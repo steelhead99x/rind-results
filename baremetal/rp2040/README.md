@@ -2,7 +2,7 @@
 
 RP2040 rev B2, dual Cortex-M0+ at 125 MHz, 2048 KiB flash, 264 KiB SRAM. Stock firmware was an Arduino (Mbed OS) sketch, about 92 KiB.
 
-rind does not build for `thumbv6m-none-eabi` (no `std`). Portable-backend dependencies do. The flash was never written.
+rind does not build for `thumbv6m-none-eabi` (no `std`). Portable-backend dependencies do. The flash was never written. See `hosts/rp2040/FEASIBILITY.md`.
 
 ## Backup
 
