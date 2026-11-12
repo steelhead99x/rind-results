@@ -134,7 +134,11 @@ const NRF52840: Board = Board {
 };
 
 /// The nRF52840's layout note; `--layout` replaces it once a relinked build has run there.
-const LAYOUT_NRF: &str = "A relinked build (rind-bench's `--pad 1031`) of all twelve benches moved no ratio      by more than 0.03 (`diag/nrf52840-relink-98568332/`; the largest was QUIC ChaCha header protection,      0.95× to 0.98× ring): unlike the ESP32-S3's, these rows hardly depend on layout (why is not tested).";
+const LAYOUT_NRF: &str = "Relinked builds that move every library by about 1 KB and about 2 KB \
+     (rind-bench's `--pad 1031` and `--pad 2053`, padding ahead of the libraries since 2026-11-12, checked with `nm -n`) \
+     moved no short-input ratio by more than 0.01 (`diag/nrf52840-relink-fixed-98568332/relink-short.md`: chacha20poly1305, \
+     hkdf, hmac and sha2). An earlier relink of all twelve benches (`diag/nrf52840-relink-98568332/`) moved the Rust code \
+     only 8 bytes, so it did not test layout. Unlike the ESP32-S3's, these rows hardly depend on layout (why is not tested).";
 
 /// The libraries a gap is measured against: the other Rust libraries, as in
 /// rind's gaps.toml. The hardware baseline is never a competitor.
