@@ -31,6 +31,6 @@ on = ["nrf52840"]
 reason = "Assembly against portable Rust: ring assembles OpenSSL's sha512-armv4 (Thumb-2), 0.84x rind's cycles. rind's portable SHA-512 (libcrux-sha2's code) matches libcrux within 1% and beats RustCrypto's soft SHA-512 (1.03x theirs)."
 
 [[gap]]
-operations = ["mlkem768-keygen/{lib}", "mlkem768-encaps/{lib}"]
+operations = ["sha3-256/{lib}/64B", "sha3-512/{lib}/64B"]
 on = ["nrf52840"]
-reason = "Compute, not randomness (measured, results/diag/nrf52840-mlkem-*): every library draws the same 64 bytes per keygen and 32 per encaps through getrandom, about 8.7 kc a byte from the RNG peripheral (0.56 M and 0.28 M cycles), so the RNG adds the same to each. With a seeded SplitMix64 behind getrandom for all three, rind's keygen is 2.42 M cycles against libcrux's 1.13 M (2.15x) and RustCrypto's 2.65 M, and encaps 2.56 M against 1.25 M (2.05x) and 2.92 M. rind's decaps stays faster than libcrux's (1.19 M against 1.44 M). Keygen and encaps both expand the matrix A from SHAKE128 while rind's decaps can reuse its key's, so rind's 64-bit-lane Keccak on this 32-bit core is the likely cost; not yet profiled."
+reason = "Per-call overhead, not the permutation: rind takes about 2.0 k cycles more than libcrux on every call whatever the digest (sha3-256, -384 and -512 at 32B and 64B are all 19.3-19.4 k against 17.4 k), while each further block costs it about 3% more (16KB: 2.13 M against 2.07 M cycles for SHA3-256, 3.99 M against 3.91 M for SHA3-512). At one block the fixed cost is 11%. Not profiled; rind is 2.2x faster than RustCrypto on every SHA-3 row. Decision: accepted, small."

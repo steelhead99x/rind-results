@@ -134,7 +134,9 @@ const NRF52840: Board = Board {
 
 /// The nRF52840's layout note; `--layout` replaces it once a relinked build has run there.
 const LAYOUT_NRF: &str =
-    "No relinked build has been run on this board, so layout sensitivity here is unmeasured.";
+    "A relinked build (rind-bench's `--pad 1031`) moved no ratio of aes_gcm, chacha20poly1305 or sha2 by \
+     more than 0.02 here (`diag/nrf52840-relink-98568332/`): the nRF52840's flash cache keeps these rows \
+     layout-insensitive, unlike the ESP32-S3's.";
 
 /// The libraries a gap is measured against: the other Rust libraries, as in
 /// rind's gaps.toml. The hardware baseline is never a competitor.
