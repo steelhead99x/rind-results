@@ -534,7 +534,7 @@ def write_markdown(out, br, host, everything, checks, skipped, runs, sizes, meta
         w("")
     w("## Confidence")
     w("")
-    n = max((e["runs"] for e in everything.values()), default=0)
+    n = max((everything[r["id"]]["runs"] for r in host["results"]), default=0)
     if n >= 2:
         w(f"Each run is a fresh boot of the same image. With {n} runs the lowest and highest run medians "
           f"bound the board's median with probability {100 * (1 - 2 ** (1 - n)):.0f}% (distribution-free: "

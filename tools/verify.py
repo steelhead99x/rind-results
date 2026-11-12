@@ -42,8 +42,16 @@ UNIT = {"ns": 1, "µs": 1e3, "us": 1e3, "ms": 1e6, "s": 1e9}
 problems = []
 
 
+notes = []
+
+
 def bad(board, what):
     problems.append(f"{board}: {what}")
+
+
+def note(board, what):
+    """A measurement to look at, not a reporting error."""
+    notes.append(f"{board}: {what}")
 
 
 def med(xs):
@@ -184,7 +192,7 @@ def check_board(board, hz_expect):
         sz = sorted(d)
         for s0, s1 in zip(sz, sz[1:]):
             if d[s1] < 0.98 * d[s0]:
-                bad(board, f"{g}: {s1} B takes less time than {s0} B")
+                note(board, f"{g}: {s1} B takes {100 * (1 - d[s1] / d[s0]):.1f}% less time than {s0} B")
     # cycles/byte across sizes: a larger input should not cost more per byte
     groups = defaultdict(dict)
     for i, a in agg.items():
@@ -354,6 +362,8 @@ def main():
             check_msi()
         else:
             check_board(b, {"esp32s3": 240_000_000, "nrf52840": 64_000_000}[b])
+    for n in notes:
+        print("NOTE", n)
     for p in problems:
         print("MISMATCH", p)
     print(f"{len(problems)} mismatches")

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the esp32s3 host: each report operation where
+# another Rust library beats rind by more than 10%, in rind's
+# benchmarks/gaps.toml format. tools/report.py refuses a gap without an entry
+# and an entry that covers no gap. No quest exists for these (rind has no
+# Xtensa quest), so each carries a reason.
+
+[[gap]]
+operations = ["sha512/{lib}/*"]
+on = ["esp32s3"]
+reason = "Not compute: rind's portable SHA-512 (libcrux-sha2, the same code as the libcrux row, which rind matches within 1%) and RustCrypto's are fully unrolled 64-bit code, about 22,000 Xtensa instructions per block, far past the 16 KB (or 32 KB) instruction cache, so every block streams its code from DIO flash: about 1.5 M cycles a block, which is the flash's bandwidth. ring's C is a small loop that stays cached. A 32 KB cache changed nothing. A fix would be a rolled compression loop on targets without 64-bit registers, or placing it in IRAM."
+
+[[gap]]
+operations = ["sha256/{lib}/64B", "sha256/{lib}/1350B"]
+on = ["esp32s3"]
+reason = "Instruction-cache misses: with ESP-IDF's default 16 KB instruction cache, rind's one-shot SHA-256 path (its wrapper over libcrux-sha2, plus padding and wiping) misses the cache on every call, a fixed ~250 µs. Rebuilt with a 32 KB cache (sdkconfig.icache32, a diagnostic run in results/diag), sha256/rind/64B went from 300 µs to 46 µs, 1.06x libcrux's 43 µs, and 1350B to 459 µs, 1.01x libcrux. The per-block cost matches libcrux's at 16 KB too (16KB rows within 10%)."
+
+[[gap]]
+operations = ["hmac-sha256/{lib}/*", "hkdf-sha256/*"]
+on = ["esp32s3"]
+reason = "The SHA-256 instruction-cache misses above, paid on each of HMAC's inner and outer hashes and HKDF's blocks. With a 32 KB instruction cache (results/diag/hmac-icache32, hkdf-icache32) rind is the fastest: hmac-sha256 64B 116 µs against ring's 140 µs, 1350B 529 µs against libcrux's 529 µs and ring's 631 µs, hkdf-sha256 expand 50 µs against RustCrypto's 49 µs and ring's 61 µs, extract-expand 193 µs against ring's 231 µs."
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/32B", "chacha20poly1305/{lib}/1350B", "chacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Compute, in Poly1305: rind's portable backend uses libcrux's HACL Poly1305, whose 64-bit limbs and u64 multiplies are emulated on 32-bit Xtensa, while ring's C Poly1305 uses 32x32->64 products (mul32x32_64). A FreeRTOS tick PC profile of the 16KB seal (results/diag/esp32s3-chacha-profile, 400 samples each) puts 58% of rind's 6.77 ms in Poly1305 (about 3.9 ms) against 32% of ring's 5.34 ms (about 1.7 ms); rind's ChaCha20 (about 2.7 ms) is a little faster than ring's (about 3.2 ms). A 32 KB instruction cache leaves the 1350B and 16KB gaps unchanged (results/diag/chacha20poly1305-icache32: 16KB 6710 µs against ring's 5336 µs). At 32B the cache also costs rind (55.3 µs, 53.7 µs with 32 KB) and open is slower than seal (93.6 µs against ring's 38.4 µs, 54.1 µs with 32 KB). A fix would be a 32-bit radix-2^26 Poly1305 on targets without 64-bit multiplies."
+
+[[gap]]
+operations = ["xchacha20poly1305/{lib}/32B", "xchacha20poly1305/{lib}/1350B", "xchacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Instruction-cache misses: rind's and libcrux's XChaCha20-Poly1305 seal draws its nonce from the RNG and walks more code than ESP-IDF's default 16 KB instruction cache holds, a fixed ~2 ms a call. Rebuilt with a 32 KB cache (results/diag/xchacha20poly1305-icache32) rind is 1.10x RustCrypto at 32B (176.0 µs against 160.4 µs), 1.05x at 1350B and 1.04x at 16KB. Not the RNG: rng-diag counts about 27k cycles for rind::rand::fill(24 B) and 36k cycles of RNG inside a 600k-cycle seal (results/diag/esp32s3-xchacha-rngdiag), and a seeded SplitMix64 RNG gives the same overhead (results/diag/esp32s3-xchacha-seeded). The 16KB residue past the cache is the Poly1305 gap above."
