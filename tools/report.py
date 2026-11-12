@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
-"""Turns captured ESP32-S3 runs into rind's report shape and RESULTS.md.
+"""Turns captured board runs into rind's report shape and RESULTS.md.
 
 Usage:
   tools/report.py --raw results/raw --rind ../rind-bench/rind \
       --firmware ../rind-bench/esp32 [--sizes results/sizes.json] [--out results]
+  tools/report.py --board nrf52840 --raw results/raw-nrf52840 --rind ../rind-bench/rind \
+      --firmware ../rind-bench/nrf52840 --gaps results/nrf52840/gaps.toml --out results/nrf52840
 
 It imports rind's own `admin/bench-report` for its OPERATIONS, SECTIONS,
 LIBRARIES, and time formatting, so the IDs, library names, and sections are
 the report's. It writes:
 
-- `<out>/esp32s3.json`: one host in `admin/bench-report`'s schema 1, with
+- `<out>/<board>.json` (`esp32s3.json`, `nrf52840.json`): one host in `admin/bench-report`'s schema 1, with
   `results` for every report operation. `ns` is the median over runs of each
   run's median; `ns_low` and `ns_high` are the lowest and highest run medians,
   so they show run-to-run spread, not criterion's confidence interval.
-- `<out>/esp32s3-all.json`: every benchmark the firmware timed, report
+- `<out>/<board>-all.json`: every benchmark the firmware timed, report
   operation or not, with each run's statistics.
 - `<out>/RESULTS.md`: the tables.
 """
@@ -37,6 +39,41 @@ def load_bench_report(rind):
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)
     return module
+
+
+# What differs between the boards; the rest of the report is the same.
+BOARDS = {
+    "esp32s3": {
+        "title": "rind on an ESP32-S3",
+        "model": "Espressif ESP32-S3 (Xtensa LX7), 240 MHz",
+        "arch": "xtensa",
+        "os": lambda start: f"ESP-IDF {start['idf'] if start else '?'} (FreeRTOS), bare board",
+        "criterion": "rind-bench-criterion-esp: CCOUNT cycles, 0.2 s warm-up, 2 ms samples, 11-51 samples per benchmark",
+        "note": "One core of an ESP32-S3 at 240 MHz, timed with its cycle counter on core 1; no radio, PSRAM off.",
+        "libs": ["rind", "ring", "rustcrypto", "libcrux", "esp32s3-hw"],
+        "intro": "rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core of an ESP32-S3 "
+        "at 240 MHz, timed with the core's cycle counter.",
+        "legend": "`esp32s3-hw` is ESP-IDF's mbedTLS on the chip's AES and SHA accelerators: hardware, not a Rust "
+        "library. rind runs its portable Rust backend here (it has no Xtensa assembly).",
+    },
+    "nrf52840": {
+        "title": "rind on an nRF52840 (Seeed T1000-E)",
+        "model": "Nordic nRF52840 (Arm Cortex-M4F), 64 MHz",
+        "arch": "arm",
+        "os": lambda start: "none (bare metal, no_std); the board's UF2 bootloader and S140 SoftDevice stay in "
+        "flash, unused",
+        "criterion": "rind-bench-criterion-esp (no_std): DWT_CYCCNT cycles, 0.2 s warm-up, 2 ms samples, "
+        "11-51 samples per benchmark",
+        "note": "An nRF52840 at 64 MHz with the flash instruction cache on, timed with the DWT cycle counter; "
+        "USB only between benchmarks, no radio.",
+        "libs": ["rind", "ring", "rustcrypto", "libcrux"],
+        "intro": "rind-bench's own benches, run unchanged but for the aws-lc-rs rows, on the nRF52840 of a Seeed "
+        "T1000-E at 64 MHz, timed with the Cortex-M4's DWT cycle counter.",
+        "legend": "rind runs its portable Rust backend here (its 32-bit Arm assembly needs ARM state and NEON, "
+        "which an M-profile core lacks); ring keeps its Thumb-2 assembly for SHA-2, AES and GHASH. There is no "
+        "hardware baseline: the chip's CryptoCell CC310 needs Nordic's closed library.",
+    },
+}
 
 
 def git(repo, *args):
@@ -91,6 +128,7 @@ def lock_versions(firmware, br):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--board", choices=sorted(BOARDS), default="esp32s3")
     ap.add_argument("--raw", default="results/raw")
     ap.add_argument("--rind", required=True)
     ap.add_argument("--firmware", required=True)
@@ -100,6 +138,7 @@ def main():
     ap.add_argument("--out", default="results")
     args = ap.parse_args()
 
+    board = BOARDS[args.board]
     br = load_bench_report(args.rind)
     runs = read_runs(args.raw)
     ok_runs = [r for r in runs if r["status"] == "ok"]
@@ -165,37 +204,32 @@ def main():
     commit = git(args.rind, "rev-parse", "HEAD")
     host = {
         "schema": 1,
-        "host": "esp32s3",
+        "host": args.board,
         "commit": commit,
         "upstream_commit": git(args.rind, "merge-base", "HEAD", "origin/main"),
         "started": ok_runs[0]["started"] if ok_runs else None,
         "finished": ok_runs[-1]["finished"] if ok_runs else None,
         "cpu": {
-            "model": "Espressif ESP32-S3 (Xtensa LX7), 240 MHz",
-            "arch": "xtensa",
+            "model": board["model"],
+            "arch": board["arch"],
             "logical_cpus": 1,
         },
-        "os": f"ESP-IDF {start['idf'] if start else '?'} (FreeRTOS), bare board",
+        "os": board["os"](start),
         "toolchain": meta.get("toolchain", {}),
         "libraries": lock_versions(args.firmware, br),
         "rind_cpu": {"backend": "portable", "has_aes_hardware": False},
         "status": "ok" if len(ok_runs) == len(runs) else "partial",
-        "criterion_args": [
-            "rind-bench-criterion-esp: CCOUNT cycles, 0.2 s warm-up, 2 ms samples, 11-51 samples per benchmark"
-        ],
+        "criterion_args": [board["criterion"]],
         "load": {"runs": len(runs), "ok_runs": len(ok_runs)},
-        "note": meta.get(
-            "note",
-            "One core of an ESP32-S3 at 240 MHz, timed with its cycle counter on core 1; no radio, PSRAM off.",
-        ),
+        "note": meta.get("note", board["note"]),
         "port": port_of(args.firmware),
         "results": results,
     }
     os.makedirs(args.out, exist_ok=True)
-    with open(os.path.join(args.out, "esp32s3.json"), "w") as f:
+    with open(os.path.join(args.out, f"{args.board}.json"), "w") as f:
         json.dump(host, f, indent=1)
         f.write("\n")
-    with open(os.path.join(args.out, "esp32s3-all.json"), "w") as f:
+    with open(os.path.join(args.out, f"{args.board}-all.json"), "w") as f:
         json.dump(
             {
                 "runs": [{k: v for k, v in r.items() if k != "records"} for r in runs],
@@ -215,7 +249,7 @@ def main():
         with open(args.sizes) as f:
             sizes = json.load(f)
     gaps = load_gaps(br, host, args.gaps)
-    write_markdown(args.out, br, host, everything, checks, skipped, runs, sizes, meta, gaps)
+    write_markdown(args.out, br, host, everything, checks, skipped, runs, sizes, meta, gaps, board)
 
 
 # The libraries a gap is measured against: the other Rust libraries, as in
@@ -284,19 +318,16 @@ def cell(br, r):
     return s
 
 
-def write_markdown(out, br, host, everything, checks, skipped, runs, sizes, meta, gaps):
-    libs = ["rind", "ring", "rustcrypto", "libcrux", "esp32s3-hw"]
+def write_markdown(out, br, host, everything, checks, skipped, runs, sizes, meta, gaps, board):
+    libs = board["libs"]
     by = {}
     for r in host["results"]:
         by[(r["operation"], r["library"])] = r
     lines = []
     w = lines.append
-    w("# rind on an ESP32-S3")
+    w(f"# {board['title']}")
     w("")
-    w(
-        "rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core of an ESP32-S3 "
-        "at 240 MHz, timed with the core's cycle counter. Every operation and ID is `admin/bench-report`'s."
-    )
+    w(board["intro"] + " Every operation and ID is `admin/bench-report`'s.")
     w("")
     w(f"- rind: upstream `{host['upstream_commit']}`, plus the port's patches: "
       + ", ".join(f"`{p}`" for p in host["port"]["patches"]))
@@ -313,8 +344,7 @@ def write_markdown(out, br, host, everything, checks, skipped, runs, sizes, meta
     w("")
     w("Each cell is the median over runs of each run's median time per operation, with cycles per byte for "
       "byte-throughput rows or cycles (c) / kilocycles (kc) per operation otherwise. "
-      "`esp32s3-hw` is ESP-IDF's mbedTLS on the chip's AES and SHA accelerators: hardware, not a Rust library. "
-      "rind runs its portable Rust backend here (it has no Xtensa assembly).")
+      + board["legend"])
     w("")
     w("## Headline: rind against the fastest other Rust library")
     w("")
@@ -387,7 +417,7 @@ def write_markdown(out, br, host, everything, checks, skipped, runs, sizes, meta
         w(notes)
         w("")
     w(f"Generated by `tools/report.py` on {datetime.date.today().isoformat()}; "
-      "every benchmark, with each run's statistics, is in `esp32s3-all.json`.")
+      f"every benchmark, with each run's statistics, is in `{host['host']}-all.json`.")
     with open(os.path.join(out, "RESULTS.md"), "w") as f:
         f.write("\n".join(lines) + "\n")
 
