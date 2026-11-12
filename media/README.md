@@ -38,7 +38,7 @@ the same drawing code the firmware runs, onto an in-memory frame instead of the 
 | First result page | ![](oled/02-op@1x.png) | [02-op@4x.png](oled/02-op@4x.png) |
 | Summary | ![](oled/31-summary@1x.png) | [31-summary@4x.png](oled/31-summary@4x.png) |
 
-All 32 pages are in [oled/](oled/).
+All 34 pages are in [oled/](oled/).
 
 ## Terminal recordings
 
