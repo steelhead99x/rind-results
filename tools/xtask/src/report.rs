@@ -88,7 +88,8 @@ const ESP32S3: Board = Board {
     intro: "rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core of an ESP32-S3 \
             at 240 MHz, timed with the core's cycle counter.",
     layout: "Relinking an image moves its short-input rows far more than that: see \
-             `diag/layout-relink-2026-11-12/`, and read short-input ratios with the README's layout caveat.",
+             `diag/layout-relink-2026-11-12/` and, at this pin, the three-layout table in \
+             `diag/esp32s3-relink-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.",
     repro: &[
         "git clone --recursive https://github.com/steelhead99x/rind-bench   # private; the port",
         "git clone https://github.com/steelhead99x/rind-results",
@@ -133,10 +134,9 @@ const NRF52840: Board = Board {
 };
 
 /// The nRF52840's layout note; `--layout` replaces it once a relinked build has run there.
-const LAYOUT_NRF: &str =
-    "A relinked build (rind-bench's `--pad 1031`) moved no ratio of aes_gcm, chacha20poly1305 or sha2 by \
-     more than 0.02 here (`diag/nrf52840-relink-98568332/`): the nRF52840's flash cache keeps these rows \
-     layout-insensitive, unlike the ESP32-S3's.";
+const LAYOUT_NRF: &str = "A relinked build (rind-bench's `--pad 1031`) moved no ratio of aes_gcm, chacha20poly1305 or sha2 by \
+     more than 0.02 (`diag/nrf52840-relink-98568332/`): unlike the ESP32-S3's, these rows hardly depend \
+     on layout (why is not tested).";
 
 /// The libraries a gap is measured against: the other Rust libraries, as in
 /// rind's gaps.toml. The hardware baseline is never a competitor.

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the esp32s3 host: each report operation where
+# another Rust library beats rind by more than 10%, in rind's
+# benchmarks/gaps.toml format. `cargo xtask report` refuses a gap without an entry
+# and an entry that covers no gap. No quest exists for these (rind has no
+# Xtensa quest), so each carries a reason. Numbers are from the 80 MHz flash
+# clock set (2026-11-12); the 32 KB-cache diagnostics in results/diag ran at
+# the 40 MHz clock of the first set, so compare their ratios, not their times.
+
+[[gap]]
+operations = ["sha512/{lib}/*"]
+on = ["esp32s3"]
+reason = "Not compute: rind's portable SHA-512 (libcrux-sha2, the same code as the libcrux row, which rind matches within 1%) and RustCrypto's are fully unrolled 64-bit code, about 22,000 Xtensa instructions per block, far past the 16 KB (or 32 KB) instruction cache, so every block streams its code from DIO flash: about 0.80 M cycles a block at the 80 MHz flash clock (1.54 M at 40 MHz, results/diag/flash-80mhz), which is the flash's bandwidth. ring's C is a small loop that stays cached. A 32 KB cache changed nothing. A fix would be a rolled compression loop on targets without 64-bit registers, or placing it in IRAM."
+
+[[gap]]
+operations = ["sha256/{lib}/64B", "sha256/{lib}/1350B"]
+on = ["esp32s3"]
+reason = "Instruction-cache misses: with ESP-IDF's default 16 KB instruction cache, rind's one-shot SHA-256 path (its wrapper over libcrux-sha2, plus padding and wiping) misses the cache on every call, a fixed ~56 µs here (100.2 µs against libcrux's 43.8 µs at 64B; ~250 µs at the 40 MHz flash clock). With a 32 KB cache (results/diag/sha2-icache32, 40 MHz) rind's 64B was 1.06x libcrux and 1350B 1.01x. The per-block cost matches libcrux's (16KB within 2%). How large the fixed cost is depends on layout: a relink halved it (results/diag/layout-relink-2026-11-12)."
+
+[[gap]]
+operations = ["hmac-sha256/{lib}/*", "hkdf-sha256/*"]
+on = ["esp32s3"]
+reason = "The SHA-256 instruction-cache misses above, paid on each of HMAC's inner and outer hashes and HKDF's blocks. With a 32 KB instruction cache (results/diag/hmac-icache32, hkdf-icache32, at the 40 MHz flash clock) rind was the fastest: hmac-sha256 64B 116 µs against ring's 140 µs, 1350B 529 µs against libcrux's 529 µs and ring's 631 µs, hkdf-sha256 expand 50 µs against RustCrypto's 49 µs and ring's 61 µs, extract-expand 193 µs against ring's 231 µs."
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/32B", "chacha20poly1305/{lib}/1350B", "chacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Compute, in Poly1305: rind's portable backend uses libcrux's HACL Poly1305, whose 64-bit limbs and u64 multiplies are emulated on 32-bit Xtensa, while ring's C Poly1305 uses 32x32->64 products (mul32x32_64). A FreeRTOS tick PC profile of the 16KB seal (results/diag/esp32s3-chacha-profile, 400 samples each) puts 58% of rind's time in Poly1305 against 32% of ring's; rind's ChaCha20 is a little faster than ring's. Neither doubling the flash clock (16KB 6.72 ms against ring's 5.34 ms, the same as at 40 MHz) nor a 32 KB instruction cache (results/diag/chacha20poly1305-icache32) moves the 1350B and 16KB gaps. At 32B rind is 54.4 µs against ring's 37.1 µs (open 54.6 µs against 38.3 µs). A fix would be a 32-bit radix-2^26 Poly1305 on targets without 64-bit multiplies."
+
+[[gap]]
+operations = ["xchacha20poly1305/{lib}/32B", "xchacha20poly1305/{lib}/1350B", "xchacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Instruction-cache misses: rind's and libcrux's XChaCha20-Poly1305 seal draws its nonce from the RNG and walks more code than ESP-IDF's default 16 KB instruction cache holds, a fixed ~1.0 ms a call here (1.20 ms against RustCrypto's 160 µs at 32B; ~2 ms at the 40 MHz flash clock). With a 32 KB cache (results/diag/xchacha20poly1305-icache32, 40 MHz) rind was 1.10x RustCrypto at 32B, 1.05x at 1350B and 1.04x at 16KB. Not the RNG: rng-diag counts about 27k cycles for rind::rand::fill(24 B) and 36k cycles of RNG inside a 600k-cycle seal (results/diag/esp32s3-xchacha-rngdiag), and a seeded SplitMix64 RNG gives the same overhead (results/diag/esp32s3-xchacha-seeded). The 16KB residue past the cache is the Poly1305 gap above."
