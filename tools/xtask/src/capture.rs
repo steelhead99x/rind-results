@@ -329,9 +329,18 @@ pub fn capture(board: Board, args: Args) -> Result<bool, String> {
         let began = crate::utc_now();
         eprintln!("run {n}: started {began}");
         let o = match board {
-            Board::Esp => run_esp(&port, timeout)?,
-            Board::Nrf => run_nrf(&port, timeout)?,
+            Board::Esp => run_esp(&port, timeout),
+            Board::Nrf => run_nrf(&port, timeout),
         };
+        // A run that cannot start (the port is gone, the board did not come
+        // back) is recorded as failed like any other, and runs.json still
+        // gets written.
+        let o = o.unwrap_or_else(|e| Outcome {
+            lines: vec![],
+            records: vec![],
+            status: "failed",
+            reason: Some(e),
+        });
         let finished = crate::utc_now();
         std::fs::write(out.join(format!("run-{n}.log")), o.lines.join("\n") + "\n")
             .map_err(|e| e.to_string())?;

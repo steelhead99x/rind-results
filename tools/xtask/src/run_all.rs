@@ -119,7 +119,11 @@ pub fn run(board: Board, a: Args) -> Result<(), String> {
                 std::fs::copy(&image, drive.join(format!("{b}{ext}")))
                     .map_err(|e| format!("{b}: {e}"))?;
                 // sync only this file system: a global sync can wait minutes on other disks.
-                let _ = Command::new("sync").arg("-f").arg(&drive).status();
+                let _ = Command::new("sync")
+                    .arg("-f")
+                    .arg(&drive)
+                    .stderr(std::process::Stdio::null())
+                    .status();
                 if !wait(30, || Path::new(NRF_PORT).exists()) {
                     return Err(format!("{b}: the firmware did not enumerate"));
                 }
