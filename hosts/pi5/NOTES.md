@@ -20,3 +20,6 @@
 - rind-cpuid reports aes, pmull, sha2, neon, and no sha3 (the SHA-512/SHA-3 extension) or DIT on this Cortex-A76.
 - Build cost measured by the harness's own `admin/build-cost` after the benchmarks, 4 jobs.
 - The largest gaps of this run are here: public-key operations (X25519 2.32×, RSA-2048 about 1.65×, P-256/P-384/P-521 ECDH 1.5 to 1.6×, Ed25519 about 1.45×) trail aws-lc-rs on the Cortex-A76, while the same rind code leads on Apple M-series. A plausible cause, not checked here: on aarch64 rind runs s2n-bignum's `_alt` routines (as `benchmarks/verified.toml` records for X25519 and P-256), which are tuned for cores with fast high multiplies, while aws-lc picks per core.
+
+- 2026-11-12 follow-up: the multiplier cause above was confirmed by A/B runs of the narrow-multiplier branches on this board; see [`ab-narrow-mul/`](ab-narrow-mul/README.md). With PR #33 every public-key gap to aws-lc-rs here closes (X25519 2.32x -> 0.99x), and the follow-up branches make ECDSA verify and RSA-3072/4096 lead.
+- 2026-11-12: this board's cpufreq `scaling_max_freq` is 1500000 (1.5 GHz) and has been since boot on 2026-11-08 (`cpuinfo_max_freq` 2400000). The A/B runs in `ab-narrow-mul/` ran at 1.5 GHz. Their wide (main) rows match `pi5.json` within 0.1%, so this report probably also ran capped, though that wasn't checked when it was taken.

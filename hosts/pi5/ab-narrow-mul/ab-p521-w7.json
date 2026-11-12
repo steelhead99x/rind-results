@@ -1,0 +1,1169 @@
+{
+ "host": "pi5",
+ "cpu": "Raspberry Pi 5 Model B Rev 1.0 (BCM2712, 4x Cortex-A76, cpufreq capped at 1.5 GHz (scaling_max_freq=1500000 since boot 2026-11-08, cpuinfo_max_freq 2.4 GHz, governor ondemand)), Debian 13, Linux 6.18.60+rpt-rpi-2712",
+ "toolchain": "rustc 1.98.1, RUSTFLAGS=--cfg rind_cpu_disable, cargo bench profile",
+ "rounds": 7,
+ "order": "spec order rotated each round; bench lock held per round",
+ "pinning": "taskset -c 3; load 0.7-3.0 before each round",
+ "commits": {
+  "w7": "41e69151 perf/pi5-p384-verify-w7",
+  "p521": "da1895d2 perf/pi5-p521-verify-w7 (41e69151 + P-521 width-7 generator NAF)"
+ },
+ "modes": {
+  "w7": "default detection (A76 -> narrow)",
+  "p521": "default detection (A76 -> narrow)"
+ },
+ "schema": "rind-results/ab-v1",
+ "criterion_args": [
+  "--warm-up-time",
+  "1",
+  "--measurement-time",
+  "3"
+ ],
+ "log": [
+  "r1 p521 14:42:50 load: 3.03 2.55 2.40 1/203 660790",
+  "r1 w7 14:43:40 load: 2.06 2.36 2.34 1/203 660943",
+  "r1 done 14:44:31 load: 1.51 2.16 2.27 1/205 661099",
+  "r2 w7 14:44:51 load: 1.22 2.05 2.23 1/205 661200",
+  "r2 p521 14:45:41 load: 1.15 1.90 2.17 1/205 661352",
+  "r2 done 14:46:31 load: 1.06 1.76 2.11 1/204 661514",
+  "r3 p521 14:46:51 load: 0.76 1.65 2.06 1/206 661576",
+  "r3 w7 14:47:41 load: 0.95 1.56 2.01 1/204 661737",
+  "r3 done 14:48:31 load: 1.11 1.51 1.97 1/204 661890",
+  "r4 w7 14:48:51 load: 0.79 1.41 1.92 1/204 661959",
+  "r4 p521 14:49:41 load: 0.95 1.36 1.88 1/204 662114",
+  "r4 done 14:50:31 load: 0.98 1.30 1.83 1/203 662268",
+  "r5 p521 14:50:51 load: 0.70 1.21 1.79 1/203 662337",
+  "r5 w7 14:51:41 load: 0.87 1.18 1.74 1/201 662489",
+  "r5 done 14:52:31 load: 0.95 1.15 1.70 1/201 662652",
+  "r6 w7 14:52:51 load: 0.68 1.07 1.67 1/203 662714",
+  "r6 p521 14:53:41 load: 0.86 1.06 1.63 1/203 662891",
+  "r6 done 14:54:31 load: 0.94 1.05 1.59 1/203 663044",
+  "r7 p521 14:54:51 load: 0.67 0.98 1.56 1/205 663116",
+  "r7 w7 14:55:41 load: 0.94 1.00 1.53 1/204 663268",
+  "r7 done 14:56:31 load: 0.98 1.00 1.50 1/204 663430",
+  "end Thu 12 Nov 14:56:51 PST 2026"
+ ],
+ "results": [
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 1,
+   "ns": 792599.5905482488,
+   "ns_low": 792401.1257069901,
+   "ns_high": 792790.534723617
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 2,
+   "ns": 792283.8526732674,
+   "ns_low": 791932.8696400352,
+   "ns_high": 792733.6084997149
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 3,
+   "ns": 791649.7210551205,
+   "ns_low": 791501.2159641852,
+   "ns_high": 791824.0843147998
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 4,
+   "ns": 792820.8917422787,
+   "ns_low": 791504.1324358173,
+   "ns_high": 795443.145539973
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 5,
+   "ns": 795293.95689966,
+   "ns_low": 795077.9741654095,
+   "ns_high": 795538.8378565857
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 6,
+   "ns": 791870.5996039604,
+   "ns_low": 791669.974698941,
+   "ns_high": 792085.2744368677
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 7,
+   "ns": 791896.2254204226,
+   "ns_low": 791719.313081742,
+   "ns_high": 792084.599389171
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 1,
+   "ns": 791988.1049091178,
+   "ns_low": 791713.9882449091,
+   "ns_high": 792259.1444575553
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 2,
+   "ns": 792346.4015812029,
+   "ns_low": 791583.3698970145,
+   "ns_high": 793884.9283867141
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 3,
+   "ns": 792009.461900399,
+   "ns_low": 791780.4289659092,
+   "ns_high": 792224.6859420841
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 4,
+   "ns": 795702.0899364563,
+   "ns_low": 795406.8400409744,
+   "ns_high": 795988.3062150703
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 5,
+   "ns": 791608.1563765332,
+   "ns_low": 791453.9776240065,
+   "ns_high": 791787.3649786252
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 6,
+   "ns": 791539.2164326881,
+   "ns_low": 791361.7759766437,
+   "ns_high": 791746.0489656237
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p384-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 7,
+   "ns": 795195.5717570563,
+   "ns_low": 794984.045747703,
+   "ns_high": 795432.1924494657
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 1,
+   "ns": 582370.9821989065,
+   "ns_low": 582211.8827231347,
+   "ns_high": 582582.0408501779
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 2,
+   "ns": 582180.1483183095,
+   "ns_low": 582130.7126628363,
+   "ns_high": 582246.370865595
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 3,
+   "ns": 582118.8861327028,
+   "ns_low": 582062.7711501591,
+   "ns_high": 582189.4927602217
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 4,
+   "ns": 582154.012170829,
+   "ns_low": 582081.7574241838,
+   "ns_high": 582249.2905062131
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 5,
+   "ns": 582080.3514999261,
+   "ns_low": 582032.0499429982,
+   "ns_high": 582136.9459937825
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 6,
+   "ns": 582081.781328506,
+   "ns_low": 582035.5198012294,
+   "ns_high": 582148.1711396687
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 7,
+   "ns": 582140.9055312546,
+   "ns_low": 582100.1065281067,
+   "ns_high": 582200.4179739344
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 1,
+   "ns": 582124.0945160337,
+   "ns_low": 582004.0408223262,
+   "ns_high": 582324.6533238379
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 2,
+   "ns": 581948.8783537757,
+   "ns_low": 581906.0769997764,
+   "ns_high": 582005.8659540688
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 3,
+   "ns": 582014.8595551943,
+   "ns_low": 581975.4157532546,
+   "ns_high": 582064.9548585257
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 4,
+   "ns": 581936.0046209546,
+   "ns_low": 581891.371903093,
+   "ns_high": 581994.5368077545
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 5,
+   "ns": 582028.198327176,
+   "ns_low": 581970.9598469539,
+   "ns_high": 582101.3888582618
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 6,
+   "ns": 581956.0857307522,
+   "ns_low": 581909.1349847848,
+   "ns_high": 582017.5824832297
+  },
+  {
+   "operation": "p384-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p384-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 7,
+   "ns": 582020.3581335895,
+   "ns_low": 581974.6651162856,
+   "ns_high": 582074.2667130434
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "p521",
+   "round": 1,
+   "ns": 1471830.2679999995,
+   "ns_low": 1471494.6874875003,
+   "ns_high": 1472198.5808875004
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "p521",
+   "round": 2,
+   "ns": 1472504.8479999998,
+   "ns_low": 1472168.1379750005,
+   "ns_high": 1472866.5930249998
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "p521",
+   "round": 3,
+   "ns": 1473210.5705000004,
+   "ns_low": 1472846.238725,
+   "ns_high": 1473599.531325
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "p521",
+   "round": 4,
+   "ns": 1472819.9615000004,
+   "ns_low": 1472470.6698875,
+   "ns_high": 1473191.7535374998
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "p521",
+   "round": 5,
+   "ns": 1472877.862,
+   "ns_low": 1472530.8962124996,
+   "ns_high": 1473244.9989624997
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "p521",
+   "round": 6,
+   "ns": 1472495.0470000005,
+   "ns_low": 1472166.4083374997,
+   "ns_high": 1472833.8499874996
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "p521",
+   "round": 7,
+   "ns": 1475257.957,
+   "ns_low": 1474960.3253249996,
+   "ns_high": 1475558.9552125004
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "w7",
+   "round": 1,
+   "ns": 1472422.4835000003,
+   "ns_low": 1472082.1864375002,
+   "ns_high": 1472776.9100125001
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "w7",
+   "round": 2,
+   "ns": 1472701.103,
+   "ns_low": 1472432.1793125004,
+   "ns_high": 1472977.9604875003
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "w7",
+   "round": 3,
+   "ns": 1471740.2900000003,
+   "ns_low": 1471360.6140500002,
+   "ns_high": 1472145.9091250007
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "w7",
+   "round": 4,
+   "ns": 1471746.2649999994,
+   "ns_low": 1471427.162949999,
+   "ns_high": 1472093.2389749999
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "w7",
+   "round": 5,
+   "ns": 1472263.2755000002,
+   "ns_low": 1471956.8964250006,
+   "ns_high": 1472574.2597500002
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "w7",
+   "round": 6,
+   "ns": 1473587.466,
+   "ns_low": 1473257.7247250008,
+   "ns_high": 1473926.2563000002
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdh/aws-lc-rs",
+   "mode": "w7",
+   "round": 7,
+   "ns": 1472745.8575000004,
+   "ns_low": 1472438.8926125,
+   "ns_high": 1473059.7683
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "p521",
+   "round": 1,
+   "ns": 1447070.7266666673,
+   "ns_low": 1446687.652380952,
+   "ns_high": 1447446.2158095234
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "p521",
+   "round": 2,
+   "ns": 1446581.6966666668,
+   "ns_low": 1446188.534702381,
+   "ns_high": 1446973.0526785718
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "p521",
+   "round": 3,
+   "ns": 1446547.8700000003,
+   "ns_low": 1446169.4973214287,
+   "ns_high": 1446926.530488095
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "p521",
+   "round": 4,
+   "ns": 1447006.421428572,
+   "ns_low": 1446628.2805833335,
+   "ns_high": 1447374.448357143
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "p521",
+   "round": 5,
+   "ns": 1447185.303333334,
+   "ns_low": 1446817.1680476181,
+   "ns_high": 1447542.4385833335
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "p521",
+   "round": 6,
+   "ns": 1447311.4995238092,
+   "ns_low": 1446956.7259285718,
+   "ns_high": 1447658.645392857
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "p521",
+   "round": 7,
+   "ns": 1447242.5028571435,
+   "ns_low": 1446872.7569642868,
+   "ns_high": 1447602.5391904765
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "w7",
+   "round": 1,
+   "ns": 1446213.63,
+   "ns_low": 1445936.8240476188,
+   "ns_high": 1446510.1071547621
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "w7",
+   "round": 2,
+   "ns": 1446611.747619047,
+   "ns_low": 1446326.1507261905,
+   "ns_high": 1446901.1463333333
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "w7",
+   "round": 3,
+   "ns": 1446260.260952381,
+   "ns_low": 1446010.8514642853,
+   "ns_high": 1446519.219261905
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "w7",
+   "round": 4,
+   "ns": 1446558.4076190474,
+   "ns_low": 1446224.8361666661,
+   "ns_high": 1446899.0243333338
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "w7",
+   "round": 5,
+   "ns": 1446579.1890476197,
+   "ns_low": 1446376.5914166667,
+   "ns_high": 1446789.0116547628
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "w7",
+   "round": 6,
+   "ns": 1446422.593333333,
+   "ns_low": 1446186.3031785719,
+   "ns_high": 1446665.9166309536
+  },
+  {
+   "operation": "p521-ecdh/{lib}",
+   "library": "rind",
+   "id": "p521-ecdh/rind",
+   "mode": "w7",
+   "round": 7,
+   "ns": 1446352.6547619049,
+   "ns_low": 1446121.214166666,
+   "ns_high": 1446591.3904880949
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "p521",
+   "round": 1,
+   "ns": 849756.6085384956,
+   "ns_low": 849605.4959284498,
+   "ns_high": 849938.6060916019
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "p521",
+   "round": 2,
+   "ns": 850137.5617378454,
+   "ns_low": 849973.3357761422,
+   "ns_high": 850297.4353252653
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "p521",
+   "round": 3,
+   "ns": 850073.6592699867,
+   "ns_low": 849917.2185900649,
+   "ns_high": 850222.46539089
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "p521",
+   "round": 4,
+   "ns": 849913.1035525344,
+   "ns_low": 849754.0058172989,
+   "ns_high": 850096.3995428922
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "p521",
+   "round": 5,
+   "ns": 849966.7975262302,
+   "ns_low": 849810.0064843962,
+   "ns_high": 850152.9389040724
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "p521",
+   "round": 6,
+   "ns": 849810.6484527856,
+   "ns_low": 849664.5901406691,
+   "ns_high": 849968.5151480482
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "p521",
+   "round": 7,
+   "ns": 852088.8460795034,
+   "ns_low": 851947.333163741,
+   "ns_high": 852239.4818082612
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "w7",
+   "round": 1,
+   "ns": 850009.7902852077,
+   "ns_low": 849846.2802549049,
+   "ns_high": 850168.9844154397
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "w7",
+   "round": 2,
+   "ns": 850348.9372011231,
+   "ns_low": 850213.9189236987,
+   "ns_high": 850514.5896102727
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "w7",
+   "round": 3,
+   "ns": 851063.6523718043,
+   "ns_low": 850934.285542399,
+   "ns_high": 851216.7812355562
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "w7",
+   "round": 4,
+   "ns": 849965.8657100635,
+   "ns_low": 849812.306801692,
+   "ns_high": 850139.4725748518
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "w7",
+   "round": 5,
+   "ns": 851095.1721442293,
+   "ns_low": 850854.3408496152,
+   "ns_high": 851311.2260880652
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "w7",
+   "round": 6,
+   "ns": 851105.3498005024,
+   "ns_low": 850930.6476059867,
+   "ns_high": 851278.3168519221
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-sign/aws-lc-rs",
+   "mode": "w7",
+   "round": 7,
+   "ns": 850092.0018117335,
+   "ns_low": 849916.1473662768,
+   "ns_high": 850264.7259254139
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "p521",
+   "round": 1,
+   "ns": 366182.2288000591,
+   "ns_low": 365870.99719784956,
+   "ns_high": 366470.5404628534
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "p521",
+   "round": 2,
+   "ns": 365898.08846756315,
+   "ns_low": 365714.2559890068,
+   "ns_high": 366092.55292328127
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "p521",
+   "round": 3,
+   "ns": 366076.60999113345,
+   "ns_low": 365913.6939175023,
+   "ns_high": 366255.00895342184
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "p521",
+   "round": 4,
+   "ns": 365816.02969705925,
+   "ns_low": 365603.0793555372,
+   "ns_high": 366055.8426602037
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "p521",
+   "round": 5,
+   "ns": 365865.4376148958,
+   "ns_low": 365662.1604195485,
+   "ns_high": 366092.9310334703
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "p521",
+   "round": 6,
+   "ns": 365634.17833604256,
+   "ns_low": 365403.87661576073,
+   "ns_high": 365894.46549873863
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "p521",
+   "round": 7,
+   "ns": 365565.33139648294,
+   "ns_low": 365323.09670328995,
+   "ns_high": 365837.89847203007
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "w7",
+   "round": 1,
+   "ns": 366166.10913994384,
+   "ns_low": 366056.8580952196,
+   "ns_high": 366287.44485481357
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "w7",
+   "round": 2,
+   "ns": 366361.73462391016,
+   "ns_low": 366218.3365051131,
+   "ns_high": 366491.68549460295
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "w7",
+   "round": 3,
+   "ns": 366547.7248603517,
+   "ns_low": 366417.29383312253,
+   "ns_high": 366665.5882933858
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "w7",
+   "round": 4,
+   "ns": 367481.2197798138,
+   "ns_low": 367313.6728430756,
+   "ns_high": 367634.3968918066
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "w7",
+   "round": 5,
+   "ns": 366076.20418058225,
+   "ns_low": 365953.64580796193,
+   "ns_high": 366201.6030283571
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "w7",
+   "round": 6,
+   "ns": 366248.424028373,
+   "ns_low": 366146.1508564869,
+   "ns_high": 366360.60952910804
+  },
+  {
+   "operation": "p521-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-sign/rind",
+   "mode": "w7",
+   "round": 7,
+   "ns": 366163.6384350525,
+   "ns_low": 366044.2261761131,
+   "ns_high": 366293.09266864613
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 1,
+   "ns": 1740345.8016666665,
+   "ns_low": 1740108.898875001,
+   "ns_high": 1740591.538597223
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 2,
+   "ns": 1740843.7644444439,
+   "ns_low": 1740538.5730555546,
+   "ns_high": 1741159.788055556
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 3,
+   "ns": 1742123.5605555559,
+   "ns_low": 1741774.972055556,
+   "ns_high": 1742470.9741250006
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 4,
+   "ns": 1740497.4272222228,
+   "ns_low": 1740236.424555556,
+   "ns_high": 1740763.8567500003
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 5,
+   "ns": 1740546.9361111105,
+   "ns_low": 1740246.995097222,
+   "ns_high": 1740864.7960833327
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 6,
+   "ns": 1740325.0166666668,
+   "ns_low": 1740058.2677222227,
+   "ns_high": 1740602.1766944446
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "p521",
+   "round": 7,
+   "ns": 1743689.2299999995,
+   "ns_low": 1743417.1506944452,
+   "ns_high": 1743970.1849999994
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 1,
+   "ns": 1740662.1544444456,
+   "ns_low": 1740400.3621944445,
+   "ns_high": 1740924.098527777
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 2,
+   "ns": 1741436.388888888,
+   "ns_low": 1741072.3919444443,
+   "ns_high": 1741807.6337499996
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 3,
+   "ns": 1740870.988333333,
+   "ns_low": 1740532.0733472216,
+   "ns_high": 1741231.8572638894
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 4,
+   "ns": 1740724.0294444452,
+   "ns_low": 1740401.6480833334,
+   "ns_high": 1741055.658333333
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 5,
+   "ns": 1740787.764444444,
+   "ns_low": 1740458.623111112,
+   "ns_high": 1741124.2888888898
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 6,
+   "ns": 1745935.288333333,
+   "ns_low": 1745674.0896388888,
+   "ns_high": 1746211.4404444445
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p521-ecdsa-verify/aws-lc-rs",
+   "mode": "w7",
+   "round": 7,
+   "ns": 1741401.3616666675,
+   "ns_low": 1741055.6570972227,
+   "ns_high": 1741747.7816805558
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 1,
+   "ns": 1267728.7537499997,
+   "ns_low": 1267490.4765,
+   "ns_high": 1267963.4863333334
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 2,
+   "ns": 1267199.0066666673,
+   "ns_low": 1266938.2292916668,
+   "ns_high": 1267463.5638958334
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 3,
+   "ns": 1267174.72375,
+   "ns_low": 1266926.0826770838,
+   "ns_high": 1267424.38578125
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 4,
+   "ns": 1267310.137916667,
+   "ns_low": 1267062.0959270843,
+   "ns_high": 1267554.899322917
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 5,
+   "ns": 1269224.71375,
+   "ns_low": 1267247.7636145835,
+   "ns_high": 1272956.0605520834
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 6,
+   "ns": 1267332.0191666675,
+   "ns_low": 1267073.0508750002,
+   "ns_high": 1267585.073364584
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "p521",
+   "round": 7,
+   "ns": 1269115.5312499995,
+   "ns_low": 1267167.54715625,
+   "ns_high": 1272786.8737499996
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 1,
+   "ns": 1324518.846086956,
+   "ns_low": 1324278.491880434,
+   "ns_high": 1324760.8882282607
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 2,
+   "ns": 1325230.2095652176,
+   "ns_low": 1324996.5411195646,
+   "ns_high": 1325459.001282608
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 3,
+   "ns": 1324990.2995652175,
+   "ns_low": 1324760.43052174,
+   "ns_high": 1325217.7853478265
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 4,
+   "ns": 1325190.7786956518,
+   "ns_low": 1324954.3440543474,
+   "ns_high": 1325421.6959673902
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 5,
+   "ns": 1324530.1043478257,
+   "ns_low": 1324284.3185543476,
+   "ns_high": 1324782.644358695
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 6,
+   "ns": 1324834.982608696,
+   "ns_low": 1324570.8268586954,
+   "ns_high": 1325109.092423913
+  },
+  {
+   "operation": "p521-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p521-ecdsa-verify/rind",
+   "mode": "w7",
+   "round": 7,
+   "ns": 1326430.1504347825,
+   "ns_low": 1324431.3027391306,
+   "ns_high": 1330151.767369565
+  }
+ ]
+}
