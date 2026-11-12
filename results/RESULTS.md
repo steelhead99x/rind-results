@@ -2,17 +2,16 @@
 
 rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core of an ESP32-S3 at 240 MHz, timed with the core's cycle counter. Every operation and ID is `admin/bench-report`'s.
 
-- rind: upstream `99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef`, plus the port's patches: `0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch`, `0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa.patch`
-- Firmware: [rind-bench](https://github.com/steelhead99x/rind-bench) `669571c20c585e3fc59c63448d3351158cc65768`
+- rind: upstream `99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef`, plus the port's patches: `0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch`, `0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch`, `0003-feat-build-for-bare-metal-targets-without-std.patch`, `ring-0.17.14-thumbv7em.patch`, `ring-0.17.14-xtensa-poly1305-align.patch`
+- Firmware: [rind-bench](https://github.com/steelhead99x/rind-bench) `a26b1a3f3477fe3de79ea251c056ea6565034879`
 - OS: ESP-IDF v5.5.1 (FreeRTOS), bare board
-- Toolchain: rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0); xtensa-esp-elf GCC 14.2.0 (esp-14.2.0_20241119)
-- Runs: 27 of 33 completed, one firmware image per rind-bench bench file
+- Runs: 33 of 33 completed, one firmware image per rind-bench bench file
   - aes_gcm run 1: ok, 171 results, 2026-11-12T07:19:43+00:00 to 2026-11-12T07:21:08+00:00 (UTC)
   - aes_gcm run 2: ok, 171 results, 2026-11-12T07:21:08+00:00 to 2026-11-12T07:22:33+00:00 (UTC)
   - aes_gcm run 3: ok, 171 results, 2026-11-12T07:22:33+00:00 to 2026-11-12T07:23:57+00:00 (UTC)
-  - chacha20poly1305 run 1: failed, 0 results, 2026-11-12T07:24:02+00:00 to 2026-11-12T07:24:04+00:00 (UTC), Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
-  - chacha20poly1305 run 2: failed, 0 results, 2026-11-12T07:24:04+00:00 to 2026-11-12T07:24:07+00:00 (UTC), Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
-  - chacha20poly1305 run 3: failed, 0 results, 2026-11-12T07:24:07+00:00 to 2026-11-12T07:24:10+00:00 (UTC), Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
+  - chacha20poly1305 run 1: ok, 56 results, 2026-11-12T17:09:21+00:00 to 2026-11-12T17:09:42+00:00 (UTC)
+  - chacha20poly1305 run 2: ok, 56 results, 2026-11-12T17:09:42+00:00 to 2026-11-12T17:10:03+00:00 (UTC)
+  - chacha20poly1305 run 3: ok, 56 results, 2026-11-12T17:10:03+00:00 to 2026-11-12T17:10:24+00:00 (UTC)
   - cipher run 1: ok, 42 results, 2026-11-12T07:24:15+00:00 to 2026-11-12T07:24:39+00:00 (UTC)
   - cipher run 2: ok, 42 results, 2026-11-12T07:24:39+00:00 to 2026-11-12T07:25:03+00:00 (UTC)
   - cipher run 3: ok, 42 results, 2026-11-12T07:25:03+00:00 to 2026-11-12T07:25:28+00:00 (UTC)
@@ -37,9 +36,9 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core o
   - x25519 run 1: ok, 9 results, 2026-11-12T08:12:31+00:00 to 2026-11-12T08:13:41+00:00 (UTC)
   - x25519 run 2: ok, 9 results, 2026-11-12T08:13:41+00:00 to 2026-11-12T08:14:50+00:00 (UTC)
   - x25519 run 3: ok, 9 results, 2026-11-12T08:14:50+00:00 to 2026-11-12T08:15:59+00:00 (UTC)
-  - xchacha20poly1305 run 1: failed, 0 results, 2026-11-12T08:16:04+00:00 to 2026-11-12T08:16:07+00:00 (UTC), Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
-  - xchacha20poly1305 run 2: failed, 0 results, 2026-11-12T08:16:07+00:00 to 2026-11-12T08:16:10+00:00 (UTC), Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
-  - xchacha20poly1305 run 3: failed, 0 results, 2026-11-12T08:16:10+00:00 to 2026-11-12T08:16:13+00:00 (UTC), Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.
+  - xchacha20poly1305 run 1: ok, 21 results, 2026-11-12T17:10:29+00:00 to 2026-11-12T17:10:38+00:00 (UTC)
+  - xchacha20poly1305 run 2: ok, 21 results, 2026-11-12T17:10:38+00:00 to 2026-11-12T17:10:47+00:00 (UTC)
+  - xchacha20poly1305 run 3: ok, 21 results, 2026-11-12T17:10:47+00:00 to 2026-11-12T17:10:56+00:00 (UTC)
 
 Each cell is the median over runs of each run's median time per operation, with cycles per byte for byte-throughput rows or cycles (c) / kilocycles (kc) per operation otherwise. `esp32s3-hw` is ESP-IDF's mbedTLS on the chip's AES and SHA accelerators: hardware, not a Rust library. rind runs its portable Rust backend here (it has no Xtensa assembly).
 
@@ -59,6 +58,12 @@ Each cell is the median over runs of each run's median time per operation, with 
 | aes256-gcm-open/…/32B | 106.83 µs (801.2 c/B) | ring: 147.91 µs (1109.4 c/B) | 0.72× | 0.0% |
 | aes256-gcm-open/…/1350B | 2.10 ms (373.9 c/B) | ring: 2.55 ms (454.0 c/B) | 0.82× | 0.0% |
 | aes256-gcm-open/…/16KB | 24.50 ms (359.0 c/B) | rustcrypto: 27.43 ms (401.8 c/B) | 0.89× | 0.0% |
+| chacha20poly1305/…/32B | 55.30 µs (414.7 c/B) | ring: 37.04 µs (277.8 c/B) | 1.49× | 0.0% |
+| chacha20poly1305/…/1350B | 616.50 µs (109.6 c/B) | ring: 470.03 µs (83.6 c/B) | 1.31× | 0.0% |
+| chacha20poly1305/…/16KB | 6.77 ms (99.2 c/B) | ring: 5.34 ms (78.2 c/B) | 1.27× | 0.0% |
+| xchacha20poly1305/…/32B | 2.09 ms (15706.3 c/B) | rustcrypto: 160.38 µs (1202.8 c/B) | 13.06× | 0.0% |
+| xchacha20poly1305/…/1350B | 2.81 ms (500.4 c/B) | rustcrypto: 684.11 µs (121.6 c/B) | 4.11× | 0.0% |
+| xchacha20poly1305/…/16KB | 8.90 ms (130.3 c/B) | rustcrypto: 6.57 ms (96.2 c/B) | 1.35× | 0.0% |
 | quic-header-protection/aes128/… | 24.19 µs (5,807 c) | ring: 37.32 µs (8,958 c) | 0.65× | 0.0% |
 | quic-header-protection/aes256/… | 33.13 µs (7,951 c) | ring: 51.34 µs (12 kc) | 0.65× | 0.0% |
 | quic-header-protection/chacha20/… | 9.37 µs (2,248 c) | ring: 10.83 µs (2,598 c) | 0.87× | 0.0% |
@@ -98,6 +103,12 @@ Each cell is the median over runs of each run's median time per operation, with 
 | aes256-gcm-open/…/32B | 106.83 µs (801.2 c/B) | 147.91 µs (1109.4 c/B) | 624.68 µs (4685.1 c/B) | 1.02 ms (7667.2 c/B) | - |
 | aes256-gcm-open/…/1350B | 2.10 ms (373.9 c/B) | 2.55 ms (454.0 c/B) | 3.25 ms (577.4 c/B) | 7.38 ms (1311.2 c/B) | - |
 | aes256-gcm-open/…/16KB | 24.50 ms (359.0 c/B) | 29.12 ms (426.6 c/B) | 27.43 ms (401.8 c/B) | 77.11 ms (1129.5 c/B) | - |
+| chacha20poly1305/…/32B | 55.30 µs (414.7 c/B) | 37.04 µs (277.8 c/B) | 39.08 µs (293.1 c/B) | 84.92 µs (636.9 c/B) | - |
+| chacha20poly1305/…/1350B | 616.50 µs (109.6 c/B) | 470.03 µs (83.6 c/B) | 563.50 µs (100.2 c/B) | 871.53 µs (154.9 c/B) | - |
+| chacha20poly1305/…/16KB | 6.77 ms (99.2 c/B) | 5.34 ms (78.2 c/B) | 6.46 ms (94.6 c/B) | 6.96 ms (102.0 c/B) | - |
+| xchacha20poly1305/…/32B | 2.09 ms (15706.3 c/B) | - | 160.38 µs (1202.8 c/B) | 2.18 ms (16327.9 c/B) | - |
+| xchacha20poly1305/…/1350B | 2.81 ms (500.4 c/B) | - | 684.11 µs (121.6 c/B) | 3.13 ms (555.9 c/B) | - |
+| xchacha20poly1305/…/16KB | 8.90 ms (130.3 c/B) | - | 6.57 ms (96.2 c/B) | 9.02 ms (132.1 c/B) | - |
 
 ## QUIC header protection
 
@@ -155,6 +166,8 @@ Every operation where another Rust library beats rind by more than 10% here, wit
 | `sha512/…/1350B`, `sha512/…/16KB`, `sha512/…/64B` | 62.62× to 63.36× | ring | Not compute: rind's portable SHA-512 (libcrux-sha2, the same code as the libcrux row, which rind matches within 1%) and RustCrypto's are fully unrolled 64-bit code, about 22,000 Xtensa instructions per block, far past the 16 KB (or 32 KB) instruction cache, so every block streams its code from DIO flash: about 1.5 M cycles a block, which is the flash's bandwidth. ring's C is a small loop that stays cached. A 32 KB cache changed nothing. A fix would be a rolled compression loop on targets without 64-bit registers, or placing it in IRAM. |
 | `sha256/…/1350B`, `sha256/…/64B` | 1.74× to 6.65× | libcrux | Instruction-cache misses: with ESP-IDF's default 16 KB instruction cache, rind's one-shot SHA-256 path (its wrapper over libcrux-sha2, plus padding and wiping) misses the cache on every call, a fixed ~250 µs. Rebuilt with a 32 KB cache (sdkconfig.icache32, a diagnostic run in results/diag), sha256/rind/64B went from 300 µs to 46 µs, 1.06x libcrux's 43 µs, and 1350B to 459 µs, 1.01x libcrux. The per-block cost matches libcrux's at 16 KB too (16KB rows within 10%). |
 | `hkdf-sha256/expand/…`, `hkdf-sha256/extract-expand/…`, `hmac-sha256/…/1350B`, `hmac-sha256/…/64B` | 2.29× to 10.51× | libcrux, ring | The SHA-256 instruction-cache misses above, paid on each of HMAC's inner and outer hashes and HKDF's blocks. With a 32 KB instruction cache (results/diag/hmac-icache32, hkdf-icache32) rind is the fastest: hmac-sha256 64B 116 µs against ring's 140 µs, 1350B 529 µs against libcrux's 529 µs and ring's 631 µs, hkdf-sha256 expand 50 µs against RustCrypto's 49 µs and ring's 61 µs, extract-expand 193 µs against ring's 231 µs. |
+| `chacha20poly1305/…/1350B`, `chacha20poly1305/…/16KB`, `chacha20poly1305/…/32B` | 1.27× to 1.49× | ring | Compute, in Poly1305: rind's portable backend uses libcrux's HACL Poly1305, whose 64-bit limbs and u64 multiplies are emulated on 32-bit Xtensa, while ring's C Poly1305 uses 32x32->64 products (mul32x32_64). A FreeRTOS tick PC profile of the 16KB seal (results/diag/esp32s3-chacha-profile, 400 samples each) puts 58% of rind's 6.77 ms in Poly1305 (about 3.9 ms) against 32% of ring's 5.34 ms (about 1.7 ms); rind's ChaCha20 (about 2.7 ms) is a little faster than ring's (about 3.2 ms). A 32 KB instruction cache leaves the 1350B and 16KB gaps unchanged (results/diag/chacha20poly1305-icache32: 16KB 6710 µs against ring's 5336 µs). At 32B the cache also costs rind (55.3 µs, 53.7 µs with 32 KB) and open is slower than seal (93.6 µs against ring's 38.4 µs, 54.1 µs with 32 KB). A fix would be a 32-bit radix-2^26 Poly1305 on targets without 64-bit multiplies. |
+| `xchacha20poly1305/…/1350B`, `xchacha20poly1305/…/16KB`, `xchacha20poly1305/…/32B` | 1.35× to 13.06× | rustcrypto | Instruction-cache misses: rind's and libcrux's XChaCha20-Poly1305 seal draws its nonce from the RNG and walks more code than ESP-IDF's default 16 KB instruction cache holds, a fixed ~2 ms a call. Rebuilt with a 32 KB cache (results/diag/xchacha20poly1305-icache32) rind is 1.10x RustCrypto at 32B (176.0 µs against 160.4 µs), 1.05x at 1350B and 1.04x at 16KB. Not the RNG: rng-diag counts about 27k cycles for rind::rand::fill(24 B) and 36k cycles of RNG inside a 600k-cycle seal (results/diag/esp32s3-xchacha-rngdiag), and a seeded SplitMix64 RNG gives the same overhead (results/diag/esp32s3-xchacha-seeded). The 16KB residue past the cache is the Poly1305 gap above. |
 
 ## Known-answer checks
 
@@ -171,13 +184,13 @@ Run on the board before any timing, every run. A library failing an operation's 
 | aes128-gcm/nist-gcm-tc2 | rind | pass (6 runs) |
 | aes128-gcm/nist-gcm-tc2 | ring | pass (6 runs) |
 | aes128-gcm/nist-gcm-tc2 | rustcrypto | pass (6 runs) |
-| chacha20poly1305/1350B-agrees-with-rind | libcrux | pass (3 runs) |
-| chacha20poly1305/1350B-agrees-with-rind | ring | pass (3 runs) |
-| chacha20poly1305/1350B-agrees-with-rind | rustcrypto | pass (3 runs) |
-| chacha20poly1305/rfc8439-2.8.2 | libcrux | pass (3 runs) |
-| chacha20poly1305/rfc8439-2.8.2 | rind | pass (3 runs) |
-| chacha20poly1305/rfc8439-2.8.2 | ring | pass (3 runs) |
-| chacha20poly1305/rfc8439-2.8.2 | rustcrypto | pass (3 runs) |
+| chacha20poly1305/1350B-agrees-with-rind | libcrux | pass (9 runs) |
+| chacha20poly1305/1350B-agrees-with-rind | ring | pass (9 runs) |
+| chacha20poly1305/1350B-agrees-with-rind | rustcrypto | pass (9 runs) |
+| chacha20poly1305/rfc8439-2.8.2 | libcrux | pass (9 runs) |
+| chacha20poly1305/rfc8439-2.8.2 | rind | pass (9 runs) |
+| chacha20poly1305/rfc8439-2.8.2 | ring | pass (9 runs) |
+| chacha20poly1305/rfc8439-2.8.2 | rustcrypto | pass (9 runs) |
 | ed25519/rfc8032-test1 | dalek | pass (3 runs) |
 | ed25519/rfc8032-test1 | libcrux | pass (3 runs) |
 | ed25519/rfc8032-test1 | rind | pass (3 runs) |

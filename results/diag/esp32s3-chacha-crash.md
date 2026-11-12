@@ -1,15 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
-# ESP32-S3: why the ChaCha20-Poly1305 and XChaCha20-Poly1305 rows are missing
+# ESP32-S3: why the ChaCha20-Poly1305 and XChaCha20-Poly1305 rows crashed
 
-**Status (2026-11-12 04:00 PST): root cause found and a fix built, not yet rerun on
-hardware.** The board dropped off USB (the host's hub disabled the port after
-repeated enumeration errors), and getting it back needs a physical replug.
+**Status: fixed and verified on hardware, 2026-11-12 09:09-09:11 PST.** The patched
+images (`chacha20poly1305.elf` `b5a7e512…`, `xchacha20poly1305.elf` `9e07e2b5…`, in
+[../images.sha256](../images.sha256)) passed every known-answer check and finished 3 of 3
+runs each (56 and 21 results a run) with no fault: [raw/chacha20poly1305](../raw/chacha20poly1305/),
+[raw/xchacha20poly1305](../raw/xchacha20poly1305/). Their rows are in
+[RESULTS.md](../RESULTS.md), with the gaps they show explained in [gaps.toml](../gaps.toml).
 
 ## What happened
 
 - Both images failed 3 of 3 runs, with `StoreProhibited` during the first
-  known-answer check: [raw/chacha20poly1305](../raw/chacha20poly1305/),
-  [raw/xchacha20poly1305](../raw/xchacha20poly1305/).
+  known-answer check: [esp32s3-chacha-crash-raw](esp32s3-chacha-crash-raw/) (the unpatched
+  images' runs, kept for the record).
 - **The fault was in ring, not rind.** ring's fallback Poly1305 state is
   `#[repr(C, align(64))]`. For any function holding such a local,
   `ring::aead::chacha20_poly1305::{seal,open}` included, LLVM-Xtensa realigns SP
@@ -37,5 +40,5 @@ repeated enumeration errors), and getting it back needs a physical replug.
   The repro fails at every opt-level and with fat LTO, on the esp toolchain
   1.97.0.0.
 - This is a ring-side workaround for a compiler bug. ring's ChaCha20-Poly1305 numbers
-  on Xtensa will come from the patched build. The other published ESP32-S3 rows
+  on Xtensa come from the patched build. The other published ESP32-S3 rows
   use unpatched ring, which never realigns outside `chacha20_poly1305::{seal,open}`.
