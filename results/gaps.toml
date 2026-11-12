@@ -19,3 +19,13 @@ reason = "Instruction-cache misses: with ESP-IDF's default 16 KB instruction cac
 operations = ["hmac-sha256/{lib}/*", "hkdf-sha256/*"]
 on = ["esp32s3"]
 reason = "The SHA-256 instruction-cache misses above, paid on each of HMAC's inner and outer hashes and HKDF's blocks. With a 32 KB instruction cache (results/diag/hmac-icache32, hkdf-icache32) rind is the fastest: hmac-sha256 64B 116 µs against ring's 140 µs, 1350B 529 µs against libcrux's 529 µs and ring's 631 µs, hkdf-sha256 expand 50 µs against RustCrypto's 49 µs and ring's 61 µs, extract-expand 193 µs against ring's 231 µs."
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/32B", "chacha20poly1305/{lib}/1350B", "chacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Compute, in Poly1305: rind's portable backend uses libcrux's HACL Poly1305, whose 64-bit limbs and u64 multiplies are emulated on 32-bit Xtensa, while ring's C Poly1305 uses 32x32->64 products (mul32x32_64). A FreeRTOS tick PC profile of the 16KB seal (results/diag/esp32s3-chacha-profile, 400 samples each) puts 58% of rind's 6.77 ms in Poly1305 (about 3.9 ms) against 32% of ring's 5.34 ms (about 1.7 ms); rind's ChaCha20 (about 2.7 ms) is a little faster than ring's (about 3.2 ms). A 32 KB instruction cache leaves the 1350B and 16KB gaps unchanged (results/diag/chacha20poly1305-icache32: 16KB 6710 µs against ring's 5336 µs). At 32B the cache also costs rind (55.3 µs, 53.7 µs with 32 KB) and open is slower than seal (93.6 µs against ring's 38.4 µs, 54.1 µs with 32 KB). A fix would be a 32-bit radix-2^26 Poly1305 on targets without 64-bit multiplies."
+
+[[gap]]
+operations = ["xchacha20poly1305/{lib}/32B", "xchacha20poly1305/{lib}/1350B", "xchacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Instruction-cache misses: rind's and libcrux's XChaCha20-Poly1305 seal draws its nonce from the RNG and walks more code than ESP-IDF's default 16 KB instruction cache holds, a fixed ~2 ms a call. Rebuilt with a 32 KB cache (results/diag/xchacha20poly1305-icache32) rind is 1.10x RustCrypto at 32B (176.0 µs against 160.4 µs), 1.05x at 1350B and 1.04x at 16KB. Not the RNG: rng-diag counts about 27k cycles for rind::rand::fill(24 B) and 36k cycles of RNG inside a 600k-cycle seal (results/diag/esp32s3-xchacha-rngdiag), and a seeded SplitMix64 RNG gives the same overhead (results/diag/esp32s3-xchacha-seeded). The 16KB residue past the cache is the Poly1305 gap above."
