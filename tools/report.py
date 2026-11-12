@@ -65,7 +65,7 @@ BOARDS = {
             "(cd esp32 && ./build-images.sh)   # images/<bench>.elf; check sha256 against images.sha256",
             "cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... tools/run-all.sh ../rind-bench/esp32/images",
             "python3 tools/report.py --raw results/raw --rind ../rind-bench/rind --firmware ../rind-bench/esp32 "
-            "--sizes results/sizes.json --images results/images.json --out results",
+            "--sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results",
             "python3 tools/verify.py   # recomputes every published number from raw",
         ],
         "legend": "`esp32s3-hw` is ESP-IDF's mbedTLS on the chip's AES and SHA accelerators: hardware, not a Rust "
