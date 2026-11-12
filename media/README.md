@@ -36,9 +36,9 @@ the same drawing code the firmware runs, onto an in-memory frame instead of the 
 | Splash | ![](oled/00-splash@1x.png) | [00-splash@4x.png](oled/00-splash@4x.png) |
 | Progress | ![](oled/01-progress@1x.png) | [01-progress@4x.png](oled/01-progress@4x.png) |
 | First result page | ![](oled/02-op@1x.png) | [02-op@4x.png](oled/02-op@4x.png) |
-| Summary | ![](oled/29-summary@1x.png) | [29-summary@4x.png](oled/29-summary@4x.png) |
+| Summary | ![](oled/31-summary@1x.png) | [31-summary@4x.png](oled/31-summary@4x.png) |
 
-All 30 pages are in [oled/](oled/).
+All 32 pages are in [oled/](oled/).
 
 ## Terminal recordings
 

@@ -36,6 +36,18 @@ description: >-
 ## 5. Report
 Give the repo URLs, what ran vs. what failed (with reasons), a headline table comparing the target library with the best competitor per operation, surprises, and open issues.
 
+## 6. Verify before you publish
+- Recompute every published number from raw with a separate script that shares no code with the report generator (rind-results' `tools/verify.py`): table cells, chart labels, display pages, the fastest-library call, ratios and spreads. It found two real errors the generator could not see in itself: truncated OLED headings that merged three pages, and provenance taken from HEAD at report time.
+- Record provenance when you build, not when you report: per image, its sha256, the source commits, the patches applied, and the build time (`images.json`). A tree that has moved on since will name the wrong commit.
+- Recheck by reflashing the published images, verified by hash, and rerunning them. Medians should land within max(1%, run spread). If they do, the remaining uncertainty is in the build, not in the noise.
+- Build the benchmark's own checks into the firmware:
+  - the cycle counter against an independent timer at every boot
+  - each benchmark's wall time against its cycles. Wall time can only be larger, because setup runs between samples, so treat it as an upper bound.
+  - an empty `iter` and `iter_batched` as the harness's own cost. Report it next to the fastest row; don't subtract it.
+- Check that time grows with input size within one message shape. A row that gets faster as its input grows may have been optimised out. Equal-block sizes such as SHA-512 at 32 B and 64 B are the exception.
+- Compare the board to public figures for the same chip. Look for the vendor's minimum hardware throughput and for third-party software numbers.
+- Re-pull upstream before you finish. Check which commits touch code on your target and rerun those benches as a separate, labelled set rather than mixing them into the pinned one.
+
 ## Lessons learned (ESP32-S3, Rust, ESP-IDF std)
 
 Toolchain
@@ -58,9 +70,17 @@ Board and timing
 - A crash that resets the chip (rst `USB_UART_CHIP_RESET`) drops the USB-Serial/JTAG port every few seconds: capture tools must reopen the port and keep logging, or the evidence is lost.
 - Pin the bench thread to core 1 at high priority with a big stack (96 KB for ML-KEM/curves); watchdogs off; no WiFi; check 240 MHz at boot and print it.
 - CCOUNT through `xthal_get_ccount()`; it wraps at 2^32 (about 17.9 s at 240 MHz), so keep samples short (2 ms) and use wrapping subtraction.
-- Cycle counts that repeat to 0.0% are not robust: relinking the same benches (adding display code) moved competitors' 32-64 B rows by 0.6-1.6x on a 16 KB flash-backed instruction cache. Rebuild with a changed layout once and report the shift as the small-input margin.
+- Cycle counts that repeat to 0.0% are not robust. On a 16 KB flash-backed instruction cache, relinking the same benches moves short-input rows a lot:
+  - an added display feature moved competitors' 32-64 B rows by 0.6-1.6x
+  - an added harness function moved `sha256/rustcrypto/32B` by 0.12x, and also rind's own rows (by 0.48x)
+
+  ring's small C loops and the 16 KB rows barely move. Relink at least once, publish the per-row shift with a check on whether any gap verdict flips (none did, though magnitudes halved), and never claim one library is layout-immune from a single relink.
+- **espflash sets the SPI flash clock in the image header when it flashes, and defaults to 40 MHz whatever `sdkconfig` says.** The app keeps the bootloader's clock. Always pass `--flash-freq 80mhz`, and confirm the bootloader's `Boot SPI Speed` line in every run log (the report prints it, and the verifier fails a set that mixes clocks). The first published set ran at 40 MHz, which made cache-missing rows (SHA-512, short SHA-256) 1.92x slow and biased them against cached code such as ring.
+- Before you blame compute for a 30-150x gap between boards, rebuild with a 32 KB instruction cache. ring's and libcrux's X25519/P-256 dropped 15-23x (cache thrash), but libcrux's P-256 dropped only 4% (opt-level `s`), so one diagnostic build sorts them.
 - Try a bigger instruction cache as a diagnostic (`CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB`): it separates cache misses from compute, and turned rind's 6.6x SHA-256 gap into 1.06x. Publish at the default and say so.
 - espflash flashes its own bundled bootloader unless you pass the build's: record which one was used.
+- Display pages: keep every heading unique and fitting at the panel's font. Fail generation on duplicates or overlap rather than truncating: truncated headings merged three QUIC pages into one and turned "1350B" into "135".
+- `git submodule update --init` (inside a patch script) resets a submodule you checked out at another commit by hand. Restore the pin with `checkout <pin>` before you rerun the script, and regenerate pinned reports only from the pinned tree.
 
 Shared machines and other boards
 - rind's `admin/bench-report run` refuses a host where other work keeps over 10% of the CPUs busy. If a resident load (someone's stream) may not be stopped, relax `BUSY_SHARE` in a reverted local edit, pin with `taskset` to one physical core's SMT pair, and record governor, boost, EPP and load; it still marks the run `noisy`. Outside Nix, `RUSTUP_TOOLCHAIN=<flake.nix's version> IN_RIND_DEV_SHELL=1` stands in for the dev shell.
