@@ -37,7 +37,7 @@ description: >-
 Give the repo URLs, what ran vs. what failed (with reasons), a headline table comparing the target library with the best competitor per operation, surprises, and open issues.
 
 ## 6. Verify before you publish
-- Recompute every published number from raw with a separate script that shares no code with the report generator (rind-results' `tools/verify.py`): table cells, chart labels, display pages, the fastest-library call, ratios and spreads. It found two real errors the generator could not see in itself: truncated OLED headings that merged three pages, and provenance taken from HEAD at report time.
+- Recompute every published number from raw with a separate program that shares no code with the report generator (rind-results' `cargo verify`, its own crate beside `cargo xtask`): table cells, chart labels, display pages, the fastest-library call, ratios and spreads. It found two real errors the generator could not see in itself: truncated OLED headings that merged three pages, and provenance taken from HEAD at report time.
 - Record provenance when you build, not when you report: per image, its sha256, the source commits, the patches applied, and the build time (`images.json`). A tree that has moved on since will name the wrong commit.
 - Recheck by reflashing the published images, verified by hash, and rerunning them. Medians should land within max(1%, run spread). If they do, the remaining uncertainty is in the build, not in the noise.
 - Build the benchmark's own checks into the firmware:
@@ -48,6 +48,8 @@ Give the repo URLs, what ran vs. what failed (with reasons), a headline table co
 - Compare the board to public figures for the same chip. Look for the vendor's minimum hardware throughput and for third-party software numbers.
 - Gaps outside the upstream report's operation list (a bench file the pinned report doesn't know, such as SHA-3 at 99b509a) still need a recorded reason. The report generator won't ask for one, so check by hand.
 - Re-pull upstream before you finish. Check which commits touch code on your target and rerun those benches as a separate, labelled set rather than mixing them into the pinned one.
+- When the pin moves, diff the upstream report generator too, not only the library: rind's `admin/bench-report` added SHA-3 to its operations between 99b509a and 98568332, so the same raw data suddenly had a gap that needed a gaps.toml entry.
+- Measure layout sensitivity cheaply with a relink: a build-time padding knob (`RIND_BENCH_PAD=<bytes>`, a never-executed static in the firmware's own `.text`) moves the library code without changing it. Run the short-input rows at two or three paddings and publish the spread; on fat LTO targets the padding shifts only part of the image, so record how far each library moved (`nm`).
 
 ## Lessons learned (ESP32-S3, Rust, ESP-IDF std)
 
@@ -98,7 +100,7 @@ Porting a criterion suite
 
 Media for sharing
 - Record with `script -q -e --log-timing T -c CMD LOG` (asciinema is rarely installed), then convert to an asciinema v2 cast and a plain log while replacing the home directory, user and host names; keep the raw log and timing out of git (byte offsets break if you edit the log itself).
-- Charts: a dependency-free SVG writer (log-scale ratio bars, green faster, red slower) plus `rsvg-convert` PNGs; screenshots: Markdown to HTML (python-markdown) in headless Chrome, shot tall and autocropped with Pillow.
+- Charts: a dependency-free SVG writer (log-scale ratio bars, green faster, red slower) plus `rsvg-convert` PNGs; screenshots: Markdown to HTML (pulldown-cmark) in headless Chrome, shot tall and autocropped (the `png` crate).
 - Render every display page on the host at native resolution and 4x from the same drawing code the firmware uses; that beats photographing a 0.96" panel.
 - Re-run one image while recording: it doubles as a reproducibility check (a rebuilt x25519 image matched the published run within 1.1%).
 - Scan for home paths before publishing: `sha256sum` with absolute paths leaked the home directory into a results file.
@@ -121,8 +123,8 @@ OLED demo (SSD1306 128x64 on I2C)
 - **Anything between timed calls evicts the cache.** A `println!` between two measurements of the same seal moved it from 20k to ~220k cycles. Time a call in a loop with nothing else in it, and print after.
 - **To rule the RNG in or out, count it.** getrandom 0.4's custom backend (`__getrandom_v03_custom`) can wrap `esp_fill_random` with call, byte and cycle counters, and a seeded SplitMix64 behind a feature gives a deterministic second build. Enable it with `--config 'target.xtensa-esp32s3-espidf.rustflags=["--cfg","getrandom_backend=\"custom\""]'`, because cargo merges `--config` arrays with `.cargo/config.toml`'s rustflags, while `RUSTFLAGS` would replace them.
 - **Profile without JTAG.** OpenOCD over the built-in USB-JTAG needs a root udev rule (`LIBUSB_ERROR_ACCESS`). A priority-24 FreeRTOS task on the other core can wake every tick and read the preempted task's saved PC and a0 from `pxTopOfStack` (words 1 and 3). Spin the operation on core 0, take 400 samples, then run `addr2line -fC` on them and classify by function. That showed rind's 1.27x ChaCha20-Poly1305 gap to ring is Poly1305 (libcrux HACL's 64-bit limbs, emulated on 32-bit Xtensa, at 58% of samples), not ChaCha20.
-- **Check the gap before deciding a fix "verified".** report.py refusing undocumented gaps is the point: every new row over 10% needs measured evidence (cache diagnostic, RNG count, profile), not a guess.
-- **A display build that embeds the published table goes stale whenever results change.** Regenerate the table (`demo_tsv.py`), rebuild the showcase, and only then flash it.
+- **Check the gap before deciding a fix "verified".** `cargo xtask report` refusing undocumented gaps is the point: every new row over 10% needs measured evidence (cache diagnostic, RNG count, profile), not a guess.
+- **A display build that embeds the published table goes stale whenever results change.** Regenerate the table (`cargo xtask demo-tsv`), rebuild the showcase, and only then flash it.
 
 ## Lessons learned (nRF52840 bare metal, a board that belongs to something else)
 
@@ -137,3 +139,14 @@ OLED demo (SSD1306 128x64 on I2C)
 - getrandom 0.4's custom backend symbol is still `__getrandom_v03_custom`.
 - The p256 image (with libcrux-ecdh pulling in X25519) overflowed 792 KB at codegen-units 16. Fat LTO fixed it; apply it to every image on that board so they're built alike, and disclose it.
 - The nRF RNG with bias correction takes about 170 µs per byte, so rows that draw randomness inside the timed loop (ML-KEM keygen/encaps) can be RNG-bound. Say so in the gap reason until it's measured.
+- A Meshtastic node leaves its watchdog running (90 s), and an nRF52 watchdog survives everything but a full reset; Adafruit's bootloader feeds it while in DFU, so the first bench image flashed straight from Meshtastic's DFU is reset about 100 s in, mid-run (here, aes_gcm run 1 after 128 of 173 results; the firmware's watchdog-reset path then sends it to the bootloader). Every later image runs clean. Either feed the watchdog from the harness when `WDT.RUNSTATUS` is set, or rerun the first image of the window after the others.
+- A capture that cannot even start a run (the port is gone) must still record that run as failed and write `runs.json`; aborting loses the record of what happened.
+
+## Lessons learned (rewriting the tooling)
+
+- Keep the tooling in the project's language: a Cargo `xtask` crate per repository (subcommands like rind's `admin/`), with the verifier a separate crate that shares no code with it. Only the shell that sets up a toolchain's environment (`env.sh`, sourced) and the installer that bootstraps rustup stay shell.
+- Prove the rewrite before deleting the old tools: regenerate every published artifact with both from the same inputs and diff. Byte-identical is reachable for JSON written by Python if the new writer copies `json.dumps` exactly: `indent`, `", "`/`": "` separators, `ensure_ascii` escapes (`µ` as `\u00b5`), float `repr` (shortest digits, `1e-05`, `1.5e+16`), ints kept as ints, insertion order (serde_json `preserve_order`, `float_roundtrip`), and `statistics.median` returning the middle element itself for odd counts.
+- Python's `f"{x:.2f}"` and Rust's `{:.2}` both round the exact binary value half to even, so fixed-point formatting matches; add thousands separators by hand.
+- PNGs match byte for byte when both sides use the same zlib at the same level (flate2's `zlib` feature links the system library Python uses); screenshots from a browser are compared by pixels instead.
+- When the source of truth is a Python file built with comprehensions (rind's `SECTIONS`), snapshot its evaluated tables into JSON stamped with the file's sha256, and make every command refuse a stale snapshot.
+- A serial capture can be checked offline: rebuild each run's `.jsonl` from its `.log` (`capture --replay`) and compare with what was published.
