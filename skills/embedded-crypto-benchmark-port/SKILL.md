@@ -46,6 +46,7 @@ Give the repo URLs, what ran vs. what failed (with reasons), a headline table co
   - an empty `iter` and `iter_batched` as the harness's own cost. Report it next to the fastest row; don't subtract it.
 - Check that time grows with input size within one message shape. A row that gets faster as its input grows may have been optimised out. Equal-block sizes such as SHA-512 at 32 B and 64 B are the exception.
 - Compare the board to public figures for the same chip. Look for the vendor's minimum hardware throughput and for third-party software numbers.
+- Gaps outside the upstream report's operation list (a bench file the pinned report doesn't know, such as SHA-3 at 99b509a) still need a recorded reason. The report generator won't ask for one, so check by hand.
 - Re-pull upstream before you finish. Check which commits touch code on your target and rerun those benches as a separate, labelled set rather than mixing them into the pinned one.
 
 ## Lessons learned (ESP32-S3, Rust, ESP-IDF std)
