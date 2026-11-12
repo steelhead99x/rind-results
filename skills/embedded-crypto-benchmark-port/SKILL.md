@@ -65,6 +65,8 @@ Board and timing
 Shared machines and other boards
 - rind's `admin/bench-report run` refuses a host where other work keeps over 10% of the CPUs busy. If a resident load (someone's stream) may not be stopped, relax `BUSY_SHARE` in a reverted local edit, pin with `taskset` to one physical core's SMT pair, and record governor, boost, EPP and load; it still marks the run `noisy`. Outside Nix, `RUSTUP_TOOLCHAIN=<flake.nix's version> IN_RIND_DEV_SHELL=1` stands in for the dev shell.
 - Don't run builds on the same machine while a host benchmark runs.
+- `taskset` shrinks `os.cpu_count()`'s view for tools that use the affinity mask: rind's `build_cost` step then judged 1.4 busy CPUs against a 2-CPU limit and refused. Pin only the timed step, or expect build cost to be skipped.
+- A noisy host run still shows its noise in place: one row at 3.8x its twin (aes256-gcm-open/1350B vs aes128) is the tell. Flag such rows rather than publish them as gaps.
 - Check what else uses a serial port before touching it (`/proc/*/fd`, systemd user units): a "BOOT" USB product string (Seeed's T1000-E reports `T1000-E-BOOT` even running Meshtastic) does not mean the board is in its bootloader; look for a mass-storage interface (class 08) instead.
 - Another agent's `espflash board-info` on the bench port mid-run left the capture waiting forever: give captures a per-run timeout well under the default, and coordinate port ownership.
 
@@ -72,6 +74,13 @@ Porting a criterion suite
 - A tiny criterion API shim renamed `criterion` lets the upstream bench files compile unchanged via `#[path]` modules; print one JSON line per result with upstream's IDs so upstream's report tool can read them.
 - Cross-check every AEAD on the bench's own input (e.g. 1350 B), not only the RFC vector, and run KATs with heap and stack guards: a heap corruption showed up as a crash in a `Vec` realloc right after a library's seal, before any timing.
 - Capture script: reset via RTS, read until a `done` record, treat a panic or reboot banner as a failed run, and keep the raw log next to the JSONL.
+
+Media for sharing
+- Record with `script -q -e --log-timing T -c CMD LOG` (asciinema is rarely installed), then convert to an asciinema v2 cast and a plain log while replacing the home directory, user and host names; keep the raw log and timing out of git (byte offsets break if you edit the log itself).
+- Charts: a dependency-free SVG writer (log-scale ratio bars, green faster, red slower) plus `rsvg-convert` PNGs; screenshots: Markdown to HTML (python-markdown) in headless Chrome, shot tall and autocropped with Pillow.
+- Render every display page on the host at native resolution and 4x from the same drawing code the firmware uses; that beats photographing a 0.96" panel.
+- Re-run one image while recording: it doubles as a reproducibility check (a rebuilt x25519 image matched the published run within 1.1%).
+- Scan for home paths before publishing: `sha256sum` with absolute paths leaked the home directory into a results file.
 
 OLED demo (SSD1306 128x64 on I2C)
 - Keep the UI as a `no_std` embedded-graphics crate drawing onto any `DrawTarget`, plus a host `Frame` target so every screen renders to PBM/PNG/Markdown text without the board.
