@@ -127,6 +127,19 @@ Known-answer checks: pad0 48/48, pad2053 48/48. Runs: 3 and 3. Rows: 42 in both.
 
 0 of 42 rows moved by more than max(1%, run spread).
 
+## ed25519
+
+Known-answer checks: pad0 12/12, pad2053 12/12. Runs: 3 and 3. Rows: 12 in both.
+
+| Library | Inputs | Rows | Median | Range |
+|---|---|---:|---:|---|
+| dalek | per op | 3 | 1.000 | 0.999 to 1.001 |
+| libcrux | per op | 3 | 1.000 | 1.000 to 1.000 |
+| rind | per op | 3 | 1.000 | 0.999 to 1.001 |
+| ring | per op | 3 | 1.001 | 1.000 to 1.003 |
+
+0 of 12 rows moved by more than max(1%, run spread).
+
 ## hkdf
 
 Known-answer checks: pad0 12/12, pad2053 12/12. Runs: 3 and 3. Rows: 38 in both.
@@ -182,6 +195,38 @@ Known-answer checks: pad0 12/12, pad2053 12/12. Runs: 3 and 3. Rows: 102 in both
 | `hmac-sha256/libcrux/1350B` | 145,787 | 144,172 | 0.989 |
 | `hmac-sha256/rustcrypto/32B` | 42,476 | 42,049 | 0.990 |
 
+## mlkem768
+
+Known-answer checks: pad0 9/9, pad2053 9/9. Runs: 3 and 3. Rows: 12 in both.
+
+| Library | Inputs | Rows | Median | Range |
+|---|---|---:|---:|---|
+| libcrux-ml-kem | per op | 4 | 1.002 | 1.000 to 1.009 |
+| rind | per op | 4 | 1.000 | 0.999 to 1.002 |
+| rustcrypto | per op | 4 | 1.000 | 1.000 to 1.003 |
+
+0 of 12 rows moved by more than max(1%, run spread).
+
+## p256
+
+Known-answer checks: pad0 12/12, pad2053 12/12. Runs: 3 and 3. Rows: 21 in both.
+
+| Library | Inputs | Rows | Median | Range |
+|---|---|---:|---:|---|
+| libcrux | per op | 4 | 0.999 | 0.999 to 0.999 |
+| p256-rustcrypto | per op | 2 | 1.002 | 1.001 to 1.003 |
+| rind | per op | 9 | 0.999 | 0.997 to 1.000 |
+| ring | per op | 4 | 1.008 | 1.003 to 1.013 |
+| rustcrypto | per op | 2 | 1.022 | 1.000 to 1.044 |
+
+3 of 21 rows moved by more than max(1%, run spread):
+
+| Row | pad0 cycles | pad2053 cycles | B/A |
+|---|---:|---:|---:|
+| `p256-ecdsa-sign/rustcrypto` | 6,420,520 | 6,699,862 | 1.044 |
+| `p256-ecdsa-sign/ring` | 41,289,166 | 41,819,317 | 1.013 |
+| `p256-keygen/ring` | 40,190,689 | 40,694,625 | 1.013 |
+
 ## sha2
 
 Known-answer checks: pad0 39/39, pad2053 39/39. Runs: 3 and 3. Rows: 74 in both.
@@ -209,6 +254,34 @@ Known-answer checks: pad0 39/39, pad2053 39/39. Runs: 3 and 3. Rows: 74 in both.
 | `sha256/rind/1350B` | 129,167 | 133,429 | 1.033 |
 | `sha256-updates/rind/16B` | 641,418 | 650,203 | 1.014 |
 | `sha256/rustcrypto/1200B` | 102,135 | 100,981 | 0.989 |
+
+## sha3
+
+Known-answer checks: pad0 45/45, pad2053 45/45. Runs: 3 and 3. Rows: 54 in both.
+
+| Library | Inputs | Rows | Median | Range |
+|---|---|---:|---:|---|
+| libcrux | long | 12 | 1.000 | 1.000 to 1.000 |
+| libcrux | short | 6 | 1.000 | 1.000 to 1.000 |
+| rind | long | 12 | 1.000 | 1.000 to 1.000 |
+| rind | short | 6 | 1.000 | 1.000 to 1.000 |
+| rustcrypto | long | 12 | 1.000 | 1.000 to 1.000 |
+| rustcrypto | short | 6 | 1.000 | 1.000 to 1.000 |
+
+0 of 54 rows moved by more than max(1%, run spread).
+
+## x25519
+
+Known-answer checks: pad0 12/12, pad2053 12/12. Runs: 3 and 3. Rows: 9 in both.
+
+| Library | Inputs | Rows | Median | Range |
+|---|---|---:|---:|---|
+| dalek | per op | 2 | 1.000 | 1.000 to 1.001 |
+| libcrux | per op | 2 | 1.003 | 1.003 to 1.003 |
+| rind | per op | 3 | 1.000 | 0.996 to 1.000 |
+| ring | per op | 2 | 0.999 | 0.998 to 1.001 |
+
+0 of 9 rows moved by more than max(1%, run spread).
 
 ## xchacha20poly1305
 
