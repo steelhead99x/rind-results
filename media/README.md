@@ -57,10 +57,11 @@ Every published run's full serial console is in [`../results/raw/<bench>/run-N.l
 (and the diagnostic runs' in [`../results/diag`](../results/diag)), with the parsed JSON records
 beside each. [`serial/x25519-recorded-run.log`](serial/x25519-recorded-run.log) is the run captured in the
 recording above. That rebuild's `x25519.elf` hashes to `a22dc0eb…`
-([`../results/images-recorded-rebuild.sha256`](../results/images-recorded-rebuild.sha256)), not the
-published `f806b1bd…` in [`../results/images.sha256`](../results/images.sha256): it was built after the bench
-thread's stack went from 96 KB to 160 KB, and it carries a newer ESP-IDF build timestamp. The published
-x25519 rows come from `f806b1bd…`; the rebuild matched them within 1.1% on every row.
+([`images-recorded-rebuild.sha256`](../results/diag/esp32s3-40mhz-2026-11-11/images-recorded-rebuild.sha256)), not
+`f806b1bd…`, the image of the first (40 MHz) published set
+([`images.sha256`](../results/diag/esp32s3-40mhz-2026-11-11/images.sha256)): it was built after the bench
+thread's stack went from 96 KB to 160 KB, and it carries a newer ESP-IDF build timestamp; it matched
+that set within 1.1% on every row. The recording predates the 80 MHz rerun now in `../results/`.
 
 The nRF52840 runs' consoles are in [`../results/raw-nrf52840/<bench>/`](../results/raw-nrf52840), and
 [`serial/nrf52840-x25519-run-1.log`](serial/nrf52840-x25519-run-1.log) is one of them; the UF2 and ELF hashes of
