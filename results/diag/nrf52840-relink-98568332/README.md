@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # nRF52840: relinked build at rind 98568332
 
+> **Correction (2026-11-12, 15:50 PST).** This relink did not move the libraries: `--pad` then put its static after the Rust code, so rind, libcrux, ring's Rust and RustCrypto moved 8 bytes (only ring's assembly and compiler_builtins moved about 1 KB; see `arm-none-eabi-nm -n`). The relinks in [`../nrf52840-relink-fixed-98568332/`](../nrf52840-relink-fixed-98568332/) move every library by about 1 KB and 2 KB and reach the same conclusion for the short inputs.
+
 The same source as the published set (`results/raw-nrf52840/`), rebuilt with rind-bench's `cargo xtask build-images nrf --pad 1031 --out images-pad1031`, which links a never-executed 1031-byte static into the firmware's `.text` and so shifts the code after it.
 
 - aes_gcm, chacha20poly1305 and sha2 ran in the published window, 2026-11-12 12:36-12:47 PST.
