@@ -21,6 +21,7 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core o
 
 - OS: ESP-IDF v5.5.1 (FreeRTOS), bare board
 - SPI flash clock, as the bootloader reported it each boot: 40 MHz (espflash's default; see the README)
+- Toolchain: rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0); xtensa-esp-elf GCC 14.2.0 (esp-14.2.0_20241119)
 - Runs: 33 of 33 completed, one firmware image per rind-bench bench file
   - aes_gcm run 1: ok, 171 results, 2026-11-12T07:19:43+00:00 to 2026-11-12T07:21:08+00:00 (UTC)
   - aes_gcm run 2: ok, 171 results, 2026-11-12T07:21:08+00:00 to 2026-11-12T07:22:33+00:00 (UTC)
@@ -266,7 +267,7 @@ rind-results/tools/setup-toolchain.sh rind-bench   # espup, espflash, ldproxy, a
 cd rind-bench && scripts/apply-patches.sh && scripts/vendor-ring.sh
 (cd esp32 && ./build-images.sh)   # images/<bench>.elf; check sha256 against images.sha256
 cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... tools/run-all.sh ../rind-bench/esp32/images
-python3 tools/report.py --raw results/raw --rind ../rind-bench/rind --firmware ../rind-bench/esp32 --sizes results/sizes.json --images results/images.json --out results
+python3 tools/report.py --raw results/raw --rind ../rind-bench/rind --firmware ../rind-bench/esp32 --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results
 python3 tools/verify.py   # recomputes every published number from raw
 ```
 
