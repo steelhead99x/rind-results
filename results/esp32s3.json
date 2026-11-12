@@ -4,19 +4,14 @@
  "commit": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
  "upstream_commit": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
  "started": "2026-11-12T07:19:43+00:00",
- "finished": "2026-11-12T08:15:59+00:00",
+ "finished": "2026-11-12T17:10:56+00:00",
  "cpu": {
   "model": "Espressif ESP32-S3 (Xtensa LX7), 240 MHz",
   "arch": "xtensa",
   "logical_cpus": 1
  },
  "os": "ESP-IDF v5.5.1 (FreeRTOS), bare board",
- "toolchain": {
-  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0)",
-  "gcc": "xtensa-esp-elf GCC 14.2.0 (esp-14.2.0_20241119)",
-  "esp_idf": "v5.5.1",
-  "espflash": "4.7.0"
- },
+ "toolchain": {},
  "libraries": {
   "rind": {
    "rind": "0.3.2"
@@ -62,21 +57,24 @@
   "backend": "portable",
   "has_aes_hardware": false
  },
- "status": "partial",
+ "status": "ok",
  "criterion_args": [
   "rind-bench-criterion-esp: CCOUNT cycles, 0.2 s warm-up, 2 ms samples, 11-51 samples per benchmark"
  ],
  "load": {
   "runs": 33,
-  "ok_runs": 27
+  "ok_runs": 33
  },
  "note": "One core of an ESP32-S3 at 240 MHz, timed with its cycle counter on core 1; no radio, PSRAM off.",
  "port": {
   "repo": "https://github.com/steelhead99x/rind-bench",
-  "commit": "669571c20c585e3fc59c63448d3351158cc65768",
+  "commit": "a26b1a3f3477fe3de79ea251c056ea6565034879",
   "patches": [
    "0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch",
-   "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa.patch"
+   "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch",
+   "0003-feat-build-for-bare-metal-targets-without-std.patch",
+   "ring-0.17.14-thumbv7em.patch",
+   "ring-0.17.14-xtensa-poly1305-align.patch"
   ]
  },
  "results": [
@@ -793,6 +791,174 @@
    "cycles": 149950.3,
    "cycles_per_byte": 4685.948,
    "run_spread_pct": 0.11626073513851065
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/1350B",
+   "library": "libcrux",
+   "id": "chacha20poly1305/libcrux/1350B",
+   "ns": 871527.083,
+   "ns_low": 871527.083,
+   "ns_high": 871527.083,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 209166.5,
+   "cycles_per_byte": 154.938,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/16KB",
+   "library": "libcrux",
+   "id": "chacha20poly1305/libcrux/16KB",
+   "ns": 6964029.167,
+   "ns_low": 6964016.667,
+   "ns_high": 6964029.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1671367.0,
+   "cycles_per_byte": 102.012,
+   "run_spread_pct": 0.00017949379160031307
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/32B",
+   "library": "libcrux",
+   "id": "chacha20poly1305/libcrux/32B",
+   "ns": 84917.604,
+   "ns_low": 84916.979,
+   "ns_high": 84919.167,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 20380.2,
+   "cycles_per_byte": 636.882,
+   "run_spread_pct": 0.0025766153270111634
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/1350B",
+   "library": "rind",
+   "id": "chacha20poly1305/rind/1350B",
+   "ns": 616504.167,
+   "ns_low": 616504.167,
+   "ns_high": 616504.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 147961.0,
+   "cycles_per_byte": 109.601,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/16KB",
+   "library": "rind",
+   "id": "chacha20poly1305/rind/16KB",
+   "ns": 6770308.333,
+   "ns_low": 6770295.833,
+   "ns_high": 6770308.333,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1624874.0,
+   "cycles_per_byte": 99.174,
+   "run_spread_pct": 0.00018462970052740728
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/32B",
+   "library": "rind",
+   "id": "chacha20poly1305/rind/32B",
+   "ns": 55296.059,
+   "ns_low": 55296.059,
+   "ns_high": 55296.059,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 13271.1,
+   "cycles_per_byte": 414.72,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/1350B",
+   "library": "ring",
+   "id": "chacha20poly1305/ring/1350B",
+   "ns": 470026.042,
+   "ns_low": 470026.042,
+   "ns_high": 470026.042,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 112806.2,
+   "cycles_per_byte": 83.56,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/16KB",
+   "library": "ring",
+   "id": "chacha20poly1305/ring/16KB",
+   "ns": 5335558.333,
+   "ns_low": 5335558.333,
+   "ns_high": 5335558.333,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1280534.0,
+   "cycles_per_byte": 78.158,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/32B",
+   "library": "ring",
+   "id": "chacha20poly1305/ring/32B",
+   "ns": 37037.5,
+   "ns_low": 37037.5,
+   "ns_high": 37037.5,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 8889.0,
+   "cycles_per_byte": 277.781,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "chacha20poly1305/rustcrypto/1350B",
+   "ns": 563502.778,
+   "ns_low": 563502.778,
+   "ns_high": 563502.778,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 135240.7,
+   "cycles_per_byte": 100.178,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "chacha20poly1305/rustcrypto/16KB",
+   "ns": 6456279.167,
+   "ns_low": 6456279.167,
+   "ns_high": 6456337.5,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1549507.0,
+   "cycles_per_byte": 94.574,
+   "run_spread_pct": 0.0009035080189498708
+  },
+  {
+   "operation": "chacha20poly1305/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "chacha20poly1305/rustcrypto/32B",
+   "ns": 39082.026,
+   "ns_low": 39082.026,
+   "ns_high": 39082.026,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 9379.7,
+   "cycles_per_byte": 293.115,
+   "run_spread_pct": 0.0
   },
   {
    "operation": "ed25519-sign/{lib}",
@@ -1913,6 +2079,132 @@
    "cycles": 167160273.0,
    "cycles_per_byte": null,
    "run_spread_pct": 0.0006873642758408273
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/1350B",
+   "library": "libcrux",
+   "id": "xchacha20poly1305/libcrux/1350B",
+   "ns": 3127162.5,
+   "ns_low": 3127087.5,
+   "ns_high": 3127262.5,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 750519.0,
+   "cycles_per_byte": 555.94,
+   "run_spread_pct": 0.00559612747978399
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/16KB",
+   "library": "libcrux",
+   "id": "xchacha20poly1305/libcrux/16KB",
+   "ns": 9020512.5,
+   "ns_low": 9020175.0,
+   "ns_high": 9020575.0,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 2164923.0,
+   "cycles_per_byte": 132.136,
+   "run_spread_pct": 0.0044343378494292865
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/32B",
+   "library": "libcrux",
+   "id": "xchacha20poly1305/libcrux/32B",
+   "ns": 2177050.0,
+   "ns_low": 2177050.0,
+   "ns_high": 2177075.0,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 522492.0,
+   "cycles_per_byte": 16327.875,
+   "run_spread_pct": 0.0011483429411359408
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/1350B",
+   "library": "rind",
+   "id": "xchacha20poly1305/rind/1350B",
+   "ns": 2814875.0,
+   "ns_low": 2814487.5,
+   "ns_high": 2815550.0,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 675570.0,
+   "cycles_per_byte": 500.422,
+   "run_spread_pct": 0.03774590345930103
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/16KB",
+   "library": "rind",
+   "id": "xchacha20poly1305/rind/16KB",
+   "ns": 8895562.5,
+   "ns_low": 8895525.0,
+   "ns_high": 8895562.5,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 2134935.0,
+   "cycles_per_byte": 130.306,
+   "run_spread_pct": 0.00042155850178108466
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/32B",
+   "library": "rind",
+   "id": "xchacha20poly1305/rind/32B",
+   "ns": 2094175.0,
+   "ns_low": 2094150.0,
+   "ns_high": 2094200.0,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 502602.0,
+   "cycles_per_byte": 15706.312,
+   "run_spread_pct": 0.0023875750593909295
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "xchacha20poly1305/rustcrypto/1350B",
+   "ns": 684112.5,
+   "ns_low": 684064.583,
+   "ns_high": 684127.083,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 164187.0,
+   "cycles_per_byte": 121.62,
+   "run_spread_pct": 0.009135924281459555
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "xchacha20poly1305/rustcrypto/16KB",
+   "ns": 6569962.5,
+   "ns_low": 6569925.0,
+   "ns_high": 6570200.0,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1576791.0,
+   "cycles_per_byte": 96.24,
+   "run_spread_pct": 0.004185716432932455
+  },
+  {
+   "operation": "xchacha20poly1305/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "xchacha20poly1305/rustcrypto/32B",
+   "ns": 160378.819,
+   "ns_low": 160371.528,
+   "ns_high": 160380.556,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 38490.9,
+   "cycles_per_byte": 1202.841,
+   "run_spread_pct": 0.005629172266208206
   }
  ]
 }
