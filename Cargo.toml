@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The repository's tooling: `cargo xtask <command>` generates every published
+# artifact, and `cargo verify` re-checks them from the raw runs. The two
+# crates share no code.
+[workspace]
+resolver = "3"
+members = ["tools/xtask", "tools/verify"]
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0 OR ISC OR MIT-0"
+publish = false
+rust-version = "1.85"
+
+[profile.release]
+debug = false
