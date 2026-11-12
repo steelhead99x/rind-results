@@ -139,7 +139,10 @@ OLED demo (SSD1306 128x64 on I2C)
 - getrandom 0.4's custom backend symbol is still `__getrandom_v03_custom`.
 - The p256 image (with libcrux-ecdh pulling in X25519) overflowed 792 KB at codegen-units 16. Fat LTO fixed it; apply it to every image on that board so they're built alike, and disclose it.
 - The nRF RNG with bias correction takes about 170 µs per byte, so rows that draw randomness inside the timed loop (ML-KEM keygen/encaps) can be RNG-bound. Say so in the gap reason until it's measured.
-- A Meshtastic node leaves its watchdog running (90 s), and an nRF52 watchdog survives everything but a full reset; Adafruit's bootloader feeds it while in DFU, so the first bench image flashed straight from Meshtastic's DFU is reset about 100 s in, mid-run (here, aes_gcm run 1 after 128 of 173 results; the firmware's watchdog-reset path then sends it to the bootloader). Every later image runs clean. Either feed the watchdog from the harness when `WDT.RUNSTATUS` is set, or rerun the first image of the window after the others.
+- The first bench image flashed straight out of Meshtastic's DFU can reset about 90 s in (here aes_gcm run 1, after 128 of 167 results; `results/diag/nrf52840-watchdog-2026-11-12/`), while every later image runs clean, including the same image flashed again. The likely cause is the nRF52 hardware watchdog Meshtastic starts, which only a reset stops; unconfirmed until the firmware reads `NRF_WDT->RUNSTATUS`. Queue a second copy of the first image at the end of the window, or feed the watchdog from the harness when it is running.
+- Bound the window on a board someone else relies on: start with the published set, put relinks after it, and trim the relink queue if the window runs long (move images out of the directory before run-all reaches it; it lists the directory when it starts).
+- A user service with `Restart=` can show `active` again seconds after you stop it while its device is away; measure downtime from the service's own "connected" line, not from `systemctl is-active`.
+- A relink can move a short-input ratio on one board and not another: on the ESP32-S3 SHA-256 64B ranged 2.36x-3.55x libcrux over three layouts, on the nRF52840 no ratio moved more than 0.02. Publish per-layout ratios and the ratio of the medians over layouts (`cargo xtask relink --short`), not one layout's number.
 - A capture that cannot even start a run (the port is gone) must still record that run as failed and write `runs.json`; aborting loses the record of what happened.
 
 ## Lessons learned (rewriting the tooling)
@@ -149,4 +152,5 @@ OLED demo (SSD1306 128x64 on I2C)
 - Python's `f"{x:.2f}"` and Rust's `{:.2}` both round the exact binary value half to even, so fixed-point formatting matches; add thousands separators by hand.
 - PNGs match byte for byte when both sides use the same zlib at the same level (flate2's `zlib` feature links the system library Python uses); screenshots from a browser are compared by pixels instead.
 - When the source of truth is a Python file built with comprehensions (rind's `SECTIONS`), snapshot its evaluated tables into JSON stamped with the file's sha256, and make every command refuse a stale snapshot.
+- Write through the destination's filesystem: `rename` out of the system temp dir fails across filesystems (`EXDEV`), so copy.
 - A serial capture can be checked offline: rebuild each run's `.jsonl` from its `.log` (`capture --replay`) and compare with what was published.
