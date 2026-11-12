@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the esp32s3 host: each report operation where
+# another Rust library beats rind by more than 10%, in rind's
+# benchmarks/gaps.toml format. tools/report.py refuses a gap without an entry
+# and an entry that covers no gap. No quest exists for these (rind has no
+# Xtensa quest), so each carries a reason.
+
+[[gap]]
+operations = ["sha512/{lib}/*"]
+on = ["esp32s3"]
+reason = "Not compute: rind's portable SHA-512 (libcrux-sha2, the same code as the libcrux row, which rind matches within 1%) and RustCrypto's are fully unrolled 64-bit code, about 22,000 Xtensa instructions per block, far past the 16 KB (or 32 KB) instruction cache, so every block streams its code from DIO flash: about 1.5 M cycles a block, which is the flash's bandwidth. ring's C is a small loop that stays cached. A 32 KB cache changed nothing. A fix would be a rolled compression loop on targets without 64-bit registers, or placing it in IRAM."
+
+[[gap]]
+operations = ["sha256/{lib}/64B", "sha256/{lib}/1350B"]
+on = ["esp32s3"]
+reason = "Instruction-cache misses: with ESP-IDF's default 16 KB instruction cache, rind's one-shot SHA-256 path (its wrapper over libcrux-sha2, plus padding and wiping) misses the cache on every call, a fixed ~250 µs. Rebuilt with a 32 KB cache (sdkconfig.icache32, a diagnostic run in results/diag), sha256/rind/64B went from 300 µs to 46 µs, 1.06x libcrux's 43 µs, and 1350B to 459 µs, 1.01x libcrux. The per-block cost matches libcrux's at 16 KB too (16KB rows within 10%)."
+
+[[gap]]
+operations = ["hmac-sha256/{lib}/*", "hkdf-sha256/*"]
+on = ["esp32s3"]
+reason = "The SHA-256 instruction-cache misses above, paid on each of HMAC's inner and outer hashes and HKDF's blocks. With a 32 KB instruction cache (results/diag/hmac-icache32, hkdf-icache32) rind is the fastest: hmac-sha256 64B 116 µs against ring's 140 µs, 1350B 529 µs against libcrux's 529 µs and ring's 631 µs, hkdf-sha256 expand 50 µs against RustCrypto's 49 µs and ring's 61 µs, extract-expand 193 µs against ring's 231 µs."
