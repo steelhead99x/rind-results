@@ -11,6 +11,7 @@ mod demo_tsv;
 mod host_run;
 mod md2png;
 mod py;
+mod relink;
 mod report;
 mod run_all;
 mod script2cast;
@@ -34,6 +35,8 @@ enum Cmd {
     Report(report::Args),
     /// Compare two sets of board runs of the same benches, row by row
     Compare(compare::Args),
+    /// rind over the fastest other library across relinked (layout-shifted) builds
+    Relink(relink::Args),
     /// Write the OLED demo's page table from a board's report JSON
     DemoTsv(demo_tsv::Args),
     /// Draw rind-over-fastest SVG charts from report JSON
@@ -68,6 +71,7 @@ fn main() -> ExitCode {
         Cmd::Report(a) => report::run(a),
         Cmd::Compare(a) => compare::run(a),
         Cmd::DemoTsv(a) => demo_tsv::run(a),
+        Cmd::Relink(a) => relink::run(a),
         Cmd::Charts(a) => charts::run(a),
         Cmd::Sizes(a) => sizes::run(a),
         Cmd::Capture(a) => return capture_exit(capture::capture(capture::Board::Esp, a)),
