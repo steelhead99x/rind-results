@@ -34,6 +34,7 @@ def main():
     by = {}
     for r in host["results"]:
         by.setdefault(r["operation"], {})[r["library"]] = r["ns"]
+    print("# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0")
     print("# rind-bench OLED demo pages, from " + args.host)
     for _, ops in br.SECTIONS:
         for op in ops:

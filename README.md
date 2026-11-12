@@ -12,6 +12,11 @@ Results, capture and report tools, and run logs for
 Both JSON files are in rind's `benchmarks/data/<host>.json` schema 1, so they line up with
 rind's [BENCHMARKS.md](upstream/rind/BENCHMARKS.md) and `admin/bench-report summary` can read them.
 
+![rind's time over the fastest other Rust library on the ESP32-S3](media/charts/esp32s3-rind-vs-fastest.svg)
+
+Charts, screenshots, the OLED pages rendered at native and 4x, terminal recordings of the checks,
+builds, flashes and runs, and the serial logs: [media/](media/README.md).
+
 ## Layout
 
 | Path | What |
@@ -24,7 +29,8 @@ rind's [BENCHMARKS.md](upstream/rind/BENCHMARKS.md) and `admin/bench-report summ
 | `results/sizes.json`, `meta-esp32s3.json`, `images.sha256` | code size by crate group, toolchain and board facts, the images measured |
 | `results/demo.tsv` | the table the OLED demo cycles |
 | `results/host/` | the x86_64 host run: `msi-001.json` and its power and load facts |
-| `tools/` | `setup-toolchain.sh`, `run-all.sh` (flash and capture every image 3 times), `capture.py`, `report.py`, `sizes.py`, `demo_tsv.py`, `host-run.sh` |
+| `media/` | charts, screenshots, rendered OLED pages, terminal recordings ([index](media/README.md)) |
+| `tools/` | `charts.py`, `md2png.py`, `script2cast.py`, `setup-toolchain.sh`, `run-all.sh` (flash and capture every image 3 times), `capture.py`, `report.py`, `sizes.py`, `demo_tsv.py`, `host-run.sh` |
 | `upstream/rind/` | rind's agent guidance, quests, bench report tool, benchmark data and bench CI, verbatim, with attribution |
 | `skills/embedded-crypto-benchmark-port/` | a reusable agent skill for this kind of port, with lessons learned |
 
@@ -61,6 +67,15 @@ library. It refuses a gap of more than 10% without a `gaps.toml` entry, as rind 
   margin.
 - The hardware baseline (`esp32s3-hw`, mbedTLS on the accelerators) is 4x rind on AES-GCM 1350 B
   and 19-31x on SHA-256 at 1350 B-16 KB; it is not a Rust library and is never counted as a competitor.
+
+## What was found on msi-001 (x86_64)
+
+rind's own suite with every competitor (aws-lc-rs, ring, RustCrypto, graviola, libcrux, OpenSSL
+3.5.8), see [results/host/](results/host/README.md). The machine was busy (3.8 CPUs of other work
+on average), so bench-report marks the run noisy. rind is fastest or within 10% on 57 of 62 report
+operations; the five over 1.1x (`rustls-bulk/chacha20poly1305` 1.12x, `aes256-gcm-open/1350B`
+1.40x, which is not credible beside its 195 ns AES-128 twin, `p256-ecdsa-verify` 1.22x graviola,
+`rsa2048-pss-sha256-sign` 1.19x aws-lc-rs, `p521-ecdsa-verify` 1.14x aws-lc-rs) need a quiet rerun.
 
 ## Disclosures
 
