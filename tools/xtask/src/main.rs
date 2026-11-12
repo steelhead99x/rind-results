@@ -54,6 +54,8 @@ enum Cmd {
     Script2cast(script2cast::Args),
     /// Run rind's own `admin/bench-report run` on this Linux host
     HostRun(host_run::Args),
+    /// rustfmt --check, clippy -D warnings and the tests, for this workspace
+    Check,
     /// Refresh tools/bench-tables.json from rind's admin/bench-report
     BenchTables {
         #[arg(long)]
@@ -75,6 +77,7 @@ fn main() -> ExitCode {
         Cmd::Md2png(a) => md2png::run(a),
         Cmd::Script2cast(a) => script2cast::run(a),
         Cmd::HostRun(a) => host_run::run(a),
+        Cmd::Check => check(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
     };
     match r {
@@ -95,6 +98,33 @@ fn capture_exit(r: Result<bool, String>) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn check() -> Result<(), String> {
+    for args in [
+        &["fmt", "--all", "--check"][..],
+        &[
+            "clippy",
+            "-q",
+            "--release",
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ],
+        &["test", "-q", "--release"],
+    ] {
+        let st = Command::new(std::env::var("CARGO").unwrap_or("cargo".into()))
+            .args(args)
+            .current_dir(root())
+            .status()
+            .map_err(|e| format!("cargo: {e}"))?;
+        if !st.success() {
+            return Err(format!("cargo {} failed", args.join(" ")));
+        }
+        println!("cargo {}: ok", args[0]);
+    }
+    Ok(())
 }
 
 /// The repository root.

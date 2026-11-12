@@ -6,7 +6,7 @@ home directories, user and host names are replaced in the recordings.
 
 ## Charts
 
-rind's time over the fastest other Rust library, per report operation, log scale (`tools/charts.py`):
+rind's time over the fastest other Rust library, per report operation, log scale (`cargo xtask charts --png media/charts results/esp32s3.json results/nrf52840/nrf52840.json results/host/msi-001.json`):
 
 ![ESP32-S3](charts/esp32s3-rind-vs-fastest.svg)
 
@@ -18,7 +18,7 @@ PNG copies sit next to the SVGs for chat and slides.
 
 ## Screenshots
 
-Rendered from the Markdown with `tools/md2png.py` (headless Chrome):
+Rendered from the Markdown with `cargo xtask md2png` (headless Chrome):
 
 - [ESP32-S3 headline table](screenshots/esp32s3-headline.png)
 - [msi-001 summary (rind's `bench-report summary`)](screenshots/msi-001-summary.png)
@@ -27,7 +27,7 @@ Rendered from the Markdown with `tools/md2png.py` (headless Chrome):
 ## OLED pages
 
 The demo's SSD1306 128x64 pages (I2C0, SDA GPIO5, SCL GPIO6, address 0x3C), rendered on the host by
-rind-bench's `demo/oled-ui` (`cargo run --example render`, then `pbm2png.py`) from
+rind-bench's `demo/oled-ui` (`cargo xtask oled-media ../rind-results/results/demo.tsv ../rind-results/media/oled` in rind-bench) from
 `results/demo.tsv`: each page at the panel's native resolution (`@1x`) and 4x (`@4x`). They are
 the same drawing code the firmware runs, onto an in-memory frame instead of the panel.
 
@@ -43,11 +43,11 @@ All 32 pages are in [oled/](oled/).
 ## Terminal recordings
 
 asciinema v2 casts (`asciinema play media/terminal/<name>.cast`) with plain-text copies, made with
-`script --log-timing` and `tools/script2cast.py`:
+`script --log-timing` and `cargo xtask script2cast`:
 
 | Recording | What |
 |---|---|
-| [check](terminal/check.txt) ([cast](terminal/check.cast)) | `scripts/check.sh`: rustfmt and clippy `-D warnings` for all eleven images, the display build and examples, and the display UI |
+| [check](terminal/check.txt) ([cast](terminal/check.cast)) | `scripts/check.sh` (now `cargo xtask check`): rustfmt and clippy `-D warnings` for all eleven images, the display build and examples, and the display UI |
 | [build-flash-run](terminal/build-flash-run.txt) ([cast](terminal/build-flash-run.cast)) | build the `x25519` image, flash it, and capture one full run (it matched the published run within 1.1% on every row) |
 | [oled-showcase](terminal/oled-showcase.txt) ([cast](terminal/oled-showcase.cast)) | build and flash the display showcase, and its boot console |
 
