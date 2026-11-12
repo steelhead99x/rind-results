@@ -88,6 +88,15 @@ OLED demo (SSD1306 128x64 on I2C)
 - Layout that reads at 128x64: inverted 9 px title bar (5x8 font), 5 rows of 9 px with a 4-char library tag, bar scaled to the slowest (target filled, rivals outlined), value right-aligned in 5x8, 4x6 footer with "X 1.19x faster than Y". 4x6 is too small for numbers.
 - Don't commit rendered PNGs when the upstream rules forbid binaries or build artifacts; commit the renderer.
 
+- **Crashes inside a library's safe Rust on Xtensa: suspect stack realignment first.** LLVM-Xtensa realigns SP with a plain `add` after `entry` for any local aligned past 32 bytes (espressif/llvm-project#140). Window spills then corrupt live locals, and the crash shows up later in the caller, often as heap corruption. Scan the linked ELF: `objdump -d` for an `and aX, a1, …` within the first instructions of a function lists every affected function. ring's Poly1305 state (`align(64)`) was the only hit; rind-bench patches it to 16.
+- **Use Espressif's QEMU when the board misbehaves.** `idf_tools.py install qemu-xtensa` fails its self-test without the system SDL2 and libslirp. Extract the tarball instead, and put `libSDL2-2.0.so.0` from the `pysdl2-dll` wheel and `libslirp` from `dnf download` into a local `LD_LIBRARY_PATH`; no root is needed.
+  - Set the console to UART for that build.
+  - Skip `adc_hw_calibration` (it spins in QEMU) with a gdb `break` / `return`.
+  - Run QEMU under host gdb to read the guest PC and registers at a QEMU crash (`((XtensaCPU*)current_cpu)->env`), and break on `helper_exception_cause` to log the first guest exception.
+- **Layered sdkconfig files need absolute paths** once `CARGO_TARGET_DIR` points outside the crate. embuild resolves them against the target dir's parent and silently skips any that are missing.
+- **A reset-looping image can get the USB port disabled** by the host hub ("disabled by hub (EMI?)", "unable to enumerate"). Re-enabling it needs root or a physical replug. Build debug images with print-halt, and never leave a boot-looping image on the board.
+- **Clear exported env between steps** (`CARGO_TARGET_DIR`, `RUSTFLAGS`): a stale target dir silently copies the wrong ELF.
+
 ## Lessons learned (nRF52840 bare metal, a board that belongs to something else)
 
 - Borrowed board (a Meshtastic node): stop its user service, export config and `--info`, enter the UF2 bootloader and copy `CURRENT.UF2` + `INFO_UF2.TXT`, and check what `CURRENT.UF2` covers (here `0x1000`-`0xEA000`, family `0x28860057`, so it cannot be copied back as is). Compare its application range with the official release block for block, then build a family-`0xADA52840` restore UF2 of the exact app region from it. Checksum all of it before flashing anything.

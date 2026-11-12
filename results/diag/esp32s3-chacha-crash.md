@@ -36,5 +36,6 @@ repeated enumeration errors), and getting it back needs a physical replug.
 - The write-up and a 20-line repro are in rind-bench at `repro/xtensa-overalign/`.
   The repro fails at every opt-level and with fat LTO, on the esp toolchain
   1.97.0.0.
-- This is a ring-side workaround for a compiler bug. ring's own numbers on Xtensa
-  come from the patched build, which is disclosed here.
+- This is a ring-side workaround for a compiler bug. ring's ChaCha20-Poly1305 numbers
+  on Xtensa will come from the patched build. The other published ESP32-S3 rows
+  use unpatched ring, which never realigns outside `chacha20_poly1305::{seal,open}`.
