@@ -1,0 +1,1918 @@
+{
+ "schema": 1,
+ "host": "esp32s3",
+ "commit": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+ "upstream_commit": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+ "started": "2026-11-12T07:19:43+00:00",
+ "finished": "2026-11-12T08:15:59+00:00",
+ "cpu": {
+  "model": "Espressif ESP32-S3 (Xtensa LX7), 240 MHz",
+  "arch": "xtensa",
+  "logical_cpus": 1
+ },
+ "os": "ESP-IDF v5.5.1 (FreeRTOS), bare board",
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0)",
+  "gcc": "xtensa-esp-elf GCC 14.2.0 (esp-14.2.0_20241119)",
+  "esp_idf": "v5.5.1",
+  "espflash": "4.7.0"
+ },
+ "libraries": {
+  "rind": {
+   "rind": "0.3.2"
+  },
+  "aws-lc-rs": {
+   "aws-lc-rs": "1.19.0",
+   "aws-lc-sys": "0.47.0"
+  },
+  "ring": {
+   "ring": "0.17.14"
+  },
+  "rustcrypto": {
+   "aes-gcm": "0.11.1",
+   "chacha20poly1305": "0.11.0",
+   "sha2": "0.11.1",
+   "sha3": "0.12.0",
+   "hmac": "0.13.0",
+   "hkdf": "0.13.0",
+   "p256": "0.14.0",
+   "ml-kem": "0.3.4",
+   "ed25519-dalek": "3.0.0",
+   "x25519-dalek": "3.0.0"
+  },
+  "libcrux": {
+   "libcrux-aes": "0.0.10",
+   "libcrux-chacha20poly1305": "0.0.10",
+   "libcrux-ecdh": "0.0.9",
+   "libcrux-ecdsa": "0.0.9",
+   "libcrux-ed25519": "0.0.10",
+   "libcrux-hkdf": "0.0.9",
+   "libcrux-hmac": "0.0.9",
+   "libcrux-ml-kem": "0.0.11",
+   "libcrux-sha2": "0.0.9",
+   "libcrux-sha3": "0.0.11"
+  },
+  "esp-idf": {
+   "esp-idf-svc": "0.53.0",
+   "esp-idf-sys": "0.38.1",
+   "esp-idf-hal": "0.47.0"
+  }
+ },
+ "rind_cpu": {
+  "backend": "portable",
+  "has_aes_hardware": false
+ },
+ "status": "partial",
+ "criterion_args": [
+  "rind-bench-criterion-esp: CCOUNT cycles, 0.2 s warm-up, 2 ms samples, 11-51 samples per benchmark"
+ ],
+ "load": {
+  "runs": 33,
+  "ok_runs": 27
+ },
+ "note": "One core of an ESP32-S3 at 240 MHz, timed with its cycle counter on core 1; no radio, PSRAM off.",
+ "port": {
+  "repo": "https://github.com/steelhead99x/rind-bench",
+  "commit": "669571c20c585e3fc59c63448d3351158cc65768",
+  "patches": [
+   "0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch",
+   "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa.patch"
+  ]
+ },
+ "results": [
+  {
+   "operation": "aes128-gcm-open/{lib}/1350B",
+   "library": "libcrux",
+   "id": "aes128-gcm-open/libcrux/1350B",
+   "ns": 6082554.167,
+   "ns_low": 6082554.167,
+   "ns_high": 6082704.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 1459813.0,
+   "cycles_per_byte": 1081.343,
+   "run_spread_pct": 0.0024660692840813955
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/16KB",
+   "library": "libcrux",
+   "id": "aes128-gcm-open/libcrux/16KB",
+   "ns": 66006395.833,
+   "ns_low": 66006333.333,
+   "ns_high": 66006454.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 15841535.0,
+   "cycles_per_byte": 966.891,
+   "run_spread_pct": 0.00018306407808121368
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/32B",
+   "library": "libcrux",
+   "id": "aes128-gcm-open/libcrux/32B",
+   "ns": 705545.833,
+   "ns_low": 705545.833,
+   "ns_high": 705547.917,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 169331.0,
+   "cycles_per_byte": 5291.594,
+   "run_spread_pct": 0.00029537414900041866
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/1350B",
+   "library": "rind",
+   "id": "aes128-gcm-open/rind/1350B",
+   "ns": 1716337.5,
+   "ns_low": 1716337.5,
+   "ns_high": 1716337.5,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 411921.0,
+   "cycles_per_byte": 305.127,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/16KB",
+   "library": "rind",
+   "id": "aes128-gcm-open/rind/16KB",
+   "ns": 19998404.167,
+   "ns_low": 19998208.333,
+   "ns_high": 19998404.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 4799617.0,
+   "cycles_per_byte": 292.945,
+   "run_spread_pct": 0.000979248135818854
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/32B",
+   "library": "rind",
+   "id": "aes128-gcm-open/rind/32B",
+   "ns": 89110.038,
+   "ns_low": 89110.038,
+   "ns_high": 89110.038,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 21386.4,
+   "cycles_per_byte": 668.325,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/1350B",
+   "library": "ring",
+   "id": "aes128-gcm-open/ring/1350B",
+   "ns": 2044654.167,
+   "ns_low": 2044654.167,
+   "ns_high": 2044654.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 490717.0,
+   "cycles_per_byte": 363.494,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/16KB",
+   "library": "ring",
+   "id": "aes128-gcm-open/ring/16KB",
+   "ns": 23258691.667,
+   "ns_low": 23258666.667,
+   "ns_high": 23258691.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 5582086.0,
+   "cycles_per_byte": 340.703,
+   "run_spread_pct": 0.00010748669941512923
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/32B",
+   "library": "ring",
+   "id": "aes128-gcm-open/ring/32B",
+   "ns": 119881.41,
+   "ns_low": 119881.41,
+   "ns_high": 119881.41,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 28771.5,
+   "cycles_per_byte": 899.111,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "aes128-gcm-open/rustcrypto/1350B",
+   "ns": 2750866.667,
+   "ns_low": 2750866.667,
+   "ns_high": 2750866.667,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 660208.0,
+   "cycles_per_byte": 489.043,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "aes128-gcm-open/rustcrypto/16KB",
+   "ns": 23304016.667,
+   "ns_low": 23304016.667,
+   "ns_high": 23304041.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 5592964.0,
+   "cycles_per_byte": 341.367,
+   "run_spread_pct": 0.00010727764383811835
+  },
+  {
+   "operation": "aes128-gcm-open/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "aes128-gcm-open/rustcrypto/32B",
+   "ns": 574180.556,
+   "ns_low": 557788.889,
+   "ns_high": 576947.222,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 137803.3,
+   "cycles_per_byte": 4306.354,
+   "run_spread_pct": 3.336639111130051
+  },
+  {
+   "operation": "aes128-gcm/{lib}/1350B",
+   "library": "esp32s3-hw",
+   "id": "aes128-gcm/esp32s3-hw/1350B",
+   "ns": 428747.917,
+   "ns_low": 428747.917,
+   "ns_high": 428747.917,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 102899.5,
+   "cycles_per_byte": 76.222,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/16KB",
+   "library": "esp32s3-hw",
+   "id": "aes128-gcm/esp32s3-hw/16KB",
+   "ns": 4431829.167,
+   "ns_low": 4431829.167,
+   "ns_high": 4431866.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1063639.0,
+   "cycles_per_byte": 64.919,
+   "run_spread_pct": 0.0008461517487909975
+  },
+  {
+   "operation": "aes128-gcm/{lib}/32B",
+   "library": "esp32s3-hw",
+   "id": "aes128-gcm/esp32s3-hw/32B",
+   "ns": 75107.692,
+   "ns_low": 75107.692,
+   "ns_high": 75107.692,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 18025.8,
+   "cycles_per_byte": 563.308,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/1350B",
+   "library": "libcrux",
+   "id": "aes128-gcm/libcrux/1350B",
+   "ns": 5653120.833,
+   "ns_low": 5653120.833,
+   "ns_high": 5653120.833,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 1356749.0,
+   "cycles_per_byte": 1004.999,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/16KB",
+   "library": "libcrux",
+   "id": "aes128-gcm/libcrux/16KB",
+   "ns": 65615391.667,
+   "ns_low": 65615354.167,
+   "ns_high": 65615433.333,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 15747694.0,
+   "cycles_per_byte": 961.163,
+   "run_spread_pct": 0.00012065156967354798
+  },
+  {
+   "operation": "aes128-gcm/{lib}/32B",
+   "library": "libcrux",
+   "id": "aes128-gcm/libcrux/32B",
+   "ns": 314611.806,
+   "ns_low": 314611.806,
+   "ns_high": 314611.806,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 75506.8,
+   "cycles_per_byte": 2359.589,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/1350B",
+   "library": "rind",
+   "id": "aes128-gcm/rind/1350B",
+   "ns": 1712425.0,
+   "ns_low": 1712425.0,
+   "ns_high": 1712425.0,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 410982.0,
+   "cycles_per_byte": 304.431,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/16KB",
+   "library": "rind",
+   "id": "aes128-gcm/rind/16KB",
+   "ns": 19955141.667,
+   "ns_low": 19955129.167,
+   "ns_high": 19955220.833,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 4789234.0,
+   "cycles_per_byte": 292.312,
+   "run_spread_pct": 0.0004593603068863269
+  },
+  {
+   "operation": "aes128-gcm/{lib}/32B",
+   "library": "rind",
+   "id": "aes128-gcm/rind/32B",
+   "ns": 88651.515,
+   "ns_low": 88651.515,
+   "ns_high": 88651.515,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 21276.4,
+   "cycles_per_byte": 664.886,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/1350B",
+   "library": "ring",
+   "id": "aes128-gcm/ring/1350B",
+   "ns": 2030466.667,
+   "ns_low": 2030466.667,
+   "ns_high": 2030466.667,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 487312.0,
+   "cycles_per_byte": 360.972,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/16KB",
+   "library": "ring",
+   "id": "aes128-gcm/ring/16KB",
+   "ns": 23200966.667,
+   "ns_low": 23200941.667,
+   "ns_high": 23200991.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 5568232.0,
+   "cycles_per_byte": 339.858,
+   "run_spread_pct": 0.0002155082618653029
+  },
+  {
+   "operation": "aes128-gcm/{lib}/32B",
+   "library": "ring",
+   "id": "aes128-gcm/ring/32B",
+   "ns": 130731.618,
+   "ns_low": 130731.618,
+   "ns_high": 130731.618,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 31375.6,
+   "cycles_per_byte": 980.487,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "aes128-gcm/rustcrypto/1350B",
+   "ns": 2444979.167,
+   "ns_low": 2444979.167,
+   "ns_high": 2444979.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 586795.0,
+   "cycles_per_byte": 434.663,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes128-gcm/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "aes128-gcm/rustcrypto/16KB",
+   "ns": 23125904.167,
+   "ns_low": 23125754.167,
+   "ns_high": 23125904.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 5550217.0,
+   "cycles_per_byte": 338.758,
+   "run_spread_pct": 0.0006486232880530816
+  },
+  {
+   "operation": "aes128-gcm/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "aes128-gcm/rustcrypto/32B",
+   "ns": 383281.25,
+   "ns_low": 383281.25,
+   "ns_high": 383281.25,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 91987.5,
+   "cycles_per_byte": 2874.609,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/1350B",
+   "library": "libcrux",
+   "id": "aes256-gcm-open/libcrux/1350B",
+   "ns": 7375304.167,
+   "ns_low": 7367816.667,
+   "ns_high": 7375629.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 1770073.0,
+   "cycles_per_byte": 1311.165,
+   "run_spread_pct": 0.10592783460994307
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/16KB",
+   "library": "libcrux",
+   "id": "aes256-gcm-open/libcrux/16KB",
+   "ns": 77108641.667,
+   "ns_low": 77108479.167,
+   "ns_high": 77108716.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 18506074.0,
+   "cycles_per_byte": 1129.521,
+   "run_spread_pct": 0.0003080069819225493
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/32B",
+   "library": "libcrux",
+   "id": "aes256-gcm-open/libcrux/32B",
+   "ns": 1022289.583,
+   "ns_low": 1020808.333,
+   "ns_high": 1022789.583,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 245349.5,
+   "cycles_per_byte": 7667.172,
+   "run_spread_pct": 0.1938051637174904
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/1350B",
+   "library": "rind",
+   "id": "aes256-gcm-open/rind/1350B",
+   "ns": 2102954.167,
+   "ns_low": 2102954.167,
+   "ns_high": 2102954.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 504709.0,
+   "cycles_per_byte": 373.859,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/16KB",
+   "library": "rind",
+   "id": "aes256-gcm-open/rind/16KB",
+   "ns": 24504512.5,
+   "ns_low": 24504495.833,
+   "ns_high": 24504533.333,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 5881083.0,
+   "cycles_per_byte": 358.953,
+   "run_spread_pct": 0.00015303303830263915
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/32B",
+   "library": "rind",
+   "id": "aes256-gcm-open/rind/32B",
+   "ns": 106828.935,
+   "ns_low": 106828.935,
+   "ns_high": 106828.935,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 25638.9,
+   "cycles_per_byte": 801.217,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/1350B",
+   "library": "ring",
+   "id": "aes256-gcm-open/ring/1350B",
+   "ns": 2553491.667,
+   "ns_low": 2553479.167,
+   "ns_high": 2553504.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 612838.0,
+   "cycles_per_byte": 453.954,
+   "run_spread_pct": 0.0009790515599908554
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/16KB",
+   "library": "ring",
+   "id": "aes256-gcm-open/ring/16KB",
+   "ns": 29121129.167,
+   "ns_low": 29121104.167,
+   "ns_high": 29121166.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 6989071.0,
+   "cycles_per_byte": 426.579,
+   "run_spread_pct": 0.00021462079867021387
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/32B",
+   "library": "ring",
+   "id": "aes256-gcm-open/ring/32B",
+   "ns": 147914.103,
+   "ns_low": 147914.103,
+   "ns_high": 147914.103,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 35499.4,
+   "cycles_per_byte": 1109.356,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "aes256-gcm-open/rustcrypto/1350B",
+   "ns": 3247800.0,
+   "ns_low": 3247687.5,
+   "ns_high": 3252362.5,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 779472.0,
+   "cycles_per_byte": 577.387,
+   "run_spread_pct": 0.14394359258575035
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "aes256-gcm-open/rustcrypto/16KB",
+   "ns": 27431229.167,
+   "ns_low": 27431179.167,
+   "ns_high": 27431441.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 6583495.0,
+   "cycles_per_byte": 401.825,
+   "run_spread_pct": 0.0009569385258017885
+  },
+  {
+   "operation": "aes256-gcm-open/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "aes256-gcm-open/rustcrypto/32B",
+   "ns": 624677.778,
+   "ns_low": 624677.778,
+   "ns_high": 624851.389,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 149922.7,
+   "cycles_per_byte": 4685.083,
+   "run_spread_pct": 0.027792088355657354
+  },
+  {
+   "operation": "aes256-gcm/{lib}/1350B",
+   "library": "libcrux",
+   "id": "aes256-gcm/libcrux/1350B",
+   "ns": 7148141.667,
+   "ns_low": 7148116.667,
+   "ns_high": 7148154.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 1715554.0,
+   "cycles_per_byte": 1270.781,
+   "run_spread_pct": 0.000524611874623609
+  },
+  {
+   "operation": "aes256-gcm/{lib}/16KB",
+   "library": "libcrux",
+   "id": "aes256-gcm/libcrux/16KB",
+   "ns": 76744316.667,
+   "ns_low": 76744279.167,
+   "ns_high": 76744404.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 18418636.0,
+   "cycles_per_byte": 1124.184,
+   "run_spread_pct": 0.00016287851065556483
+  },
+  {
+   "operation": "aes256-gcm/{lib}/32B",
+   "library": "libcrux",
+   "id": "aes256-gcm/libcrux/32B",
+   "ns": 532994.792,
+   "ns_low": 532957.292,
+   "ns_high": 533138.542,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 127918.8,
+   "cycles_per_byte": 3997.461,
+   "run_spread_pct": 0.034005960793703216
+  },
+  {
+   "operation": "aes256-gcm/{lib}/1350B",
+   "library": "rind",
+   "id": "aes256-gcm/rind/1350B",
+   "ns": 2099041.667,
+   "ns_low": 2099041.667,
+   "ns_high": 2099041.667,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 503770.0,
+   "cycles_per_byte": 373.163,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes256-gcm/{lib}/16KB",
+   "library": "rind",
+   "id": "aes256-gcm/rind/16KB",
+   "ns": 24461458.333,
+   "ns_low": 24461441.667,
+   "ns_high": 24461495.833,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 5870750.0,
+   "cycles_per_byte": 358.322,
+   "run_spread_pct": 0.00022143405868839492
+  },
+  {
+   "operation": "aes256-gcm/{lib}/32B",
+   "library": "rind",
+   "id": "aes256-gcm/rind/32B",
+   "ns": 106370.37,
+   "ns_low": 106370.37,
+   "ns_high": 106370.37,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 25528.9,
+   "cycles_per_byte": 797.778,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "aes256-gcm/{lib}/1350B",
+   "library": "ring",
+   "id": "aes256-gcm/ring/1350B",
+   "ns": 2535337.5,
+   "ns_low": 2535329.167,
+   "ns_high": 2535337.5,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 608481.0,
+   "cycles_per_byte": 450.727,
+   "run_spread_pct": 0.00032867419032379643
+  },
+  {
+   "operation": "aes256-gcm/{lib}/16KB",
+   "library": "ring",
+   "id": "aes256-gcm/ring/16KB",
+   "ns": 29066408.333,
+   "ns_low": 29066370.833,
+   "ns_high": 29066420.833,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 6975938.0,
+   "cycles_per_byte": 425.777,
+   "run_spread_pct": 0.000172019877472214
+  },
+  {
+   "operation": "aes256-gcm/{lib}/32B",
+   "library": "ring",
+   "id": "aes256-gcm/ring/32B",
+   "ns": 179129.808,
+   "ns_low": 179129.487,
+   "ns_high": 179129.808,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 42991.2,
+   "cycles_per_byte": 1343.474,
+   "run_spread_pct": 0.00017919965614895023
+  },
+  {
+   "operation": "aes256-gcm/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "aes256-gcm/rustcrypto/1350B",
+   "ns": 3108383.333,
+   "ns_low": 3102195.833,
+   "ns_high": 3111208.333,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 746012.0,
+   "cycles_per_byte": 552.601,
+   "run_spread_pct": 0.2899417167863189
+  },
+  {
+   "operation": "aes256-gcm/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "aes256-gcm/rustcrypto/16KB",
+   "ns": 27368633.333,
+   "ns_low": 27368633.333,
+   "ns_high": 27368720.833,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 6568472.0,
+   "cycles_per_byte": 400.908,
+   "run_spread_pct": 0.0003197090586708106
+  },
+  {
+   "operation": "aes256-gcm/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "aes256-gcm/rustcrypto/32B",
+   "ns": 624793.056,
+   "ns_low": 624494.444,
+   "ns_high": 625220.833,
+   "throughput": {
+    "Bytes": 32
+   },
+   "cycles": 149950.3,
+   "cycles_per_byte": 4685.948,
+   "run_spread_pct": 0.11626073513851065
+  },
+  {
+   "operation": "ed25519-sign/{lib}",
+   "library": "rustcrypto",
+   "id": "ed25519-sign/dalek",
+   "ns": 33007787.5,
+   "ns_low": 33007162.5,
+   "ns_high": 33023137.5,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 7921869.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.04839766979231795
+  },
+  {
+   "operation": "ed25519-sign/{lib}",
+   "library": "libcrux",
+   "id": "ed25519-sign/libcrux",
+   "ns": 2070391929.167,
+   "ns_low": 2070352141.667,
+   "ns_high": 2070419866.667,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 496894063.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0032711197839361953
+  },
+  {
+   "operation": "ed25519-sign/{lib}",
+   "library": "rind",
+   "id": "ed25519-sign/rind",
+   "ns": 24855937.5,
+   "ns_low": 24854000.0,
+   "ns_high": 24855950.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 5965425.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.007845208011164334
+  },
+  {
+   "operation": "ed25519-sign/{lib}",
+   "library": "ring",
+   "id": "ed25519-sign/ring",
+   "ns": 28362870.833,
+   "ns_low": 28362608.333,
+   "ns_high": 28362970.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 6807089.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.001278079366980841
+  },
+  {
+   "operation": "ed25519-verify/{lib}",
+   "library": "rustcrypto",
+   "id": "ed25519-verify/dalek",
+   "ns": 31276958.333,
+   "ns_low": 31276845.833,
+   "ns_high": 31276995.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 7506470.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0004795862769102343
+  },
+  {
+   "operation": "ed25519-verify/{lib}",
+   "library": "libcrux",
+   "id": "ed25519-verify/libcrux",
+   "ns": 2621860937.5,
+   "ns_low": 2621857200.0,
+   "ns_high": 2621861162.5,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 629246625.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.00015113311096424237
+  },
+  {
+   "operation": "ed25519-verify/{lib}",
+   "library": "rind",
+   "id": "ed25519-verify/rind",
+   "ns": 30860037.5,
+   "ns_low": 30859750.0,
+   "ns_high": 30860400.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 7406409.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0021062838954748514
+  },
+  {
+   "operation": "ed25519-verify/{lib}",
+   "library": "ring",
+   "id": "ed25519-verify/ring",
+   "ns": 646160587.5,
+   "ns_low": 646158825.0,
+   "ns_high": 646161550.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 155078541.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0004217217906376873
+  },
+  {
+   "operation": "hkdf-sha256/expand/{lib}",
+   "library": "libcrux",
+   "id": "hkdf-sha256/expand/libcrux",
+   "ns": 882800.0,
+   "ns_low": 882800.0,
+   "ns_high": 882950.0,
+   "throughput": null,
+   "cycles": 211872.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.016991391028545536
+  },
+  {
+   "operation": "hkdf-sha256/expand/{lib}",
+   "library": "rind",
+   "id": "hkdf-sha256/expand/rind",
+   "ns": 636786.111,
+   "ns_low": 636741.667,
+   "ns_high": 637044.444,
+   "throughput": null,
+   "cycles": 152828.7,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.04754767649133004
+  },
+  {
+   "operation": "hkdf-sha256/expand/{lib}",
+   "library": "ring",
+   "id": "hkdf-sha256/expand/ring",
+   "ns": 60598.438,
+   "ns_low": 60598.438,
+   "ns_high": 60598.438,
+   "throughput": null,
+   "cycles": 14543.6,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hkdf-sha256/expand/{lib}",
+   "library": "rustcrypto",
+   "id": "hkdf-sha256/expand/rustcrypto",
+   "ns": 88054.167,
+   "ns_low": 88054.167,
+   "ns_high": 88054.167,
+   "throughput": null,
+   "cycles": 21133.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hkdf-sha256/extract-expand/{lib}",
+   "library": "libcrux",
+   "id": "hkdf-sha256/extract-expand/libcrux",
+   "ns": 1455020.833,
+   "ns_low": 1455020.833,
+   "ns_high": 1455020.833,
+   "throughput": null,
+   "cycles": 349205.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hkdf-sha256/extract-expand/{lib}",
+   "library": "rind",
+   "id": "hkdf-sha256/extract-expand/rind",
+   "ns": 1968983.333,
+   "ns_low": 1968983.333,
+   "ns_high": 1968983.333,
+   "throughput": null,
+   "cycles": 472556.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hkdf-sha256/extract-expand/{lib}",
+   "library": "ring",
+   "id": "hkdf-sha256/extract-expand/ring",
+   "ns": 231036.458,
+   "ns_low": 231036.458,
+   "ns_high": 231036.458,
+   "throughput": null,
+   "cycles": 55448.8,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hkdf-sha256/extract-expand/{lib}",
+   "library": "rustcrypto",
+   "id": "hkdf-sha256/extract-expand/rustcrypto",
+   "ns": 3994762.5,
+   "ns_low": 3994612.5,
+   "ns_high": 4014450.0,
+   "throughput": null,
+   "cycles": 958743.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.4965877195452796
+  },
+  {
+   "operation": "hmac-sha256/{lib}/1350B",
+   "library": "libcrux",
+   "id": "hmac-sha256/libcrux/1350B",
+   "ns": 618648.611,
+   "ns_low": 618648.611,
+   "ns_high": 618648.611,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 148475.7,
+   "cycles_per_byte": 109.982,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hmac-sha256/{lib}/64B",
+   "library": "libcrux",
+   "id": "hmac-sha256/libcrux/64B",
+   "ns": 190214.583,
+   "ns_low": 190214.583,
+   "ns_high": 190214.583,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 45651.5,
+   "cycles_per_byte": 713.305,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hmac-sha256/{lib}/1350B",
+   "library": "rind",
+   "id": "hmac-sha256/rind/1350B",
+   "ns": 1415491.667,
+   "ns_low": 1414241.667,
+   "ns_high": 1415491.667,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 339718.0,
+   "cycles_per_byte": 251.643,
+   "run_spread_pct": 0.08830853823740667
+  },
+  {
+   "operation": "hmac-sha256/{lib}/64B",
+   "library": "rind",
+   "id": "hmac-sha256/rind/64B",
+   "ns": 928402.083,
+   "ns_low": 928377.083,
+   "ns_high": 928589.583,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 222816.5,
+   "cycles_per_byte": 3481.508,
+   "run_spread_pct": 0.022888789662485063
+  },
+  {
+   "operation": "hmac-sha256/{lib}/1350B",
+   "library": "ring",
+   "id": "hmac-sha256/ring/1350B",
+   "ns": 630945.833,
+   "ns_low": 630945.833,
+   "ns_high": 630945.833,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 151427.0,
+   "cycles_per_byte": 112.168,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hmac-sha256/{lib}/64B",
+   "library": "ring",
+   "id": "hmac-sha256/ring/64B",
+   "ns": 140370.238,
+   "ns_low": 140370.238,
+   "ns_high": 140370.238,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 33688.9,
+   "cycles_per_byte": 526.388,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hmac-sha256/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "hmac-sha256/rustcrypto/1350B",
+   "ns": 1048220.833,
+   "ns_low": 1048220.833,
+   "ns_high": 1048220.833,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 251573.0,
+   "cycles_per_byte": 186.35,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "hmac-sha256/{lib}/64B",
+   "library": "rustcrypto",
+   "id": "hmac-sha256/rustcrypto/64B",
+   "ns": 564990.278,
+   "ns_low": 564990.278,
+   "ns_high": 564990.278,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 135597.7,
+   "cycles_per_byte": 2118.714,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "mlkem768-decaps/{lib}",
+   "library": "libcrux",
+   "id": "mlkem768-decaps/libcrux-ml-kem",
+   "ns": 47365391.667,
+   "ns_low": 47361791.667,
+   "ns_high": 47370254.167,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 11367694.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.017866420401408647
+  },
+  {
+   "operation": "mlkem768-decaps/{lib}",
+   "library": "rind",
+   "id": "mlkem768-decaps/rind",
+   "ns": 6192729.167,
+   "ns_low": 6188604.167,
+   "ns_high": 6208166.667,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 1486255.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.3158946479404466
+  },
+  {
+   "operation": "mlkem768-decaps/{lib}",
+   "library": "rustcrypto",
+   "id": "mlkem768-decaps/rustcrypto",
+   "ns": 20283495.833,
+   "ns_low": 20280320.833,
+   "ns_high": 20288870.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 4868039.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.042152497135575985
+  },
+  {
+   "operation": "mlkem768-encaps/{lib}",
+   "library": "libcrux",
+   "id": "mlkem768-encaps/libcrux-ml-kem",
+   "ns": 34739645.833,
+   "ns_low": 34736183.333,
+   "ns_high": 35559845.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 8337515.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 2.3709582531713203
+  },
+  {
+   "operation": "mlkem768-encaps/{lib}",
+   "library": "rind",
+   "id": "mlkem768-encaps/rind",
+   "ns": 14159558.333,
+   "ns_low": 14153533.333,
+   "ns_high": 14160370.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 3398294.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.048288935567041315
+  },
+  {
+   "operation": "mlkem768-encaps/{lib}",
+   "library": "rustcrypto",
+   "id": "mlkem768-encaps/rustcrypto",
+   "ns": 17828937.5,
+   "ns_low": 17826512.5,
+   "ns_high": 17829150.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 4278945.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.014793366121789366
+  },
+  {
+   "operation": "mlkem768-keygen/{lib}",
+   "library": "libcrux",
+   "id": "mlkem768-keygen/libcrux-ml-kem",
+   "ns": 21589283.333,
+   "ns_low": 21585758.333,
+   "ns_high": 21595133.333,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 5181428.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.043424322407543625
+  },
+  {
+   "operation": "mlkem768-keygen/{lib}",
+   "library": "rind",
+   "id": "mlkem768-keygen/rind",
+   "ns": 13364479.167,
+   "ns_low": 13364429.167,
+   "ns_high": 13365191.667,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 3207475.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.005705422489510773
+  },
+  {
+   "operation": "mlkem768-keygen/{lib}",
+   "library": "rustcrypto",
+   "id": "mlkem768-keygen/rustcrypto",
+   "ns": 15196750.0,
+   "ns_low": 15196712.5,
+   "ns_high": 15197800.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 3647220.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.007156135357889022
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "libcrux",
+   "id": "p256-ecdh/libcrux",
+   "ns": 3142500470.833,
+   "ns_low": 3142333333.333,
+   "ns_high": 3142513283.333,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 754200113.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.005726331679826277
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rustcrypto",
+   "id": "p256-ecdh/p256-rustcrypto",
+   "ns": 88473933.333,
+   "ns_low": 88464295.833,
+   "ns_high": 88476733.333,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 21233744.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.014057812885053367
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "ns": 62351404.167,
+   "ns_low": 62348191.667,
+   "ns_high": 62355854.167,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 14964337.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.012289218025430518
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "ring",
+   "id": "p256-ecdh/ring",
+   "ns": 1383376958.333,
+   "ns_low": 1383376958.333,
+   "ns_high": 1383376958.333,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 332010470.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "libcrux",
+   "id": "p256-ecdsa-sign/libcrux",
+   "ns": 982457208.333,
+   "ns_low": 982404820.833,
+   "ns_high": 982530045.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 235789730.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.012746102215736962
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "ns": 37262787.5,
+   "ns_low": 37252687.5,
+   "ns_high": 37266900.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 8943069.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.03814126895364444
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "ring",
+   "id": "p256-ecdsa-sign/ring",
+   "ns": 325714004.167,
+   "ns_low": 325714004.167,
+   "ns_high": 325718641.667,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 78171361.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0014237950903769744
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rustcrypto",
+   "id": "p256-ecdsa-sign/rustcrypto",
+   "ns": 34468350.0,
+   "ns_low": 34465862.5,
+   "ns_high": 34469850.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 8272404.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.01156858393279632
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "libcrux",
+   "id": "p256-ecdsa-verify/libcrux",
+   "ns": 2605279920.833,
+   "ns_low": 2605269166.667,
+   "ns_high": 2605291091.667,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 625267181.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0008415602417489865
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "ns": 53128858.333,
+   "ns_low": 53127995.833,
+   "ns_high": 53128983.333,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 12750926.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0018586885376127738
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "ring",
+   "id": "p256-ecdsa-verify/ring",
+   "ns": 1381262829.167,
+   "ns_low": 1381262829.167,
+   "ns_high": 1381262829.167,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 331503079.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rustcrypto",
+   "id": "p256-ecdsa-verify/rustcrypto",
+   "ns": 76592137.5,
+   "ns_low": 76591987.5,
+   "ns_high": 76592775.0,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 18382113.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0010281734205420236
+  },
+  {
+   "operation": "quic-header-protection/aes128/{lib}",
+   "library": "rind",
+   "id": "quic-header-protection/aes128/rind",
+   "ns": 24194.36,
+   "ns_low": 24194.36,
+   "ns_high": 24194.36,
+   "throughput": null,
+   "cycles": 5806.6,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "quic-header-protection/aes128/{lib}",
+   "library": "ring",
+   "id": "quic-header-protection/aes128/ring",
+   "ns": 37324.921,
+   "ns_low": 37324.921,
+   "ns_high": 37324.921,
+   "throughput": null,
+   "cycles": 8958.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "quic-header-protection/aes256/{lib}",
+   "library": "rind",
+   "id": "quic-header-protection/aes256/rind",
+   "ns": 33128.681,
+   "ns_low": 33128.681,
+   "ns_high": 33128.681,
+   "throughput": null,
+   "cycles": 7950.9,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "quic-header-protection/aes256/{lib}",
+   "library": "ring",
+   "id": "quic-header-protection/aes256/ring",
+   "ns": 51343.202,
+   "ns_low": 51343.202,
+   "ns_high": 51343.202,
+   "throughput": null,
+   "cycles": 12322.4,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "quic-header-protection/chacha20/{lib}",
+   "library": "rind",
+   "id": "quic-header-protection/chacha20/rind",
+   "ns": 9367.713,
+   "ns_low": 9367.713,
+   "ns_high": 9367.713,
+   "throughput": null,
+   "cycles": 2248.3,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "quic-header-protection/chacha20/{lib}",
+   "library": "ring",
+   "id": "quic-header-protection/chacha20/ring",
+   "ns": 10826.184,
+   "ns_low": 10826.184,
+   "ns_high": 10826.184,
+   "throughput": null,
+   "cycles": 2598.3,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/1350B",
+   "library": "esp32s3-hw",
+   "id": "sha256/esp32s3-hw/1350B",
+   "ns": 42942.301,
+   "ns_low": 42942.301,
+   "ns_high": 42942.301,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 10306.2,
+   "cycles_per_byte": 7.634,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/16KB",
+   "library": "esp32s3-hw",
+   "id": "sha256/esp32s3-hw/16KB",
+   "ns": 185747.083,
+   "ns_low": 185747.083,
+   "ns_high": 185747.083,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 44579.3,
+   "cycles_per_byte": 2.721,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/64B",
+   "library": "esp32s3-hw",
+   "id": "sha256/esp32s3-hw/64B",
+   "ns": 27240.525,
+   "ns_low": 27240.525,
+   "ns_high": 27240.525,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 6537.7,
+   "cycles_per_byte": 102.152,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/1350B",
+   "library": "libcrux",
+   "id": "sha256/libcrux/1350B",
+   "ns": 467101.389,
+   "ns_low": 467101.389,
+   "ns_high": 467101.389,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 112104.3,
+   "cycles_per_byte": 83.04,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/16KB",
+   "library": "libcrux",
+   "id": "sha256/libcrux/16KB",
+   "ns": 5344129.167,
+   "ns_low": 5344129.167,
+   "ns_high": 5344129.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1282591.0,
+   "cycles_per_byte": 78.283,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/64B",
+   "library": "libcrux",
+   "id": "sha256/libcrux/64B",
+   "ns": 45216.422,
+   "ns_low": 45216.422,
+   "ns_high": 45216.422,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 10851.9,
+   "cycles_per_byte": 169.562,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/1350B",
+   "library": "rind",
+   "id": "sha256/rind/1350B",
+   "ns": 812706.25,
+   "ns_low": 812706.25,
+   "ns_high": 812706.25,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 195049.5,
+   "cycles_per_byte": 144.481,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/16KB",
+   "library": "rind",
+   "id": "sha256/rind/16KB",
+   "ns": 5767250.0,
+   "ns_low": 5767225.0,
+   "ns_high": 5767312.5,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1384140.0,
+   "cycles_per_byte": 84.481,
+   "run_spread_pct": 0.0015171875677315878
+  },
+  {
+   "operation": "sha256/{lib}/64B",
+   "library": "rind",
+   "id": "sha256/rind/64B",
+   "ns": 300481.944,
+   "ns_low": 300455.556,
+   "ns_high": 300481.944,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 72115.7,
+   "cycles_per_byte": 1126.807,
+   "run_spread_pct": 0.008781892066045535
+  },
+  {
+   "operation": "sha256/{lib}/1350B",
+   "library": "ring",
+   "id": "sha256/ring/1350B",
+   "ns": 544547.222,
+   "ns_low": 544547.222,
+   "ns_high": 544547.222,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 130691.3,
+   "cycles_per_byte": 96.808,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/16KB",
+   "library": "ring",
+   "id": "sha256/ring/16KB",
+   "ns": 6310504.167,
+   "ns_low": 6310504.167,
+   "ns_high": 6310504.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1514521.0,
+   "cycles_per_byte": 92.439,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/64B",
+   "library": "ring",
+   "id": "sha256/ring/64B",
+   "ns": 53960.36,
+   "ns_low": 53960.36,
+   "ns_high": 53960.36,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 12950.5,
+   "cycles_per_byte": 202.351,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "sha256/rustcrypto/1350B",
+   "ns": 693995.833,
+   "ns_low": 693995.833,
+   "ns_high": 693995.833,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 166559.0,
+   "cycles_per_byte": 123.377,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "sha256/rustcrypto/16KB",
+   "ns": 5819341.667,
+   "ns_low": 5819341.667,
+   "ns_high": 5819341.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 1396642.0,
+   "cycles_per_byte": 85.244,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha256/{lib}/64B",
+   "library": "rustcrypto",
+   "id": "sha256/rustcrypto/64B",
+   "ns": 257122.024,
+   "ns_low": 257122.024,
+   "ns_high": 257122.024,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 61709.3,
+   "cycles_per_byte": 964.208,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha512/{lib}/1350B",
+   "library": "libcrux",
+   "id": "sha512/libcrux/1350B",
+   "ns": 67328975.0,
+   "ns_low": 67328900.0,
+   "ns_high": 67328975.0,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 16158954.0,
+   "cycles_per_byte": 11969.596,
+   "run_spread_pct": 0.00011139334885166454
+  },
+  {
+   "operation": "sha512/{lib}/16KB",
+   "library": "libcrux",
+   "id": "sha512/libcrux/16KB",
+   "ns": 786457887.5,
+   "ns_low": 786455150.0,
+   "ns_high": 786458737.5,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 188749893.0,
+   "cycles_per_byte": 11520.379,
+   "run_spread_pct": 0.0004561591989882611
+  },
+  {
+   "operation": "sha512/{lib}/64B",
+   "library": "libcrux",
+   "id": "sha512/libcrux/64B",
+   "ns": 6376175.0,
+   "ns_low": 6376175.0,
+   "ns_high": 6376187.5,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 1530282.0,
+   "cycles_per_byte": 23910.656,
+   "run_spread_pct": 0.0001960422980862351
+  },
+  {
+   "operation": "sha512/{lib}/1350B",
+   "library": "rind",
+   "id": "sha512/rind/1350B",
+   "ns": 67457204.167,
+   "ns_low": 67457166.667,
+   "ns_high": 67457254.167,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 16189729.0,
+   "cycles_per_byte": 11992.392,
+   "run_spread_pct": 0.00012971186855503407
+  },
+  {
+   "operation": "sha512/{lib}/16KB",
+   "library": "rind",
+   "id": "sha512/rind/16KB",
+   "ns": 786586141.667,
+   "ns_low": 786584004.167,
+   "ns_high": 786586354.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 188780674.0,
+   "cycles_per_byte": 11522.258,
+   "run_spread_pct": 0.0002987593952544957
+  },
+  {
+   "operation": "sha512/{lib}/64B",
+   "library": "rind",
+   "id": "sha512/rind/64B",
+   "ns": 6428029.167,
+   "ns_low": 6428016.667,
+   "ns_high": 6428041.667,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 1542727.0,
+   "cycles_per_byte": 24105.109,
+   "run_spread_pct": 0.0003889216951339325
+  },
+  {
+   "operation": "sha512/{lib}/1350B",
+   "library": "ring",
+   "id": "sha512/ring/1350B",
+   "ns": 1064633.333,
+   "ns_low": 1064633.333,
+   "ns_high": 1064633.333,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 255512.0,
+   "cycles_per_byte": 189.268,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha512/{lib}/16KB",
+   "library": "ring",
+   "id": "sha512/ring/16KB",
+   "ns": 12417737.5,
+   "ns_low": 12417733.333,
+   "ns_high": 12417741.667,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 2980257.0,
+   "cycles_per_byte": 181.9,
+   "run_spread_pct": 6.711367508668557e-05
+  },
+  {
+   "operation": "sha512/{lib}/64B",
+   "library": "ring",
+   "id": "sha512/ring/64B",
+   "ns": 102653.728,
+   "ns_low": 102653.728,
+   "ns_high": 102653.728,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 24636.9,
+   "cycles_per_byte": 384.951,
+   "run_spread_pct": 0.0
+  },
+  {
+   "operation": "sha512/{lib}/1350B",
+   "library": "rustcrypto",
+   "id": "sha512/rustcrypto/1350B",
+   "ns": 69540991.667,
+   "ns_low": 69540979.167,
+   "ns_high": 69540991.667,
+   "throughput": {
+    "Bytes": 1350
+   },
+   "cycles": 16689838.0,
+   "cycles_per_byte": 12362.843,
+   "run_spread_pct": 1.7975009703423245e-05
+  },
+  {
+   "operation": "sha512/{lib}/16KB",
+   "library": "rustcrypto",
+   "id": "sha512/rustcrypto/16KB",
+   "ns": 812885479.167,
+   "ns_low": 812885341.667,
+   "ns_high": 812886204.167,
+   "throughput": {
+    "Bytes": 16384
+   },
+   "cycles": 195092515.0,
+   "cycles_per_byte": 11907.502,
+   "run_spread_pct": 0.00010610350684131326
+  },
+  {
+   "operation": "sha512/{lib}/64B",
+   "library": "rustcrypto",
+   "id": "sha512/rustcrypto/64B",
+   "ns": 6493541.667,
+   "ns_low": 6493529.167,
+   "ns_high": 6493541.667,
+   "throughput": {
+    "Bytes": 64
+   },
+   "cycles": 1558450.0,
+   "cycles_per_byte": 24350.781,
+   "run_spread_pct": 0.00019249895728743307
+  },
+  {
+   "operation": "x25519-ecdh/{lib}",
+   "library": "rustcrypto",
+   "id": "x25519-ecdh/dalek",
+   "ns": 30014033.333,
+   "ns_low": 30012454.167,
+   "ns_high": 30018029.167,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 7203368.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.018574644527599587
+  },
+  {
+   "operation": "x25519-ecdh/{lib}",
+   "library": "libcrux",
+   "id": "x25519-ecdh/libcrux",
+   "ns": 2803464095.833,
+   "ns_low": 2803460283.333,
+   "ns_high": 2803464120.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 672831383.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0001368842214067933
+  },
+  {
+   "operation": "x25519-ecdh/{lib}",
+   "library": "rind",
+   "id": "x25519-ecdh/rind",
+   "ns": 30202195.833,
+   "ns_low": 30200608.333,
+   "ns_high": 30206870.833,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 7248527.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.02073524731323465
+  },
+  {
+   "operation": "x25519-ecdh/{lib}",
+   "library": "ring",
+   "id": "x25519-ecdh/ring",
+   "ns": 696501137.5,
+   "ns_low": 696496350.0,
+   "ns_high": 696501137.5,
+   "throughput": {
+    "Elements": 1
+   },
+   "cycles": 167160273.0,
+   "cycles_per_byte": null,
+   "run_spread_pct": 0.0006873642758408273
+  }
+ ]
+}

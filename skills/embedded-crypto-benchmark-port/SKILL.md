@@ -54,9 +54,19 @@ LLVM Xtensa backend
 
 Board and timing
 - If quad PSRAM init fails ("PSRAM chip is not connected") the board likely has octal PSRAM: turn PSRAM off and keep buffers in internal SRAM, which is also fairer.
+- Size the bench thread's stack from the disassembly, not by guess: on Xtensa, `entry a1, N` gives each frame. ML-KEM put a 27 KB frame (rind `DecapKey::generate`) under two ~31 KB bench frames, overflowing 96 KB into the heap; the symptom was a crash on core 0 ("Unhandled debug exception", corrupted backtrace) or a later `realloc` fault. 160 KB fixed it.
+- A crash that resets the chip (rst `USB_UART_CHIP_RESET`) drops the USB-Serial/JTAG port every few seconds: capture tools must reopen the port and keep logging, or the evidence is lost.
 - Pin the bench thread to core 1 at high priority with a big stack (96 KB for ML-KEM/curves); watchdogs off; no WiFi; check 240 MHz at boot and print it.
 - CCOUNT through `xthal_get_ccount()`; it wraps at 2^32 (about 17.9 s at 240 MHz), so keep samples short (2 ms) and use wrapping subtraction.
+- Cycle counts that repeat to 0.0% are not robust: relinking the same benches (adding display code) moved competitors' 32-64 B rows by 0.6-1.6x on a 16 KB flash-backed instruction cache. Rebuild with a changed layout once and report the shift as the small-input margin.
+- Try a bigger instruction cache as a diagnostic (`CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB`): it separates cache misses from compute, and turned rind's 6.6x SHA-256 gap into 1.06x. Publish at the default and say so.
 - espflash flashes its own bundled bootloader unless you pass the build's: record which one was used.
+
+Shared machines and other boards
+- rind's `admin/bench-report run` refuses a host where other work keeps over 10% of the CPUs busy. If a resident load (someone's stream) may not be stopped, relax `BUSY_SHARE` in a reverted local edit, pin with `taskset` to one physical core's SMT pair, and record governor, boost, EPP and load; it still marks the run `noisy`. Outside Nix, `RUSTUP_TOOLCHAIN=<flake.nix's version> IN_RIND_DEV_SHELL=1` stands in for the dev shell.
+- Don't run builds on the same machine while a host benchmark runs.
+- Check what else uses a serial port before touching it (`/proc/*/fd`, systemd user units): a "BOOT" USB product string (Seeed's T1000-E reports `T1000-E-BOOT` even running Meshtastic) does not mean the board is in its bootloader; look for a mass-storage interface (class 08) instead.
+- Another agent's `espflash board-info` on the bench port mid-run left the capture waiting forever: give captures a per-run timeout well under the default, and coordinate port ownership.
 
 Porting a criterion suite
 - A tiny criterion API shim renamed `criterion` lets the upstream bench files compile unchanged via `#[path]` modules; print one JSON line per result with upstream's IDs so upstream's report tool can read them.
