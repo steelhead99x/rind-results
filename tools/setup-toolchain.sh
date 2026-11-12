@@ -3,13 +3,14 @@
 # Installs, without root, what building and flashing rind-bench's ESP32-S3
 # images needs, at the versions the published results used:
 #   rustup (stable), espup 0.19.0 -> Rust "esp" 1.97.0.0 + Xtensa GCC
-#   esp-14.2.0_20241119, ldproxy 0.3.5, espflash 4.7.0, pyserial 3.5.
-# Usage: tools/setup-toolchain.sh RIND_BENCH_DIR [VENV_DIR]
+#   esp-14.2.0_20241119, ldproxy 0.3.5, espflash 4.7.0.
+# Usage: tools/setup-toolchain.sh RIND_BENCH_DIR
+# It stays shell because it installs rustup itself; everything after it is
+# `cargo xtask` (rind-bench and rind-results).
 # Tools land in RIND_BENCH_DIR/.tools; ESP-IDF v5.5.1 itself is fetched by
 # the first firmware build into esp32/.embuild.
 set -eu
 bench=$(cd "$1" && pwd)
-venv=${2:-$HOME/esp32-venv}
 tools=$bench/.tools
 mkdir -p "$tools"
 arch=$(uname -m)
@@ -35,10 +36,5 @@ if [ ! -x "$tools/espflash" ]; then
     (cd "$tools" && unzip -o -q espflash.zip && chmod +x espflash && rm espflash.zip)
 fi
 
-if [ ! -x "$venv/bin/python" ]; then
-    python3 -m venv "$venv"
-fi
-"$venv/bin/pip" install -q pyserial==3.5
-
-echo "done: source $bench/esp32/env.sh, then $bench/esp32/build-images.sh"
+echo "done: in $bench, cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images esp"
 echo "the board's USB-Serial/JTAG port needs your user in the dialout (or uucp) group"
