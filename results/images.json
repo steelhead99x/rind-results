@@ -1,78 +1,85 @@
 {
- "note": "Where each published image came from. Builds are not bit-reproducible (ESP-IDF stamps the build time into the app descriptor), so the sha256 identifies the image that ran; the commits are the source it was built from, from the build times and the repository history.",
+ "note": "Where each published image came from: all twelve built in one pass by esp32/build-images.sh from a clean rind-bench tree at the commit given, the rind submodule at its pin with patches/0001-0004 applied and ring vendored with ring-0.17.14-xtensa-poly1305-align.patch. Builds are not bit-reproducible (ESP-IDF stamps the build time into the app descriptor), so the sha256 identifies the image that ran. Flashed with --flash-freq 80mhz.",
  "patches": [
   "0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch",
   "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch",
   "0003-feat-build-for-bare-metal-targets-without-std.patch",
+  "0004-feat-bench-leave-aws-lc-rs-rows-out-of-sha3-on-Xtensa.patch",
   "ring-0.17.14-xtensa-poly1305-align.patch"
  ],
  "file_ext": ".elf",
  "images": {
   "aes_gcm": {
-   "sha256": "d3ab22144b2d0f0f6aa25e7927ccef0713cab838a48f114403c3ab1d32731e15",
+   "sha256": "e5235b433188e179b790b6164287ae989dd82d1ad3906f739c2f5bf13e3ff4db",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "chacha20poly1305": {
-   "sha256": "b5a7e512525c213f829a8c688584a30ee57e50b8981e18d14ee977e88a204503",
+   "sha256": "f581ff142514edeaf201e4b2ff841946324521d6072756165083b46d342b74c4",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
-   "built": "2026-11-12 03:56 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "cipher": {
-   "sha256": "101bc29ea9e98c974ffc019a972840bfa0e0d41bc37b922a05868cc5d38d6619",
+   "sha256": "7d75475e4e93adb7b20bef257c6f7ca1ac18bbe2042d90d2fd5b9cf30477e79a",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "ed25519": {
-   "sha256": "ed53714f07fe30247498d7696955a26bc9594f431cb73681e6c5fd35013e29b0",
+   "sha256": "81569af99e208f40509e21ed07c24cca4d47d641456cc141bf5f1feecb63c8d6",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "hkdf": {
-   "sha256": "2ad77c9d444da6ba1238efac13337fbd1df500675ced75a75b5f682c499fa9cc",
+   "sha256": "a2544a9b9b7956b6b49c7731de9e8d0d2794a16e667f5f576abc7360a022e33d",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "hmac": {
-   "sha256": "8e8f6d7c709d6123bbb1efc2ee8b35772d14cd9e69bc4fccefe3e96c1465d53e",
+   "sha256": "44b5e8bbb69022d03045364ed22950ef1ea673ee1da6a5eb2909a968318ab2bf",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "mlkem768": {
-   "sha256": "75069a7bc0a506ce7c8111b677d703101d7fa6350e8f85064f2de3be52000231",
+   "sha256": "bcfd05e275511f457929e9c093ed1b6eca00ae822b3c44510e299ad41bb01b4c",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the tree after 669571c with the 160 KB stack (committed in 9b9ebcb, 2026-11-12 01:14 PST)",
-   "built": "2026-11-11 23:51 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "p256": {
-   "sha256": "60e0068fc2c642ade8b8f3d5b7d35a64891884475a0e4474ad2645f58cac56d4",
+   "sha256": "0ca6a233201372f8816c1494361abeaca152f88db781e761b7527a0f23acc38e",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "sha2": {
-   "sha256": "c153499481a3989c91aa7bd041927400549353ca5d6e160008441b1d8bc91219",
+   "sha256": "9b352830d35438ffd375bf2a82f395d129212a40f6971a6608f87cffc3559028",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
+  },
+  "sha3": {
+   "sha256": "cb776505583c9be156bd69c532ea978e8a03a4a91ec1bd15f765808739539ee1",
+   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "x25519": {
-   "sha256": "f806b1bd0f73479476a51774cc54cbca4db1b94bd9d609a7a301c26f3b78927a",
+   "sha256": "0d5dd95d542a3c7a3082adac867705f73c62553738e05ddc044c3d3b29242c95",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11, before 23:32 PST (the first run began 00:12 PST)"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   },
   "xchacha20poly1305": {
-   "sha256": "9e07e2b51bedad6014810bfd19ac251fe65cadbff3e8937df8f6ace4247f2ce2",
+   "sha256": "11af9bb8ea4824df293fb4130dd8ddd68dcfdfb4f223351b704d69767777e591",
    "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
-   "built": "2026-11-12 03:56 PST"
+   "rind_bench": "0463305 (2026-11-12 10:35 PST), clean tree",
+   "built": "2026-11-12 10:35-10:38 PST"
   }
  }
 }
