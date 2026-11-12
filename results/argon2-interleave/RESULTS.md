@@ -69,7 +69,7 @@ Loaded runs (another agent's tests on the Pi, 92 C, ~1 GHz; `*-LOADED*`) gave g1
 | 64 MiB | sha3 | 22.141 ms (13.5%) | **20.496 ms** (10.1%) | 0.926 | 33.047 ms |
 | 1 MiB | neon | 799.14 us (4.5%) | **726.69 us** (7.9%) | 0.909 | 1.069 ms |
 | 16 MiB | neon | 4.436 ms (11.5%) | **4.078 ms** (2.8%) | 0.919 | 5.822 ms |
-| 64 MiB | neon | 26.711 ms (11.7%) | **23.700 ms** (26.2%) | 0.887 | 32.480 ms |
+| 64 MiB | neon | 26.711 ms (10.7%) | **23.700 ms** (26.2%) | 0.887 | 32.480 ms |
 
 Wall-clock harness rounds on the M1 (`raw/m1pro-*-wall-r*.tsv`, 8-10 alternations, load 45-100)
 agree: sha3 0.88-0.97, neon 0.89-0.95. The M1 numbers are noisy in absolute terms; every run had
