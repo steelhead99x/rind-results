@@ -269,7 +269,7 @@ Run on the board before any timing, every run. A library failing an operation's 
 
 ## Confidence
 
-Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `nrf52840.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. A relinked build (rind-bench's `--pad 1031`) of all twelve benches moved no ratio by more than 0.03 (`diag/nrf52840-relink-98568332/`; the largest was QUIC ChaCha header protection, 0.95× to 0.98× ring): unlike the ESP32-S3's, these rows hardly depend on layout (why is not tested).
+Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `nrf52840.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. Relinked builds that move every library by about 1 KB and about 2 KB (rind-bench's `--pad 1031` and `--pad 2053`, padding ahead of the libraries since 2026-11-12, checked with `nm -n`) moved no short-input ratio by more than 0.01 (`diag/nrf52840-relink-fixed-98568332/relink-short.md`: chacha20poly1305, hkdf, hmac and sha2). An earlier relink of all twelve benches (`diag/nrf52840-relink-98568332/`) moved the Rust code only 8 bytes, so it did not test layout. Unlike the ESP32-S3's, these rows hardly depend on layout (why is not tested).
 
 ## Reproduce
 
