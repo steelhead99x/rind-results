@@ -8,7 +8,7 @@
 | chacha20poly1305 | chacha20poly1305 | 1 | +1040 | +2064 |
 | chacha20poly1305 | poly1305 | 1 | +1040 | +2064 |
 | chacha20poly1305 | cipher | 2 | +1040 | +2064 |
-| hkdf | rind | 57 | +1040 | +2064 |
+| hkdf | rind | 61 | +1040 | +2064 |
 | hkdf | libcrux_sha2 | 2 | +1040 | +2064 |
 | hkdf | libcrux_hkdf | 9 | +1040 | +2064 |
 | hkdf | ring | 27 | +1040 | +2064 |

@@ -89,7 +89,7 @@ const ESP32S3: Board = Board {
             at 240 MHz, timed with the core's cycle counter.",
     layout: "Relinking an image moves its short-input rows far more than that: see \
              `diag/layout-relink-2026-11-12/` and, at this pin, the three-layout table in \
-             `diag/esp32s3-relink-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.",
+             `diag/esp32s3-relink-fixed-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.",
     repro: &[
         "git clone --recursive https://github.com/steelhead99x/rind-bench   # private; the port",
         "git clone https://github.com/steelhead99x/rind-results",
