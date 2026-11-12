@@ -12,6 +12,8 @@ rind's time over the fastest other Rust library, per report operation, log scale
 
 ![msi-001, x86_64 (noisy run)](charts/msi-001-rind-vs-fastest.svg)
 
+![nRF52840 (Seeed T1000-E), Cortex-M4F at 64 MHz](charts/nrf52840-rind-vs-fastest.svg)
+
 PNG copies sit next to the SVGs for chat and slides.
 
 ## Screenshots
@@ -54,4 +56,12 @@ asciinema v2 casts (`asciinema play media/terminal/<name>.cast`) with plain-text
 Every published run's full serial console is in [`../results/raw/<bench>/run-N.log`](../results/raw)
 (and the diagnostic runs' in [`../results/diag`](../results/diag)), with the parsed JSON records
 beside each. [`serial/x25519-recorded-run.log`](serial/x25519-recorded-run.log) is the run captured in the
-recording above.
+recording above. That rebuild's `x25519.elf` hashes to `a22dc0eb…`
+([`../results/images-recorded-rebuild.sha256`](../results/images-recorded-rebuild.sha256)), not the
+published `f806b1bd…` in [`../results/images.sha256`](../results/images.sha256): it was built after the bench
+thread's stack went from 96 KB to 160 KB, and it carries a newer ESP-IDF build timestamp. The published
+x25519 rows come from `f806b1bd…`; the rebuild matched them within 1.1% on every row.
+
+The nRF52840 runs' consoles are in [`../results/raw-nrf52840/<bench>/`](../results/raw-nrf52840), and
+[`serial/nrf52840-x25519-run-1.log`](serial/nrf52840-x25519-run-1.log) is one of them; the UF2 and ELF hashes of
+the images that ran are in [`../results/nrf52840/images.sha256`](../results/nrf52840/images.sha256).

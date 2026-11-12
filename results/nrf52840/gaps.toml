@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the nrf52840 host (Cortex-M4F, 64 MHz): each
+# report operation where another Rust library beats rind by more than 10%, in
+# rind's benchmarks/gaps.toml format. tools/report.py refuses a gap without an
+# entry and an entry that covers no gap. rind has no M-profile quest, so each
+# carries a reason.
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/*"]
+on = ["nrf52840"]
+reason = "Assembly against portable Rust: ring assembles OpenSSL's Thumb-2 ChaCha20 (chacha-armv4) here, while rind runs its portable backend, because its 32-bit Arm assembly is ARM-state NEON that an M-profile core lacks. rind's portable code is 0.93x libcrux's and 1.15x RustCrypto's at 1350B. A Thumb-2 (or DSP-extension) ChaCha20 for M-profile would close it."
+
+[[gap]]
+operations = ["xchacha20poly1305/{lib}/16KB"]
+on = ["nrf52840"]
+reason = "Portable against portable: ring has no XChaCha, and RustCrypto's soft ChaCha20 runs 16 KB in 0.85x rind's cycles (946 kc against 1,115 kc); rind is 0.95x libcrux. At 1350B and below the HChaCha20 key setup dominates and all three are within 6%. Same fix as chacha20poly1305: an M-profile ChaCha20."
+
+[[gap]]
+operations = ["sha256/{lib}/*", "hmac-sha256/{lib}/*", "hkdf-sha256/extract-expand/{lib}"]
+on = ["nrf52840"]
+reason = "Assembly against portable Rust: ring assembles OpenSSL's sha256-armv4 here (Thumb-2, no NEON needed), 0.62x rind's cycles at 16 KB. rind's portable SHA-256 is libcrux-sha2's code and matches libcrux within 1% on every length, and RustCrypto's soft SHA-256 is 0.88x. HMAC and HKDF inherit it. An M-profile SHA-256 block function would close it."
+
+[[gap]]
+operations = ["hkdf-sha256/expand/{lib}"]
+on = ["nrf52840"]
+reason = "Fixed per-call cost on a 64-byte output: rind's expand takes 11.1 kc against RustCrypto's 8.5 kc and ring's 9.3 kc, about 2.5 kc of setup over three SHA-256 blocks; with the same SHA-256 the long rows track libcrux. Not investigated further; the same pattern does not show on SHA-384/512, where rind is within 14% of ring and level with RustCrypto."
+
+[[gap]]
+operations = ["sha512/{lib}/*"]
+on = ["nrf52840"]
+reason = "Assembly against portable Rust: ring assembles OpenSSL's sha512-armv4 (Thumb-2), 0.84x rind's cycles. rind's portable SHA-512 (libcrux-sha2's code) matches libcrux within 1% and beats RustCrypto's soft SHA-512 (1.03x theirs)."
+
+[[gap]]
+operations = ["mlkem768-keygen/{lib}", "mlkem768-encaps/{lib}"]
+on = ["nrf52840"]
+reason = "Not understood yet, probably randomness: rind's keygen and encaps are 1.74x and 1.83x libcrux's, about 1.25 M cycles more each, while its decaps, which draws no randomness, is 0.82x libcrux's. Every row draws its randomness through getrandom, served here by the nRF52840's RNG peripheral with bias correction, which yields about one byte per 170 µs (11 kc), so ~110 more random bytes per operation would account for it. To check: count rind's getrandom bytes per operation, then rerun with a seeded generator behind getrandom."

@@ -7,7 +7,7 @@ How long rind and the usual Rust crypto libraries take for the same operations, 
 
 Results of rind's own benchmark harness (`admin/bench-report`, rind-bench, criterion) at [`b6651423`](https://github.com/moq-dev/rind/commit/b66514238d449fc211d75fd14554301bb690e421) on four hosts the upstream report doesn't cover. `benchmarks/overview-all.svg` puts them beside the six hosts the upstream BENCHMARKS.md publishes (its numbers, from `upstream/rind/benchmarks/data/`, measured 2026-11-06 and 2026-11-07 at older commits). `hosts/<host>/` holds each host's raw JSON in the harness's schema, a trimmed log, and notes. `scripts/` holds the wrapper, the renderer, and the run scripts. An RP2040 was also tried and is not runnable: rind lacks `no_std` (see `hosts/rp2040/`).
 
-ESP32-S3, msi-001, and their charts stay in [results/](results/) and [media/](media/README.md). Bare-metal extras: [EXTRAS.md](EXTRAS.md).
+ESP32-S3, msi-001, and their charts stay in [results/](results/) and [media/](media/README.md). The nRF52840 (a Seeed T1000-E, Cortex-M4F at 64 MHz, bare metal) is in [results/nrf52840/](results/nrf52840/RESULTS.md): rind builds `no_std` there with rind-bench's `patches/0003`. Bare-metal extras: [EXTRAS.md](EXTRAS.md).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="benchmarks/overview-all-dark.svg">

@@ -87,3 +87,17 @@ OLED demo (SSD1306 128x64 on I2C)
 - Draw only from an observer called between benchmarks (before setup and warm-up, after the last sample); the panel self-refreshes, so a shown frame costs nothing. Count benchmarks with a dry run for the progress bar. Publish numbers from images built without the display feature.
 - Layout that reads at 128x64: inverted 9 px title bar (5x8 font), 5 rows of 9 px with a 4-char library tag, bar scaled to the slowest (target filled, rivals outlined), value right-aligned in 5x8, 4x6 footer with "X 1.19x faster than Y". 4x6 is too small for numbers.
 - Don't commit rendered PNGs when the upstream rules forbid binaries or build artifacts; commit the renderer.
+
+## Lessons learned (nRF52840 bare metal, a board that belongs to something else)
+
+- Borrowed board (a Meshtastic node): stop its user service, export config and `--info`, enter the UF2 bootloader and copy `CURRENT.UF2` + `INFO_UF2.TXT`, and check what `CURRENT.UF2` covers (here `0x1000`-`0xEA000`, family `0x28860057`, so it cannot be copied back as is). Compare its application range with the official release block for block, then build a family-`0xADA52840` restore UF2 of the exact app region from it. Checksum all of it before flashing anything.
+- Keep the image inside the application region (`0x27000`-`0xED000` with S140 7.3.0 and Adafruit's bootloader); have the UF2 writer refuse anything outside. Never call `embassy_nrf::init`, because it writes UICR. Afterwards, re-read `CURRENT.UF2` to prove the SoftDevice is byte-identical. For the restore, diff `--export-config` (identical means no re-import is needed) and the `--info` sections other than the node list.
+- Every exit should lead to the bootloader: a panic, a fault, a lockup, or a 1200-baud touch. Use a 300-baud touch to restart for the next run. Give UsageFault, BusFault and MemManage a priority below USB so they can report pc/cfsr before resetting.
+- ModemManager opens new CDC-ACM ports and eats output or drops the run. Start runs only on an explicit host token (`rind-bench:go`) sent after a settle delay, and fail any run whose first record isn't `start`. Use `sync -f <drive>`, not a global `sync`, after copying a UF2, since a busy disk elsewhere stalls the global one for minutes.
+- rind on `thumbv7em`: patch it to build `no_std` (patches/0003), with the portable backend for M-profile. Getting ring 0.17 onto bare metal takes three things:
+  - an `AsmTarget` for os `none`, minus the NEON-in-ARM-state `x25519-asm-arm.S` and `poly1305_arm_asm.S`, with the NEON Poly1305 cfg'd out
+  - `less-safe-getrandom-custom-or-rdrand`
+  - a getrandom 0.2 custom backend
+- getrandom 0.4's custom backend symbol is still `__getrandom_v03_custom`.
+- The p256 image (with libcrux-ecdh pulling in X25519) overflowed 792 KB at codegen-units 16. Fat LTO fixed it; apply it to every image on that board so they're built alike, and disclose it.
+- The nRF RNG with bias correction takes about 170 µs per byte, so rows that draw randomness inside the timed loop (ML-KEM keygen/encaps) can be RNG-bound. Say so in the gap reason until it's measured.
