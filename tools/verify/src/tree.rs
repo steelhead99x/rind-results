@@ -902,35 +902,46 @@ fn check_agg(path: &Path, rep: &mut Report) -> bool {
             }
             continue;
         }
-        let Some(med_ns) = time_ns(cells[3], &time) else {
+        let Some((med_ns, _)) = time_ns_tol(cells[3], &time) else {
             continue;
         };
-        let Some(min_ns) = time_ns(cells[4], &time) else {
+        let Some((min_ns, min_half)) = time_ns_tol(cells[4], &time) else {
             continue;
         };
-        let Some(max_ns) = time_ns(cells[5], &time) else {
+        let Some((max_ns, max_half)) = time_ns_tol(cells[5], &time) else {
             continue;
         };
         n += 1;
-        if min_ns > med_ns + 1e-6 || med_ns > max_ns + 1e-6 {
+        if min_ns > med_ns + min_half + 1e-6 || med_ns > max_ns + max_half + 1e-6 {
             rep.bad(
                 &label,
                 format!("{} {}: median outside min/max", cells[0], cells[1]),
             );
         }
-        let raw = if min_ns == 0.0 {
+        // min and max are rounded, so (max/min − 1) has a range, not one value.
+        let min_lo = (min_ns - min_half).max(0.0);
+        let min_hi = min_ns + min_half;
+        let max_lo = (max_ns - max_half).max(0.0);
+        let max_hi = max_ns + max_half;
+        let spread_lo = if max_lo <= min_hi || min_hi == 0.0 {
             0.0
         } else {
-            (max_ns / min_ns - 1.0) * 100.0
+            (max_lo / min_hi - 1.0) * 100.0
         };
-        let shown = cells[6].trim_end_matches('%');
-        let shown: f64 = shown.parse().unwrap_or(f64::NAN);
-        if (shown - raw).abs() > 0.05 + 1e-9 {
+        let spread_hi = if min_lo == 0.0 {
+            f64::INFINITY
+        } else {
+            (max_hi / min_lo - 1.0) * 100.0
+        };
+        let shown_text = cells[6].trim_end_matches('%');
+        let shown: f64 = shown_text.parse().unwrap_or(f64::NAN);
+        let shown_half = 0.5 * 10f64.powi(-decimals(shown_text));
+        if shown + shown_half + 1e-9 < spread_lo || shown - shown_half - 1e-9 > spread_hi {
             rep.bad(
                 &label,
                 format!(
-                    "{} {}: spread shows {}%, (max/min − 1) is {raw:.2}%",
-                    cells[0], cells[1], cells[6]
+                    "{} {}: spread shows {}%, (max/min − 1) is {:.2}%–{:.2}%",
+                    cells[0], cells[1], cells[6], spread_lo, spread_hi
                 ),
             );
         }
@@ -941,11 +952,12 @@ fn check_agg(path: &Path, rep: &mut Report) -> bool {
     n > 0
 }
 
-fn time_ns(cell: &str, re: &Regex) -> Option<f64> {
+fn time_ns_tol(cell: &str, re: &Regex) -> Option<(f64, f64)> {
     let m = re.captures(cell)?;
     let v: f64 = m[1].replace(',', "").parse().ok()?;
     let scale = unit_scale(&m[2])?;
-    Some(v * scale)
+    let half = 0.5 * scale * 10f64.powi(-decimals(&m[1]));
+    Some((v * scale, half))
 }
 
 fn compare_mds(dir: &Path) -> impl Iterator<Item = PathBuf> {
