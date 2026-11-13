@@ -38,8 +38,9 @@ const DATA = {
     { k: "Little RAM", v: "264 KiB", what: "264 KiB of SRAM in total, 256 KiB of it main SRAM.", fix: "listed as a blocker in the survey" }
   ],
 
-  /* hosts/rp2040/images.json, hosts/rp2040/NOTES.md (commit 2cb88c3) */
-  images: { count: 12, rindBench: "f656f95", rind: "98568332", patches: "0001–0005", ringVer: "0.17.14",
+  /* hosts/rp2040/images.json, hosts/rp2040/NOTES.md (main, 876586ce / 2cb88c3).
+     Published images are still patches 0001–0005. 0006 and 0007 are on the fork branch below. */
+  images: { count: 12, firmwareRepo: "steelhead99x/rind-hardware", rindBench: "f656f95", rind: "98568332", patches: "0001–0005", laterPatches: "0006–0007", ringVer: "0.17.14",
     names: ["aes_gcm","chacha20poly1305","cipher","ed25519","hkdf","hmac","mlkem768","p256","sha2","sha3","x25519","xchacha20poly1305"] },
 
   /* COMPETITOR-BUILDS.md: 1 = compiles, 0 = fails. Columns: thumbv6m, thumbv7em, thumbv8m.main, riscv32imc, riscv32imac */
@@ -81,21 +82,25 @@ const DATA = {
 
   /* hosts/rp2040/NOTES.md, baremetal/rp2040/README.md, builds/README.md */
   plan: [
-    { ph: "Done", h: "Back up flash", t: "Full flash read three times; all copies matched." , done: true },
-    { ph: "Step 1", h: "Copy the image", t: "Hold BOOTSEL, plug in USB, copy one .uf2 file." },
-    { ph: "Step 2", h: "Start the run", t: "Open the USB serial port and send rind-bench:go." },
-    { ph: "Step 3", h: "Check and time", t: "Known-answer checks built into the firmware run, along with the timed rows." },
-    { ph: "Step 4", h: "Record", t: "Save the serial output." },
-    { ph: "Step 5", h: "Restore", t: "Write the saved firmware back with picotool, with verify." }
+    { ph: "Done", h: "Back up flash", t: "A triple-matched picotool read was taken on November 12. Before the first flash, the firmware then on the board (MicroPython) was saved and verified." , done: true },
+    { ph: "Done", h: "Flash and start", t: "The twelve images were loaded with picotool. The start token is still rind-bench:go." , done: true },
+    { ph: "Done", h: "Check and time", t: "Known-answer checks passed on all twelve images. First timed runs are in, after a SysTick wrap fix." , done: true },
+    { ph: "Next", h: "Record in rind-results", t: "The measured numbers are in fork commit messages. results/rp2040/ is not in rind-results yet." },
+    { ph: "Next", h: "Restore", t: "Write the saved firmware back with picotool, with verify. Not confirmed." },
+    { ph: "Later", h: "Upstream PRs", t: "Fork branches exist for the SysTick fix, patches 0006 and 0007, and a no_std alloc build. No upstream pull request has been opened." }
   ],
 
-  /* Measurement plan, rind-bench team, 2026-11-12 (plan, not results).
-     SysTick wrap at 125 MHz: hosts/rp2040/NOTES.md (134.2 ms). */
+  /* Measurement plan, 2026-11-12, plus the first-run SysTick facts.
+     Wrap times: hosts/rp2040/NOTES.md (2cb88c3). Fix and cross-check:
+     steelhead99x/rind-hardware rp2040/systick-wrap-fix (a9d057a). */
   methods: {
     systick32: "34.4 s",   /* hosts/rp2040/NOTES.md, commit 2cb88c3 */
+    checkCycles: "37500815",
+    checkUs: "300021",
+    checkMhz: "125.0",
     timers: [
       ["SysTick", "core clock, 125 MHz", "24 bits: safe up to about 134 ms", "cycles", "short operations"],
-      ["TIMERAWH / TIMERAWL", "1 MHz", "64 bits", "µs; cycles = µs × 125", "longer operations"]
+      ["TIMERAWH / TIMERAWL", "1 MHz", "64 bits", "µs; cycles = µs × 125", "boot cross-check, and longer operations"]
     ],
     sample: [
       "Repeat the operation until one sample takes at least about 10 ms, or 100 times the timer's resolution.",
@@ -110,34 +115,43 @@ const DATA = {
      unit: "cycles" for SysTick rows, "us" for 1 MHz timer rows.
      --------------------------------------------------------------- */
   live: {
-    status: "pending",          /* "pending" | "partial" | "complete" */
-    asOf: null,                 /* e.g. "2026-11-20 14:00 PST" */
-    source: null,               /* e.g. "main: hosts/rp2040/RESULTS.md (commit abc1234)" */
-    placement: null,            /* "XIP flash" | "SRAM" */
+    status: "partial",          /* "pending" | "partial" | "complete" */
+    asOf: "2026-11-12 18:01 PST",
+    source: "steelhead99x/rind-hardware@6abf7fd (rp2040/armv6m-sha512-ghash) and steelhead99x/rind@c08c91ea (rp2040/armv6m-no-std). Not yet in rind-results/results/rp2040/.",
+    placement: "XIP flash, cache on",
+    compare: "before-after",    /* rind after a patch vs rind before; not vs another library */
+    note: "Medians of per-round medians, interleaved, 125 MHz. Known-answer checks passed on all twelve images. Fastest-other cycle counts are pending. A P-256 multiply rewrite and further elliptic-curve and Poly1305 work have not been timed on the board.",
     rows: [
-      { bench: "aes_gcm",           op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
-      { bench: "chacha20poly1305",  op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
-      { bench: "sha2",              op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
-      { bench: "hmac",              op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
-      { bench: "x25519",            op: "", unit: "us",     rind: null, best: null, bestLib: "" },
-      { bench: "ed25519",           op: "", unit: "us",     rind: null, best: null, bestLib: "" },
-      { bench: "p256",              op: "", unit: "us",     rind: null, best: null, bestLib: "" },
-      { bench: "mlkem768",          op: "", unit: "us",     rind: null, best: null, bestLib: "" },
-      { bench: "cipher",            op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
-      { bench: "hkdf",              op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
-      { bench: "sha3",              op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
-      { bench: "xchacha20poly1305", op: "", unit: "cycles", rind: null, best: null, bestLib: "" }
+      { bench: "sha512",        op: "16 KiB",              unit: "cycles", before: 36.06e6, rind: 3.42e6,  beforeText: "36.06 M", afterText: "3.42 M",  ratio: "0.095×" },
+      { bench: "sha512",        op: "32 B",                unit: "cycles", before: 315.0e3, rind: 28.7e3,  beforeText: "315.0 k", afterText: "28.7 k",  ratio: "0.091×" },
+      { bench: "hmac-sha384",   op: "32 B",                unit: "cycles", before: 1.195e6, rind: 114.6e3, beforeText: "1.195 M", afterText: "114.6 k", ratio: "0.096×" },
+      { bench: "hkdf-sha384",   op: "expand",              unit: "cycles", before: 625.3e3, rind: 57.8e3,  beforeText: "625.3 k", afterText: "57.8 k",  ratio: "0.092×" },
+      { bench: "ed25519-sign",  op: "",                    unit: "cycles", before: 7.87e6,  rind: 7.28e6,  beforeText: "7.87 M",  afterText: "7.28 M",  ratio: "0.925×" },
+      { bench: "aes128-gcm",    op: "16 KiB",              unit: "cycles", before: 16.55e6, rind: 7.93e6,  beforeText: "16.55 M", afterText: "7.93 M",  ratio: "0.479×" },
+      { bench: "aes256-gcm",    op: "16 KiB",              unit: "cycles", before: 18.19e6, rind: 9.57e6,  beforeText: "18.19 M", afterText: "9.57 M",  ratio: "0.526×" },
+      { bench: "aes128-gcm",    op: "32 B",                unit: "cycles", before: 81.95e3, rind: 36.79e3, beforeText: "81.95 k", afterText: "36.79 k", ratio: "0.449×" }
     ]
   },
 
-  /* Sources slide */
+  /* First-run findings, used on slides 6 and 10. */
+  findings: {
+    systick: "The first runs sometimes added an extra 2^24 cycles (about 16.8 million, or 134 ms at 125 MHz) when a sample crossed a SysTick wrap. cycles() treated COUNTFLAG as a wrap the handler had not counted, but the handler never read SYST_CSR, so the flag stayed set. The handler now reads CSR. When a wrap lands with interrupts masked, cycles() counts it, clears the pending interrupt, and re-reads CVR. The boot cross-check now lasts 300 ms, at least two wraps: 37,500,815 cycles against 300,021 µs (125.0 MHz).",
+    sha512: "SHA-512 ran at about 2,200 cycles per byte in rind, RustCrypto and libcrux (SHA-256 was 101). HACL*'s unrolled compression is about 27 KB of Thumb, larger than the 16 KB XIP cache. Patch 0006 is a rolled loop of 1,724 bytes, used on Arm without CAS atomics.",
+    ghash: "AES-GCM ran at 2.1 to 2.3 times RustCrypto's time. GHASH's 32-bit path made 144 calls to the 32×32→64 helper (__aeabi_lmul) per block, because ARMv6-M has no umull. Patch 0007 takes those products with muls alone, as BearSSL's ghash_ctmul32 does.",
+    nostd: "A separate fork branch, steelhead99x/rind no-std/thumbv6m-alloc (3dc5634), builds the rind crate itself with alloc and without std, down to thumbv6m-none-eabi. The default std feature stays on; desktop codegen was unchanged. This is not the same as harness patch 0005, which keeps ReuseCache in a Cell with no new crate. Neither has been sent upstream.",
+    pr: "No pull request has been opened on kixel-ai/rind (the current upstream of moq-dev/rind) for this work."
+  },
+
+  /* Sources slide. repo is omitted for steelhead99x/rind-results (the default). */
   sources: [
-    ["Board, backup", "main", "baremetal/rp2040/README.md", "hosts/rp2040/DEVICE.md"],
-    ["Starting errors, fixes", "main", "hosts/rp2040/FEASIBILITY.md", "hosts/rp2040/NOTES.md"],
-    ["Image list and build", "main", "hosts/rp2040/images.json", ""],
-    ["Other libraries", "main", "baremetal/rp2040/COMPETITOR-BUILDS.md", "baremetal/rp2040/builds/README.md"],
-    ["Other chips", "main", "baremetal/rp2040/TARGET-SURVEY.md", "baremetal/mg24/README.md"],
-    ["Commits", "main", "commit/2cb88c3", "commit/f4e0b1d|commit/cb264f8"]
+    ["Board, backup, notes", "main", "https://github.com/steelhead99x/rind-results", "hosts/rp2040/NOTES.md", "hosts/rp2040/DEVICE.md|baremetal/rp2040/README.md|commit/2cb88c3|commit/876586ce"],
+    ["Published images", "main", "https://github.com/steelhead99x/rind-results", "hosts/rp2040/images.json", ""],
+    ["Firmware repo", "main", "https://github.com/steelhead99x/rind-hardware", "rp2040/README.md", "commit/8d9c1bb"],
+    ["SysTick wrap fix", "rp2040/systick-wrap-fix", "https://github.com/steelhead99x/rind-hardware", "commit/a9d057a", ""],
+    ["Patches 0006 and 0007", "rp2040/armv6m-sha512-ghash", "https://github.com/steelhead99x/rind-hardware", "commit/6abf7fd", "rp2040/README.md"],
+    ["GHASH change in rind", "rp2040/armv6m-no-std", "https://github.com/steelhead99x/rind", "commit/c08c91ea", ""],
+    ["no_std + alloc crate", "no-std/thumbv6m-alloc", "https://github.com/steelhead99x/rind", "commit/3dc5634", ""],
+    ["Other libraries, chips", "main", "https://github.com/steelhead99x/rind-results", "baremetal/rp2040/COMPETITOR-BUILDS.md", "baremetal/rp2040/TARGET-SURVEY.md|baremetal/mg24/README.md"]
   ]
 };
 </script>
@@ -289,7 +303,7 @@ table.sv td:first-child{white-space:nowrap}
   <div class="inner">
     <div class="kicker">rind · bare-metal port</div>
     <h1>rind on the RP2040</h1>
-    <div class="sub"><span data-k="chip.mhz"></span> MHz Cortex-M0+, no operating system. How a Rust cryptography library was made to build for this chip, and how it will be measured there.</div>
+    <div class="sub"><span data-k="chip.mhz"></span> MHz Cortex-M0+, no operating system. How a Rust cryptography library was made to build for this chip, what the first on-device runs found, and how those results were measured.</div>
   </div>
   <div class="meta">steelhead99x/rind-results<br><span data-k="meta.date"></span></div>
   <div class="foot"><span class="src">Sources are listed on the last slide. Anything without a source is left out or marked pending.</span><span class="num"></span></div>
@@ -298,7 +312,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 2. BOARD ============ -->
 <section class="slide" data-section="Board">
   <div class="kicker">The board</div>
-  <h2>The test board is an RP2040, and its original firmware was saved and left in place</h2>
+  <h2>The test board is an RP2040; its firmware was backed up, and the first bench images have now been flashed</h2>
   <div class="board" id="board-cells" style="margin-top:22px"></div>
   <div class="cols c64" style="margin-top:8px">
     <div class="card tall"><h3>The chip</h3><ul class="b">
@@ -307,9 +321,8 @@ table.sv td:first-child{white-space:nowrap}
       <li>Code runs from the <span data-k="chip.flashMiB"></span> MiB external flash (XIP, "execute in place") or from on-chip SRAM.</li>
     </ul></div>
     <div class="card tall"><h3>What was done to the board</h3><ul class="b">
-      <li>It came with an Arduino (Mbed OS) sketch of about <span data-k="chip.stockKiB"></span> KiB.</li>
-      <li>The full flash was read <span data-k="chip.backupReads"></span> times with picotool <span data-k="chip.picotool"></span>. All copies matched.</li>
-      <li>The flash has not been written. The backup is not in this repository.</li>
+      <li>On November 12 the notes recorded an Arduino (Mbed OS) sketch of about <span data-k="chip.stockKiB"></span> KiB. The full flash was read <span data-k="chip.backupReads"></span> times with picotool <span data-k="chip.picotool"></span>; all copies matched, and the flash had not been written yet.</li>
+      <li>Before the first bench flash, the board was running MicroPython. That firmware was saved and verified, then the twelve images were loaded with picotool. The backups are not in this repository.</li>
     </ul></div>
   </div>
   <div class="callout" style="margin-top:22px">The target survey lists the RP2040 as "the floor" of its suggested benchmark chips.</div>
@@ -382,7 +395,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 6. NOW ============ -->
 <section class="slide" data-section="Now">
   <div class="kicker">Where it stands</div>
-  <h2>One command now builds a firmware image for every benchmark, and none of them has run on the chip yet</h2>
+  <h2>One command builds a firmware image for every benchmark; the first on-device run was on 12 November 2026</h2>
   <svg class="flow" id="pipe" viewBox="0 0 1152 150" width="1152" height="150" role="img" aria-label="Build pipeline"></svg>
   <div class="cols" style="margin-top:14px">
     <div>
@@ -394,12 +407,13 @@ table.sv td:first-child{white-space:nowrap}
       <ul class="b sm">
         <li>Libraries in the images: rind, RustCrypto, dalek, libcrux.</li>
         <li><b>ring <span data-k="images.ringVer"></span> is left out.</b> Its Arm assembly uses NEON (<code>vpush</code>) and does not assemble for ARMv6-M. aws-lc-rs is left out because it needs an OS.</li>
-        <li>Known-answer checks are built into the firmware and will run on the first flash.</li>
-        <li>There is no official QEMU machine for the RP2040 with enough RAM to run these images, so only the build is published.</li>
+        <li>Known-answer checks are built into the firmware and passed on all twelve images on the first flash.</li>
+        <li>The firmware lives in the public <code>steelhead99x/rind-hardware</code> repo. There is still no official QEMU machine with enough RAM, so those first-run numbers are not from an emulator.</li>
       </ul>
     </div>
   </div>
-  <div class="foot"><span class="src">hosts/rp2040/NOTES.md · hosts/rp2040/images.json · hosts/rp2040/FEASIBILITY.md (commit 2cb88c3, branch main)</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:12px">The first runs found a SysTick wrap-count bug (fixed), SHA-512 at about 2,200 cycles/byte because HACL*'s unrolled loop missed the 16 KB XIP cache (patch 0006, 0.095× at 16 KiB), and AES-GCM at 2.1–2.3× RustCrypto from 32×32→64 helper calls (patch 0007, 0.48–0.53×). Details on slides 10 and 11.</div>
+  <div class="foot"><span class="src">hosts/rp2040/NOTES.md, images.json (main, 876586ce) · rind-hardware rp2040/README.md and commits a9d057a, 6abf7fd</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 7. COMPETITORS ============ -->
@@ -428,8 +442,8 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 9. PLAN ============ -->
 <section class="slide" data-section="Plan">
-  <div class="kicker">Plan for on-device runs</div>
-  <h2>The next step is to flash the images, read results over USB, and put the original firmware back</h2>
+  <div class="kicker">On-device runs</div>
+  <h2>The first flash is done; next is publishing the full results in rind-results, then restoring the saved firmware</h2>
   <div class="timeline t6" id="plan" style="margin-top:22px"></div>
   <div class="cols" style="margin-top:22px">
     <div class="card"><h3>The firmware stack</h3><ul class="b sm">
@@ -438,23 +452,23 @@ table.sv td:first-child{white-space:nowrap}
       <li>Results come back over a USB serial port (USB CDC); <code>defmt-rtt</code> through a debug probe is the alternative.</li>
     </ul></div>
     <div class="card"><h3>What's next after the numbers</h3><ul class="b sm">
-      <li>Publish the results on this repository and in this deck (slide 11).</li>
-      <li>Patches 0003 and 0005 stay in the benchmark harness. There is no plan to send them upstream right now; an upstream pull request happens only if approved.</li>
+      <li>The first numbers are on slide 11, from fork commits. They are not yet in <code>rind-results/results/rp2040/</code>.</li>
+      <li>Patches 0003, 0005, 0006 and 0007, and the no_std alloc branch, stay on the forks. No upstream pull request has been opened.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">baremetal/rp2040/builds/README.md ("Later: on-device runner") · hosts/rp2040/NOTES.md · baremetal/rp2040/README.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">hosts/rp2040/NOTES.md (main) · rind-hardware rp2040/README.md (6abf7fd) · steelhead99x/rind 3dc5634</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 10. METHODS ============ -->
 <section class="slide" data-section="Methods">
-  <div class="kicker">How we'll measure (plan, not results)</div>
+  <div class="kicker">How results are measured</div>
   <h2>Short operations are timed in CPU cycles, long ones with the 1 MHz timer, and every comparison runs the same way on the same chip</h2>
   <div class="cols" style="margin-top:16px">
     <div>
       <div class="chart-title">Two clocks, because the M0+ has no cycle counter</div>
       <table class="t" id="tb-timers"></table>
       <p class="small">The M0+ has no DWT cycle counter, which the survey suggests using on the M33. The 1 MHz timer is read as RAWH, RAWL, RAWH, repeating if the high half changed, to avoid a torn read.</p>
-      <p class="small"><b>In the images built so far</b> (commit 2cb88c3): SysTick is extended in software to 32 bits, wrapping about every <span data-k="methods.systick32"></span> at 125 MHz, and the 1 MHz TIMERAW timer is used only as a startup cross-check.</p>
+      <p class="small"><b>On the board</b> (rind-hardware a9d057a): SysTick is still extended to 32 bits, wrapping about every <span data-k="methods.systick32"></span> at 125 MHz. The first runs hit a COUNTFLAG double-count, which added 2<sup>24</sup> cycles to any sample that crossed a wrap. That is fixed, and the 1 MHz TIMERAW cross-check now lasts 300 ms: <span data-k="methods.checkCycles"></span> cycles against <span data-k="methods.checkUs"></span> µs (<span data-k="methods.checkMhz"></span> MHz).</p>
       <div class="chart-title" style="margin-top:12px">Each reported number</div>
       <ul class="b sm" id="m-sample"></ul>
     </div>
@@ -468,34 +482,34 @@ table.sv td:first-child{white-space:nowrap}
       </ul>
     </div>
   </div>
-  <div class="foot"><span class="src">Measurement plan from the rind-bench team, 2026-11-12 · built images: hosts/rp2040/NOTES.md (commit 2cb88c3)</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Measurement plan, 2026-11-12 · hosts/rp2040/NOTES.md (2cb88c3) · SysTick fix: steelhead99x/rind-hardware@a9d057a</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 11. LIVE RESULTS ============ -->
 <section class="slide" data-section="Results">
   <div class="kicker">Live results</div>
-  <h2 id="live-title">On-device results are pending and will be filled in as runs land</h2>
+  <h2 id="live-title">First on-device results: SHA-512 and AES-GCM before and after the ARMv6-M patches</h2>
   <div class="pendbar" id="live-status"></div>
   <div class="cols c64" style="margin-top:10px">
     <table class="t" id="tb-live"></table>
     <div>
-      <div class="chart-title">rind time relative to the fastest other library (lower is better)</div>
+      <div class="chart-title">rind after each patch, relative to rind before (lower is better)</div>
       <div id="ch-live"></div>
     </div>
   </div>
-  <div class="foot"><span class="src">Results will be cited here from steelhead99x/rind-results once published. Update instructions: presentations/rind-rp2040/README.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">steelhead99x/rind-hardware@6abf7fd · steelhead99x/rind@c08c91ea · not yet in rind-results/results/rp2040/</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 12. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Every fact comes from these files in steelhead99x/rind-results, except the measurement plan, which is the rind-bench team's</h2>
+  <h2>Facts come from steelhead99x/rind-results, the public rind-hardware firmware repo, and fork branches of steelhead99x/rind</h2>
   <table class="t" id="tb-src" style="margin-top:14px;font-size:14.5px"></table>
   <div class="cols" style="margin-top:20px">
-    <div class="card"><h3>Branches checked</h3><p class="small" style="margin:0">All branches (<code>main</code>, <code>results/*</code>, <code>docs/*</code>) were checked on 2026-11-12. None has RP2040 data newer than <code>main</code> at commit 2cb88c3.</p></div>
-    <div class="card"><h3>Not in this deck</h3><p class="small" style="margin:0">On-device numbers (none exist yet), flash backup hashes, and links into the benchmark harness repository, which is not public.</p></div>
+    <div class="card"><h3>Branches checked</h3><p class="small" style="margin:0">rind-results <code>main</code> is at 876586ce (firmware links point at rind-hardware). On-device numbers are not in <code>results/rp2040/</code> yet; they are taken from the fork commits in the table. No upstream pull request on kixel-ai/rind has been opened for this work.</p></div>
+    <div class="card"><h3>Not in this deck</h3><p class="small" style="margin:0">Flash backup hashes, competitor cycle counts, and benches whose times are not in the cited commits. Untimed follow-ups (a P-256 rewrite, and multiply-helper work in X25519, Ed25519 and Poly1305) are marked pending.</p></div>
   </div>
-  <div class="foot"><span class="src">Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
+  <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind-hardware · github.com/steelhead99x/rind</span><span class="num"></span></div>
 </section>
 
 </div>
@@ -520,9 +534,9 @@ table.sv td:first-child{white-space:nowrap}
 
   // Slide 6: pipeline + images
   (function(){ const s=$('#pipe'), I=D.images;
-    const box=[[0,"Source",`rind ${I.rind}`,`patches ${I.patches}`,'#eef0f6'],[300,"Build",`cargo xtask build-images rp2040`,`rind-bench ${I.rindBench}`,'#eef0f6'],[600,"Output",`${I.count} UF2 images`,`hashes in images.json`,'#e6f4f1'],[900,"On the chip","not run yet","waiting for a board",'#fdf6e3']];
+    const box=[[0,"Source",`rind ${I.rind}`,`patches ${I.patches}, then ${I.laterPatches}`,'#eef0f6'],[300,"Build",`cargo xtask build-images rp2040`,`rind-hardware`,'#eef0f6'],[600,"Output",`${I.count} UF2 images`,`hashes in images.json`,'#e6f4f1'],[900,"On the chip","first run 12 Nov","all 12 KATs passed",'#e6f4f1']];
     el('defs',{},s).innerHTML='<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>';
-    box.forEach(([x,h,a,b,f],i)=>{ el('rect',{x,y:10,width:252,height:118,rx:10,fill:f,stroke:i==3?'#c9a227':'#dfe4ea','stroke-dasharray':i==3?'6 4':''},s);
+    box.forEach(([x,h,a,b,f],i)=>{ el('rect',{x,y:10,width:252,height:118,rx:10,fill:f,stroke:'#dfe4ea'},s);
       el('text',{class:'st',x:x+16,y:38},s,h.toUpperCase()); el('text',{class:i==1?'m':'t1',x:x+16,y:72,'font-size':i==1?12:15,'font-weight':600},s,a); el('text',{class:'t2',x:x+16,y:100},s,b);
       if(i<3) el('line',{x1:x+258,y1:69,x2:x+294,y2:69,stroke:'#0f766e','stroke-width':2.5,'marker-end':'url(#ah)'},s); });
   })();
@@ -545,35 +559,43 @@ table.sv td:first-child{white-space:nowrap}
   $('#m-sample').innerHTML = D.methods.sample.map(x=>`<li>${x}</li>`).join('');
 
   // Slide 11: live results (driven entirely by DATA.live)
-  (function(){ const L=D.live, MHZ=c.mhz;
+  (function(){ const L=D.live, MHZ=c.mhz, ab=L.compare==='before-after';
     const P='<span class="tag pending">pending</span>';
-    const cyc=(v,u)=> v==null?null:(u==='us'?v*MHZ:v);
-    const show=(v,u)=> v==null?P:(u==='us'?`${v.toLocaleString()} µs<br><span class="sub2">${Math.round(v*MHZ).toLocaleString()} cycles</span>`:`${v.toLocaleString()} cycles<br><span class="sub2">${(v/MHZ).toFixed(1)} µs</span>`);
-    const done=L.rows.filter(r=>r.rind!=null&&r.best!=null);
-    if(L.status!=='pending'&&done.length) $('#live-title').textContent = L.status==='complete' ? `On-device results for ${done.length} benchmarks are in` : `On-device results are in for ${done.length} of ${L.rows.length} benchmarks, with the rest pending`;
+    const showTxt=(r,which)=> (which==='before'?r.beforeText:r.afterText) ? `${which==='before'?r.beforeText:r.afterText} cycles` : P;
+    const done=L.rows.filter(r=>r.rind!=null&&(ab?r.before!=null:r.best!=null));
+    if(L.status!=='pending'&&done.length) $('#live-title').textContent = ab
+      ? `First on-device results: SHA-512 and AES-GCM before and after the ARMv6-M patches`
+      : (L.status==='complete' ? `On-device results for ${done.length} benchmarks are in` : `On-device results are in for ${done.length} of ${L.rows.length} benchmarks, with the rest pending`);
     $('#live-status').innerHTML = L.status==='pending'
-      ? `<b>Pending, updated as on-device runs land.</b> No benchmark has run on the RP2040 yet. The rows are the ${L.rows.length} bench images listed in images.json.`
-      : `<b>${L.status==='complete'?'Complete':'Partial, updated as on-device runs land'}.</b> As of ${L.asOf||'?'} · code in ${L.placement||'?'} · source: ${L.source||'?'}`;
-    $('#tb-live').innerHTML = `<tr><th>Bench</th><th>Operation</th><th class="n">rind</th><th class="n">Fastest other</th><th class="n">rind / other</th></tr>` +
-      L.rows.map(r=>{ const a=cyc(r.rind,r.unit), b=cyc(r.best,r.unit);
-        return `<tr><td><code>${r.bench}</code></td><td>${r.op||'<span class="mut">to be set</span>'}</td><td class="n">${show(r.rind,r.unit)}</td><td class="n">${show(r.best,r.unit)}${r.bestLib?`<br><span class="sub2">${r.bestLib}</span>`:''}</td><td class="n">${a!=null&&b!=null?(a/b).toFixed(2)+'×':P}</td></tr>`; }).join('');
-    const w=440, rowH=34, h=L.rows.length*rowH+34, s=el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img','aria-label':'Bar chart of rind time divided by the fastest other library for each benchmark; bars appear as results land'}), x0=120, x1=w-50;
-    const vals=L.rows.map(r=>{const a=cyc(r.rind,r.unit),b=cyc(r.best,r.unit); return a!=null&&b!=null?a/b:null;});
-    const max=Math.max(2,...vals.filter(v=>v!=null).map(v=>Math.ceil(v*2)/2)), sc=v=>x0+(x1-x0)*v/max;
-    for(let t=0;t<=max+1e-9;t+=max>4?1:0.5){ el('line',{x1:sc(t),x2:sc(t),y1:4,y2:h-24,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-8,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,t.toFixed(1)+'×'); }
-    L.rows.forEach((r,i)=>{ const y=6+i*rowH, v=vals[i];
-      el('text',{x:x0-8,y:y+rowH/2+3,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,r.bench);
+      ? `<b>Pending, updated as on-device runs land.</b> No benchmark has run on the RP2040 yet.`
+      : `<b>Partial.</b> As of ${L.asOf||'?'} · ${L.placement||'?'} ${L.note?`<span class="sub2" style="display:block;margin-top:4px">${L.note}</span>`:''}`;
+    if(ab){
+      $('#tb-live').innerHTML = `<tr><th>Bench</th><th>Operation</th><th class="n">Before</th><th class="n">After</th><th class="n">After / before</th></tr>` +
+        L.rows.map(r=>`<tr><td><code>${r.bench}</code></td><td>${r.op||''}</td><td class="n">${showTxt(r,'before')}</td><td class="n">${showTxt(r,'after')}</td><td class="n">${r.ratio||P}</td></tr>`).join('');
+    } else {
+      const cyc=(v,u)=> v==null?null:(u==='us'?v*MHZ:v);
+      const show=(v,u)=> v==null?P:(u==='us'?`${v.toLocaleString()} µs<br><span class="sub2">${Math.round(v*MHZ).toLocaleString()} cycles</span>`:`${v.toLocaleString()} cycles<br><span class="sub2">${(v/MHZ).toFixed(1)} µs</span>`);
+      $('#tb-live').innerHTML = `<tr><th>Bench</th><th>Operation</th><th class="n">rind</th><th class="n">Fastest other</th><th class="n">rind / other</th></tr>` +
+        L.rows.map(r=>{ const a=cyc(r.rind,r.unit), b=cyc(r.best,r.unit);
+          return `<tr><td><code>${r.bench}</code></td><td>${r.op||'<span class="mut">to be set</span>'}</td><td class="n">${show(r.rind,r.unit)}</td><td class="n">${show(r.best,r.unit)}${r.bestLib?`<br><span class="sub2">${r.bestLib}</span>`:''}</td><td class="n">${a!=null&&b!=null?(a/b).toFixed(2)+'×':P}</td></tr>`; }).join('');
+    }
+    const w=440, rowH=32, h=L.rows.length*rowH+34, s=el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img','aria-label':ab?'Bar chart of rind time after each patch divided by rind time before':'Bar chart of rind time divided by the fastest other library'}), x0=128, x1=w-52;
+    const vals=L.rows.map(r=> ab ? (r.rind!=null&&r.before? r.rind/r.before : null) : null);
+    const max=Math.max(1,...vals.filter(v=>v!=null).map(v=>Math.ceil(v*10)/10)), sc=v=>x0+(x1-x0)*v/max;
+    for(let tick=0;tick<=max+1e-9;tick+=0.25){ el('line',{x1:sc(tick),x2:sc(tick),y1:4,y2:h-24,stroke:'#e6eaef'},s); if(tick*100%25===0||tick===0) el('text',{x:sc(tick),y:h-8,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,tick.toFixed(2)+'×'); }
+    L.rows.forEach((r,i)=>{ const y=6+i*rowH, v=vals[i], label=r.op?`${r.bench} ${r.op}`:r.bench;
+      el('text',{x:x0-8,y:y+rowH/2+3,'font-size':11,'text-anchor':'end',fill:'#16202e'},s,label);
       if(v==null){ el('rect',{x:x0,y:y+8,width:x1-x0,height:16,rx:2,fill:'none',stroke:'#dfe4ea','stroke-dasharray':'4 3'},s); el('text',{x:x0+8,y:y+20,'font-size':11,fill:'#6f5a0a'},s,'pending'); }
-      else { el('rect',{x:x0,y:y+8,width:sc(v)-x0,height:16,rx:2,fill:v<=1?'#0f766e':'#b4532a'},s); el('text',{class:'v',x:sc(v)+5,y:y+20,'font-size':11,fill:'#465467','font-weight':600},s,v.toFixed(2)+'×'); } });
+      else { el('rect',{x:x0,y:y+8,width:Math.max(2,sc(v)-x0),height:16,rx:2,fill:v<=1?'#0f766e':'#b4532a'},s); el('text',{class:'v',x:sc(v)+5,y:y+20,'font-size':11,fill:'#465467','font-weight':600},s,r.ratio|| (v.toFixed(3)+'×')); } });
     el('line',{x1:sc(1),x2:sc(1),y1:2,y2:h-24,stroke:'#0e2238','stroke-width':1.5,'stroke-dasharray':'4 3'},s);
     $('#ch-live').appendChild(s);
   })();
 
   // Slide 12: sources
-  const base=D.meta.repo, link=(b,p)=>{ if(!p) return ''; if(p.startsWith('commit/')) return `<a href="${base}/${p}">commit ${p.slice(7)}</a>`; return `<a href="${base}/blob/${b}/${p}"><code>${p}</code></a>`; };
-  $('#tb-src').innerHTML = `<tr><th style="width:22%">Topic</th><th style="width:10%">Branch</th><th>Files (github.com/steelhead99x/rind-results)</th></tr>` +
-    D.sources.map(([t,b,a,x])=>`<tr><td>${t}</td><td><code>${b}</code></td><td>${[a,...x.split('|')].filter(Boolean).map(p=>link(b,p)).join(' · ')}</td></tr>`).join('') +
-    `<tr><td>Measurement plan</td><td>n/a</td><td>rind-bench team methodology, 2026-11-12 (a plan; no results yet)</td></tr>`;
+  const link=(repo,b,p)=>{ if(!p) return ''; const r=repo||D.meta.repo; if(p.startsWith('commit/')) return `<a href="${r}/commit/${p.slice(7)}">commit ${p.slice(7)}</a>`; return `<a href="${r}/blob/${b}/${p}"><code>${p}</code></a>`; };
+  $('#tb-src').innerHTML = `<tr><th style="width:20%">Topic</th><th style="width:22%">Branch</th><th>Files</th></tr>` +
+    D.sources.map(([topic,b,repo,a,x])=>`<tr><td>${topic}</td><td><code>${b}</code></td><td>${[a,...(x||'').split('|')].filter(Boolean).map(p=>link(repo,b,p)).join(' · ')}</td></tr>`).join('') +
+    `<tr><td>Measurement plan</td><td>n/a</td><td>How results would be taken, 2026-11-12; first-run numbers are in the fork commits above.</td></tr>`;
 
   // Navigation
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
