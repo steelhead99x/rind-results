@@ -9,7 +9,7 @@ Every other image of that window ran clean, including the same aes_gcm image fla
 
 ## Confirmation, 2026-11-12 13:58-14:00 PST
 
-`probe-20261112-1358/` is a first-image probe flashed straight out of Meshtastic's DFU (rind-bench's `wdt-probe` feature). The start record and the probe record both reported:
+`probe-20261112-1358/` is a first-image probe flashed straight out of Meshtastic's DFU (rind-hardware's `wdt-probe` feature). The start record and the probe record both reported:
 
 - `wdt_runstatus` = 1 (`NRF_WDT->RUNSTATUS`)
 - `wdt_crv` = 2,949,120, which is 90 × 32,768, a 90-second timeout

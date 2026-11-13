@@ -9,7 +9,7 @@ loop on core 0. A priority-24 task on core 1 wakes every FreeRTOS tick
 (words 1 and 3), then emits `{"type":"sample","pc":..,"a0":..}`.
 
 `*.functions.txt` is `xtensa-esp32s3-elf-addr2line -fC` of each sampled PC
-against the spin image (built from rind-bench `esp32`, not committed: no
+against the spin image (built from rind-hardware `esp32`, not committed: no
 binaries). Classification for 400 samples:
 
 | | Poly1305 | ChaCha20 | Total time | Poly1305 time |

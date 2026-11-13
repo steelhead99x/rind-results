@@ -20,6 +20,8 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows, on the nRF52
   | x25519 | `3482ac5d727828f5…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:46 PST |
   | xchacha20poly1305 | `b2290ab79a7d7129…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:45 PST |
 
+  rind-bench commits recorded before 2026-11-13 are from the pre-public rind-bench history, published squashed as [rind-hardware](https://github.com/steelhead99x/rind-hardware); they are not in rind-hardware.
+
 - OS: none (bare metal, no_std); the board's UF2 bootloader and S140 SoftDevice stay in flash, unused
 - Runs: 36 of 36 completed, one firmware image per rind-bench bench file
   - aes_gcm run 1: ok, 167 results, 2026-11-12T20:47:57+00:00 to 2026-11-12T20:50:01+00:00 (UTC)
@@ -274,10 +276,10 @@ Each run is a fresh boot of the same image. With 3 runs the lowest and highest r
 ## Reproduce
 
 ```sh
-git clone --recursive https://github.com/steelhead99x/rind-bench && cd rind-bench
+git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware
 cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images nrf
-cd ../rind-results && cargo xtask run-all-nrf ../rind-bench/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
-cargo xtask report --board nrf52840 --raw results/raw-nrf52840 --rind ../rind-bench/rind --firmware ../rind-bench/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
+cd ../rind-results && cargo xtask run-all-nrf ../rind-hardware/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
+cargo xtask report --board nrf52840 --raw results/raw-nrf52840 --rind ../rind-hardware/rind --firmware ../rind-hardware/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
 cargo verify
 ```
 

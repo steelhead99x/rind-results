@@ -76,6 +76,6 @@ suggestions for whoever updates it.
     before and after (24.7 → 37.7 °C here) and mark the run noisy.
 17. **DIT-held column is Apple-only** in rind-bench (`target_vendor = "apple"`), even though the
     Tensor G4 has DIT.
-18. **Microcontrollers (RP2040)** needed `no_std` and a CAS-free `ReuseCache`. rind-bench `patches/0003` and `0005` now provide both; the images build for thumbv6m-none-eabi and are ready for a Pico. ring still does not build (NEON assembly). The skill should mention no-CAS targets and the Cell fallback.
+18. **Microcontrollers (RP2040)** needed `no_std` and a CAS-free `ReuseCache`. rind-hardware `patches/0003` and `0005` now provide both; the images build for thumbv6m-none-eabi and are ready for a Pico. ring still does not build (NEON assembly). The skill should mention no-CAS targets and the Cell fallback.
 19. **The repo moved mid-run** (b6651423 → a4759c48). Render and convert against a worktree of the
     measured commit so operation lists, `verified.toml`, and the renderer match the data.

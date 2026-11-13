@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 //! `cargo xtask sizes`: attributes the code and read-only data linked into
-//! rind-bench's images to the libraries raced, by demangled symbol.
+//! rind-hardware's images to the libraries raced, by demangled symbol.
 //!
 //! Every function or read-only object in any image counts once, under the
 //! crate its demangled path starts with (a trait impl, `<crate::Type as
