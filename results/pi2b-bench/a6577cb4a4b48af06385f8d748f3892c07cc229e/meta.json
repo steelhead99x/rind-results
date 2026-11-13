@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "host": "pi2b-bench",
+ "commit": "a6577cb4a4b48af06385f8d748f3892c07cc229e",
+ "upstream_commit": "a6577cb4a4b48af06385f8d748f3892c07cc229e",
+ "patches": [],
+ "runs": 5,
+ "spread_is": "runs",
+ "metric_units": "ns",
+ "status": "ok",
+ "sample_size": 10,
+ "toolchain": {
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+  "target": "armv7-unknown-linux-gnueabihf (cross-built on macOS, clang 22 + rust-lld, Pi sysroot)"
+ },
+ "validation": {
+  "neon": {
+   "passed": 1023,
+   "failed": 0,
+   "ignored": 34
+  },
+  "noneon": {
+   "passed": 1023,
+   "failed": 0,
+   "ignored": 34
+  },
+  "wipe_neon": {
+   "passed": 28,
+   "failed": 0,
+   "ignored": 0
+  },
+  "wipe_noneon": {
+   "passed": 28,
+   "failed": 0,
+   "ignored": 0
+  },
+  "detects_the_expected_cpu": "passed in both tiers"
+ },
+ "note": "Not admin/bench-report run. Cross-compiled rind-bench harnesses, unpatched kixel-ai/rind. Medians are of all five runs. See NOTES.md for the OpenSSL mldsa65-sign spike in run 5."
+}

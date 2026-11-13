@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the pi2b-bench host: each report operation
+# where another library (OpenSSL included) beats rind by more than 10%, in
+# rind's benchmarks/gaps.toml format. `cargo xtask host-report` refuses a gap
+# without an entry and an entry that covers no gap.
+
+[[gap]]
+operations = [
+  "aes128-gcm/{lib}/*",
+  "aes128-gcm-open/{lib}/*",
+  "aes256-gcm/{lib}/*",
+  "aes256-gcm-open/{lib}/*",
+  "rustls-bulk/aes128-gcm/{lib}",
+  "rustls-bulk/aes256-gcm/{lib}",
+]
+on = ["pi2b-bench"]
+reason = "The Cortex-A7 has NEON but no AES instructions. aws-lc-rs and ring use ARMv7 NEON bitsliced AES (bsaes) and NEON GHASH (vmull.p8). rind is on a portable path here and matches RustCrypto. The same gap shows up in rustls bulk AES-GCM."
+
+[[gap]]
+operations = [
+  "quic-header-protection/aes128/{lib}",
+  "quic-header-protection/aes256/{lib}",
+]
+on = ["pi2b-bench"]
+reason = "Header protection encrypts one AES block per packet. aws-lc-rs and ring have a faster single-block AES on this core; rind uses its portable path. This is separate from the bulk AES-CTR gap above."
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/32B"]
+on = ["pi2b-bench"]
+reason = "Per-call setup (key and nonce init, Poly1305 key generation) is a larger share of a 32-byte message. RustCrypto is fastest at this size."
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/16KB"]
+on = ["pi2b-bench"]
+reason = "OpenSSL's NEON ChaCha uses a wider interleave than rind's on this armv7 core."
+
+[[gap]]
+operations = ["xchacha20poly1305/{lib}/32B"]
+on = ["pi2b-bench"]
+reason = "The same per-call setup cost as ChaCha20-Poly1305 at 32 B. RustCrypto is fastest at this size."
+
+[[gap]]
+operations = ["p256-ecdh/{lib}", "p256-ecdsa-verify/{lib}"]
+on = ["pi2b-bench"]
+reason = "OpenSSL's 32-bit ARM ecp_nistz256 Montgomery assembly is ahead. rind is still faster than aws-lc-rs, ring, RustCrypto and libcrux on these rows."
+
+[[gap]]
+operations = ["p521-ecdsa-verify/{lib}"]
+on = ["pi2b-bench"]
+reason = "aws-lc-rs is slightly ahead on the P-521 verify path."
