@@ -272,7 +272,7 @@ pub fn faketime_runner(home: &Path, offset_secs: &str) -> String {
     )
 }
 
-/// Env from `scripts/orin-env.sh`: the board's staged toolchain, nothing installed system-wide.
+/// The Orin staged toolchain (`cargo xtask orin-setup`): nothing is installed system-wide.
 pub fn orin_env(home: &Path) -> Vec<(String, String)> {
     vec![
         (
