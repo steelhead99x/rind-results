@@ -6,13 +6,15 @@ home directories, user and host names are replaced in the recordings.
 
 ## Charts
 
-rind's time over the fastest other Rust library, per report operation, log scale (`cargo xtask charts --png media/charts results/esp32s3.json results/nrf52840/nrf52840.json results/host/msi-001.json`):
+rind's time over the fastest other Rust library, per report operation, log scale (`cargo xtask charts --png media/charts results/esp32s3.json results/nrf52840/nrf52840.json results/host/msi-001.json results/jetson-orin-nano/jetson-orin-nano.json`):
 
 ![ESP32-S3](charts/esp32s3-rind-vs-fastest.svg)
 
 ![msi-001, x86_64 (noisy run)](charts/msi-001-rind-vs-fastest.svg)
 
 ![nRF52840 (Seeed T1000-E), Cortex-M4F at 64 MHz](charts/nrf52840-rind-vs-fastest.svg)
+
+![Jetson Orin Nano, Cortex-A78AE at 1.73 GHz](charts/jetson-orin-nano-rind-vs-fastest.svg)
 
 PNG copies sit next to the SVGs for chat and slides.
 
