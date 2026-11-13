@@ -7,12 +7,20 @@
 //!
 //! Usage: cargo verify [--board esp32s3|nrf52840|msi-001 ...]
 //! Exit status 1 if anything mismatched.
+//!
+//! `cargo verify --dir <tree>` checks that directory instead of the published
+//! paths: a host tree (`raw/run-*.json` plus its median JSON and RESULTS.md),
+//! a board tree (jsonl under the directory, `raw/`, or a sibling `raw-<name>/`),
+//! an `msi-001`-style `summary.md`, a `rind-results/ab-v1` directory, or a
+//! parent of those. With no arguments the published paths are checked, as before.
 
 use regex::Regex;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+
+mod tree;
 
 const NOT_RIVALS: &[&str] = &["rind", "esp32s3-hw"];
 
@@ -178,11 +186,10 @@ fn truthy(v: Option<&Value>) -> bool {
     }
 }
 
-/// Files matching `<root>/<dir>/*/<prefix>*<suffix>`, sorted as strings.
-fn glob(dir: &str, prefix: &str, suffix: &str) -> Vec<PathBuf> {
-    let base = root().join(dir);
+/// Files matching `<base>/*/<prefix>*<suffix>`, sorted as strings.
+fn glob_at(base: &Path, prefix: &str, suffix: &str) -> Vec<PathBuf> {
     let mut out = vec![];
-    for d in std::fs::read_dir(&base).into_iter().flatten().flatten() {
+    for d in std::fs::read_dir(base).into_iter().flatten().flatten() {
         if d.file_name().to_string_lossy().starts_with('.') || !d.path().is_dir() {
             continue;
         }
@@ -211,14 +218,14 @@ struct Raw {
     clocks: Vec<Value>,
 }
 
-fn load_raw(rawdir: &str) -> Raw {
+fn load_raw_at(base: &Path) -> Raw {
     let mut raw = Raw {
         per: Ordered::default(),
         starts: vec![],
         checks: vec![],
         clocks: vec![],
     };
-    for f in glob(rawdir, "run-", ".jsonl") {
+    for f in glob_at(base, "run-", ".jsonl") {
         for line in read(&f).lines() {
             let line = line.trim();
             if !line.starts_with('{') {
@@ -255,10 +262,10 @@ fn s(v: &Value) -> String {
 /// The SPI flash clock each ESP32-S3 boot reported, MHz -> logs: one set of
 /// runs must not mix them, since every row that misses the instruction cache
 /// scales with it.
-fn flash_clocks(rawdir: &str) -> BTreeMap<i64, Vec<PathBuf>> {
+fn flash_clocks_at(base: &Path) -> BTreeMap<i64, Vec<PathBuf>> {
     let re = Regex::new(r"Boot SPI Speed\s*:\s*(\d+)MHz").unwrap();
     let mut out: BTreeMap<i64, Vec<PathBuf>> = BTreeMap::new();
-    for f in glob(rawdir, "run-", ".log") {
+    for f in glob_at(base, "run-", ".log") {
         if let Some(c) = re.captures(&read(&f)) {
             out.entry(c[1].parse().unwrap()).or_default().push(f);
         }
@@ -341,9 +348,71 @@ fn py_list<T: std::fmt::Display>(xs: &[T]) -> String {
 
 fn check_board(board: &str, rep: &mut Report) {
     let bf = board_files(board).expect("known board");
-    let hz_expect = bf.hz;
-    let raw = load_raw(bf.raw);
-    let fc = flash_clocks(bf.raw);
+    let raw_path = root().join(bf.raw);
+    let md = root().join(bf.md);
+    let svg = root().join(bf.svg);
+    let tsv = bf.tsv.map(|p| root().join(p));
+    check_board_at(
+        board,
+        &raw_path,
+        Some(&md),
+        Some(&svg),
+        tsv.as_deref(),
+        Some(bf.hz),
+        rep,
+    );
+}
+
+/// Re-check one board tree. `hz` is the counter rate a published board must
+/// report; `None` (used by `--dir`) takes the rate from start records that agree.
+fn check_board_at(
+    board: &str,
+    raw_path: &Path,
+    md: Option<&Path>,
+    svg: Option<&Path>,
+    tsv: Option<&Path>,
+    hz: Option<f64>,
+    rep: &mut Report,
+) {
+    let raw = load_raw_at(raw_path);
+    let reported_hz: Vec<i64> = {
+        let mut v: Vec<i64> = raw
+            .starts
+            .iter()
+            .filter_map(|s| {
+                s.get("cpu_hz").and_then(|c| {
+                    c.as_i64()
+                        .or_else(|| c.as_u64().map(|u| u as i64))
+                        .or_else(|| c.as_f64().map(|f| f as i64))
+                })
+            })
+            .collect();
+        v.sort();
+        v.dedup();
+        v
+    };
+    let hz_expect = if let Some(h) = hz {
+        h
+    } else if reported_hz.len() == 1 {
+        reported_hz[0] as f64
+    } else if reported_hz.is_empty() {
+        rep.bad(board, "start records have no cpu_hz".into());
+        0.0
+    } else {
+        rep.bad(
+            board,
+            format!(
+                "cpu_hz in start records differs: {}",
+                reported_hz
+                    .iter()
+                    .map(|h| h.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+        );
+        0.0
+    };
+    let fc = flash_clocks_at(raw_path);
     if fc.len() > 1 {
         let mix: Vec<String> = fc
             .iter()
@@ -357,6 +426,9 @@ fn check_board(board: &str, rep: &mut Report) {
         );
     }
     for c in &raw.clocks {
+        if hz_expect <= 0.0 {
+            break;
+        }
         let rate = fv(&c["cycles"]) * 1e9 / fv(&c["wall_ns"]);
         if (rate / hz_expect - 1.0).abs() > 0.001 {
             rep.bad(
@@ -381,19 +453,19 @@ fn check_board(board: &str, rep: &mut Report) {
             first.join(", ")
         );
     }
-    let mut hz: Vec<String> = raw
+    let mut hz_seen: Vec<String> = raw
         .starts
         .iter()
         .map(|s| s.get("cpu_hz").map_or("None".into(), |v| v.to_string()))
         .collect();
-    hz.sort();
-    hz.dedup();
-    if hz != [format!("{}", hz_expect as i64)] {
+    hz_seen.sort();
+    hz_seen.dedup();
+    if hz.is_some() && hz_seen != [format!("{}", hz_expect as i64)] {
         rep.bad(
             board,
             format!(
                 "cpu_hz in start records {{{}}}, expected {}",
-                hz.join(", "),
+                hz_seen.join(", "),
                 hz_expect as i64
             ),
         );
@@ -405,39 +477,41 @@ fn check_board(board: &str, rep: &mut Report) {
         let cyc: Vec<f64> = recs.iter().map(|r| fv(&r["cycles"]["median"])).collect();
         // cycles vs wall time, per run
         for r in recs {
-            let want = fv(&r["cycles"]["median"]) * 1e9 / hz_expect;
-            let d = (fv(&r["ns"]) - want).abs() / want;
-            if d > worst.0 {
-                worst = (d, Some(i.clone()));
-            }
-            if d > 0.01 {
-                rep.bad(
-                    board,
-                    format!(
-                        "{i}: ns {:.1} vs cycles/{:.0}MHz {want:.1} ({:.2}%)",
-                        fv(&r["ns"]),
-                        hz_expect / 1e6,
-                        100.0 * d
-                    ),
-                );
-            }
-            let bytes = r.get("throughput").and_then(|t| t.get("Bytes"));
-            if let Some(b) = bytes.filter(|_| truthy(r.get("cycles_per_byte"))) {
-                let cpb = fv(&r["cycles"]["median"]) / fv(b);
-                if (cpb - fv(&r["cycles_per_byte"])).abs() > 0.01 * cpb {
+            if hz_expect > 0.0 {
+                let want = fv(&r["cycles"]["median"]) * 1e9 / hz_expect;
+                let d = (fv(&r["ns"]) - want).abs() / want;
+                if d > worst.0 {
+                    worst = (d, Some(i.clone()));
+                }
+                if d > 0.01 {
                     rep.bad(
                         board,
-                        format!("{i}: cycles_per_byte {} vs {cpb:.3}", r["cycles_per_byte"]),
+                        format!(
+                            "{i}: ns {:.1} vs cycles/{:.0}MHz {want:.1} ({:.2}%)",
+                            fv(&r["ns"]),
+                            hz_expect / 1e6,
+                            100.0 * d
+                        ),
                     );
                 }
-            }
-            if truthy(r.get("wall_ns"))
-                && fv(&r["sampled_cycles"]) * 1e9 / hz_expect > 1.001 * fv(&r["wall_ns"])
-            {
-                rep.bad(
-                    board,
-                    format!("{i}: counted more cycles than the wall clock allows"),
-                );
+                let bytes = r.get("throughput").and_then(|t| t.get("Bytes"));
+                if let Some(b) = bytes.filter(|_| truthy(r.get("cycles_per_byte"))) {
+                    let cpb = fv(&r["cycles"]["median"]) / fv(b);
+                    if (cpb - fv(&r["cycles_per_byte"])).abs() > 0.01 * cpb {
+                        rep.bad(
+                            board,
+                            format!("{i}: cycles_per_byte {} vs {cpb:.3}", r["cycles_per_byte"]),
+                        );
+                    }
+                }
+                if truthy(r.get("wall_ns"))
+                    && fv(&r["sampled_cycles"]) * 1e9 / hz_expect > 1.001 * fv(&r["wall_ns"])
+                {
+                    rep.bad(
+                        board,
+                        format!("{i}: counted more cycles than the wall clock allows"),
+                    );
+                }
             }
             let c = &r["cycles"];
             let (mn, md, mx, p5, p95) = (
@@ -555,10 +629,16 @@ fn check_board(board: &str, rep: &mut Report) {
         }
     }
 
-    check_markdown(board, &bf, &table, rep);
-    check_chart(board, &bf, &table, rep);
-    if let Some(tsv) = bf.tsv {
-        check_tsv(board, tsv, &table, rep);
+    if let Some(path) = md {
+        check_markdown(board, path, &table, rep);
+    } else {
+        println!("{board}: no RESULTS.md; raw rows checked, tables skipped");
+    }
+    if let Some(path) = svg {
+        check_chart(board, path, &table, rep);
+    }
+    if let Some(path) = tsv {
+        check_tsv(board, path, &table, rep);
     }
 }
 
@@ -570,9 +650,9 @@ fn upsert(d: &mut Vec<(f64, f64)>, k: f64, v: f64) {
     }
 }
 
-fn check_markdown(board: &str, bf: &BoardFiles, table: &Ordered<Ordered<Agg>>, rep: &mut Report) {
+fn check_markdown(board: &str, md: &Path, table: &Ordered<Ordered<Agg>>, rep: &mut Report) {
     let cell_re = Regex::new(r"^([\d.,]+) (ns|µs|us|ms|s)(?: \(([\d.,]+) (c/B|c|kc)\))?").unwrap();
-    let text = read(&root().join(bf.md));
+    let text = read(md);
     let mut header: Option<Vec<String>> = None;
     let (mut cells, mut rows) = (0, 0);
     let empty = Ordered::default();
@@ -677,13 +757,13 @@ fn check_markdown(board: &str, bf: &BoardFiles, table: &Ordered<Ordered<Agg>>, r
     println!("{board}: RESULTS.md {rows} rows, {cells} cells checked");
 }
 
-fn check_chart(board: &str, bf: &BoardFiles, table: &Ordered<Ordered<Agg>>, rep: &mut Report) {
+fn check_chart(board: &str, svg_path: &Path, table: &Ordered<Ordered<Agg>>, rep: &mut Report) {
     // chart: op label then "ratio lib"
     let mut by_label: Ordered<&Ordered<Agg>> = Ordered::default();
     for (op, t) in &table.0 {
         by_label.insert(&label(op), t);
     }
-    let svg = read(&root().join(bf.svg));
+    let svg = read(svg_path);
     let tag = Regex::new(r"<[^>]*>").unwrap();
     let lab: Vec<String> = Regex::new(r"<text[^>]*>[^<]*</text>")
         .unwrap()
@@ -713,17 +793,17 @@ fn check_chart(board: &str, bf: &BoardFiles, table: &Ordered<Ordered<Agg>>, rep:
     println!("{board}: chart {n} bars checked");
 }
 
-fn check_tsv(board: &str, tsv: &str, table: &Ordered<Ordered<Agg>>, rep: &mut Report) {
+fn check_tsv(board: &str, tsv: &Path, table: &Ordered<Ordered<Agg>>, rep: &mut Report) {
     // Pages are runs of adjacent lines with one heading, as the firmware
     // reads them; each must equal exactly one report operation's row.
     let mut pages: Vec<(String, Ordered<f64>)> = vec![];
-    for line in read(&root().join(tsv)).split_inclusive('\n') {
+    for line in read(tsv).split_inclusive('\n') {
         if line.starts_with('#') || line.trim().is_empty() {
             continue;
         }
         let f: Vec<&str> = line.trim_end_matches('\n').split('\t').collect();
         let [h, lib, ns] = f[..] else {
-            panic!("{tsv}: bad line {line:?}")
+            panic!("{}: bad line {line:?}", tsv.display())
         };
         if pages.last().is_none_or(|p| p.0 != h) {
             pages.push((h.to_string(), Ordered::default()));
@@ -813,8 +893,18 @@ fn check_tsv(board: &str, tsv: &str, table: &Ordered<Ordered<Agg>>, rep: &mut Re
 }
 
 fn check_msi(rep: &mut Report) {
-    let d: Value = serde_json::from_str(&read(&root().join("results/host/msi-001.json")))
-        .expect("msi-001.json");
+    check_summary(
+        "msi-001",
+        &root().join("results/host/msi-001.json"),
+        &root().join("results/host/summary.md"),
+        rep,
+    );
+}
+
+/// One schema-1 host JSON against rind's `summary` table (`summary.md`).
+fn check_summary(name: &str, json_path: &Path, summary: &Path, rep: &mut Report) {
+    let d: Value = serde_json::from_str(&read(json_path))
+        .unwrap_or_else(|e| panic!("{}: {e}", json_path.display()));
     let mut by: Ordered<Ordered<f64>> = Ordered::default();
     for r in d["results"].as_array().into_iter().flatten() {
         by.entry(&s(&r["operation"]), Ordered::default)
@@ -823,7 +913,7 @@ fn check_msi(rep: &mut Report) {
     let row = Regex::new(r"^\| (\S+) \| ([\d.,]+ \S+), ([\d.]+)× (\S+) \|").unwrap();
     let cell_re = Regex::new(r"^([\d.,]+) (ns|µs|us|ms|s)(?: \(([\d.,]+) (c/B|c|kc)\))?").unwrap();
     let mut n = 0;
-    for line in read(&root().join("results/host/summary.md")).lines() {
+    for line in read(summary).lines() {
         let Some(m) = row.captures(line) else {
             continue;
         };
@@ -831,7 +921,7 @@ fn check_msi(rep: &mut Report) {
         let ops: Vec<&String> = by.keys().filter(|o| label(o) == shown_op).collect();
         if ops.len() != 1 {
             let l = py_list(&ops.iter().map(|o| format!("'{o}'")).collect::<Vec<_>>());
-            rep.bad("msi-001", format!("summary row {shown_op}: matched {l}"));
+            rep.bad(name, format!("summary row {shown_op}: matched {l}"));
             continue;
         }
         let t = by.get(ops[0]).unwrap();
@@ -847,15 +937,12 @@ fn check_msi(rep: &mut Report) {
         let p = parse_cell(&m[2], &cell_re).expect("a time");
         n += 1;
         if !close(p.ns, p.ns_tol, rind) {
-            rep.bad(
-                "msi-001",
-                format!("{shown_op}: time {} vs {rind:.1} ns", &m[2]),
-            );
+            rep.bad(name, format!("{shown_op}: time {} vs {rind:.1} ns", &m[2]));
         }
         let shown: f64 = m[3].parse().unwrap_or(f64::NAN);
         if &m[4] != fl || (shown - ratio).abs() > 0.005 + 1e-9 {
             rep.bad(
-                "msi-001",
+                name,
                 format!(
                     "{shown_op}: shows {}x {}, raw {ratio:.3}x {fl}",
                     &m[3], &m[4]
@@ -873,7 +960,7 @@ fn check_msi(rep: &mut Report) {
         Some(Value::Bool(false)) => "False".into(),
         Some(v) => v.to_string(),
     };
-    println!("msi-001: summary.md {n} rows checked, noisy={noisy}");
+    println!("{name}: summary.md {n} rows checked, noisy={noisy}");
 }
 
 /// Maps recorded private rind-bench SHAs to public rind-hardware commits.
@@ -1081,7 +1168,12 @@ fn check_provenance(rep: &mut Report) {
 /// schema 1) recomputed into medians and compared with the median JSON,
 /// RESULTS.md (headline and every-library tables, the win count) and RUNS.md.
 fn check_host(name: &str, rep: &mut Report) {
-    let dir = root().join("results").join(name);
+    check_host_at(&root().join("results").join(name), name, rep);
+}
+
+/// `name` is the host id, which is also the median JSON's file stem
+/// (`<name>.json`) for the trees published under `results/<name>/`.
+fn check_host_at(dir: &Path, name: &str, rep: &mut Report) {
     let heading = |l: &str| -> String {
         match l {
             "rustcrypto" => "RustCrypto + dalek".into(),
@@ -1312,15 +1404,19 @@ fn check_host(name: &str, rep: &mut Report) {
 
 fn main() -> ExitCode {
     let mut boards = vec![];
+    let mut dirs = vec![];
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--board" => boards.push(args.next().expect("--board needs a value")),
             s if s.starts_with("--board=") => boards.push(s["--board=".len()..].to_string()),
+            "--dir" => dirs.push(args.next().expect("--dir needs a value")),
+            s if s.starts_with("--dir=") => dirs.push(s["--dir=".len()..].to_string()),
             "-h" | "--help" => {
                 println!(
                     "usage: cargo verify [--board esp32s3|nrf52840|msi-001|<host under results/> ...]"
                 );
+                println!("       cargo verify --dir <output tree> [--dir <output tree> ...]");
                 return ExitCode::SUCCESS;
             }
             other => {
@@ -1329,6 +1425,7 @@ fn main() -> ExitCode {
             }
         }
     }
+    let asked_board = !boards.is_empty();
     if boards.is_empty() {
         boards = vec!["esp32s3".into(), "nrf52840".into(), "msi-001".into()];
         for h in HOSTS {
@@ -1336,6 +1433,10 @@ fn main() -> ExitCode {
                 boards.push((*h).into());
             }
         }
+    }
+    // `--dir` alone checks those trees and leaves the published set alone.
+    if !dirs.is_empty() && !asked_board {
+        boards.clear();
     }
     let mut rep = Report::default();
     for b in &boards {
@@ -1350,7 +1451,12 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     }
-    check_provenance(&mut rep);
+    if dirs.is_empty() || asked_board {
+        check_provenance(&mut rep);
+    }
+    for d in &dirs {
+        tree::verify_dir(Path::new(d), &mut rep);
+    }
     for n in &rep.notes {
         println!("NOTE {n}");
     }
