@@ -1,0 +1,34 @@
+| id | mode | runs | median | min | max | spread |
+|---|---|---|---|---|---|---|
+| p256-ecdh/aws-lc-rs | detect | 5 | 213.76 us | 213.66 us | 214.15 us | 0.2% |
+| p256-ecdh/aws-lc-rs | detect-a6 | 5 | 213.59 us | 213.53 us | 213.93 us | 0.2% |
+| p256-ecdh/aws-lc-rs | narrow | 5 | 213.54 us | 213.52 us | 213.55 us | 0.0% |
+| p256-ecdh/aws-lc-rs | narrow-a6 | 5 | 213.58 us | 213.55 us | 213.96 us | 0.2% |
+| p256-ecdh/rind | detect | 5 | 201.08 us | 201.08 us | 201.15 us | 0.0% |
+| p256-ecdh/rind | detect-a6 | 5 | 201.20 us | 201.16 us | 201.24 us | 0.0% |
+| p256-ecdh/rind | narrow | 5 | 200.04 us | 200.01 us | 200.28 us | 0.1% |
+| p256-ecdh/rind | narrow-a6 | 5 | 200.02 us | 199.99 us | 200.03 us | 0.0% |
+| p256-ecdsa-sign/aws-lc-rs | detect | 5 | 76.20 us | 76.09 us | 76.22 us | 0.2% |
+| p256-ecdsa-sign/aws-lc-rs | detect-a6 | 5 | 75.94 us | 75.89 us | 76.12 us | 0.3% |
+| p256-ecdsa-sign/aws-lc-rs | narrow | 5 | 75.85 us | 75.84 us | 75.90 us | 0.1% |
+| p256-ecdsa-sign/aws-lc-rs | narrow-a6 | 5 | 75.90 us | 75.88 us | 75.94 us | 0.1% |
+| p256-ecdsa-sign/rind | detect | 5 | 46.19 us | 46.17 us | 46.20 us | 0.1% |
+| p256-ecdsa-sign/rind | detect-a6 | 5 | 46.19 us | 46.19 us | 46.20 us | 0.0% |
+| p256-ecdsa-sign/rind | narrow | 5 | 45.08 us | 45.07 us | 45.17 us | 0.2% |
+| p256-ecdsa-sign/rind | narrow-a6 | 5 | 45.10 us | 45.10 us | 45.11 us | 0.0% |
+| p256-ecdsa-verify/aws-lc-rs | detect | 5 | 256.72 us | 256.62 us | 256.90 us | 0.1% |
+| p256-ecdsa-verify/aws-lc-rs | detect-a6 | 5 | 256.76 us | 256.68 us | 257.46 us | 0.3% |
+| p256-ecdsa-verify/aws-lc-rs | narrow | 5 | 256.65 us | 256.58 us | 256.70 us | 0.0% |
+| p256-ecdsa-verify/aws-lc-rs | narrow-a6 | 5 | 256.66 us | 256.58 us | 256.69 us | 0.0% |
+| p256-ecdsa-verify/rind | detect | 5 | 273.77 us | 273.76 us | 273.97 us | 0.1% |
+| p256-ecdsa-verify/rind | detect-a6 | 5 | 273.88 us | 273.87 us | 273.89 us | 0.0% |
+| p256-ecdsa-verify/rind | narrow | 5 | 273.88 us | 273.87 us | 273.89 us | 0.0% |
+| p256-ecdsa-verify/rind | narrow-a6 | 5 | 273.85 us | 273.82 us | 274.14 us | 0.1% |
+| p256-keygen/aws-lc-rs | detect | 5 | 43.22 us | 43.20 us | 43.27 us | 0.2% |
+| p256-keygen/aws-lc-rs | detect-a6 | 5 | 43.13 us | 43.13 us | 43.30 us | 0.4% |
+| p256-keygen/aws-lc-rs | narrow | 5 | 43.15 us | 43.14 us | 43.22 us | 0.2% |
+| p256-keygen/aws-lc-rs | narrow-a6 | 5 | 43.13 us | 43.12 us | 43.14 us | 0.0% |
+| p256-keygen/rind | detect | 5 | 37.51 us | 37.50 us | 37.51 us | 0.0% |
+| p256-keygen/rind | detect-a6 | 5 | 37.52 us | 37.52 us | 37.56 us | 0.1% |
+| p256-keygen/rind | narrow | 5 | 36.39 us | 36.39 us | 36.42 us | 0.1% |
+| p256-keygen/rind | narrow-a6 | 5 | 36.40 us | 36.39 us | 36.43 us | 0.1% |
