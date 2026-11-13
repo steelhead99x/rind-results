@@ -18,8 +18,8 @@ use std::path::{Path, PathBuf};
 
 #[derive(clap::Args)]
 pub struct Args {
-    /// the rind checkout the runs measured (its admin/bench-report must match
-    /// tools/bench-tables.json)
+    /// the rind checkout the runs measured; its admin/bench-report is what the
+    /// tables are evaluated from
     #[arg(long)]
     rind: PathBuf,
     /// the host directory: raw/run-*.json, gaps.toml, facts.txt, NOTES.md

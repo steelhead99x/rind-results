@@ -63,7 +63,8 @@ enum Cmd {
     HostRun(host_run::Args),
     /// rustfmt --check, clippy -D warnings and the tests, for this workspace
     Check,
-    /// Refresh tools/bench-tables.json from rind's admin/bench-report
+    /// Rewrite tools/bench-tables.json from a rind checkout, for review.
+    /// Report commands evaluate the checkout they are given and do not need this.
     BenchTables {
         #[arg(long)]
         rind: PathBuf,
