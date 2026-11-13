@@ -10,59 +10,92 @@ description: >-
 
 ## 1. Inspect the hardware (on the user's machine, since the board is plugged in there)
 - List serial ports and use udevadm to tell boards apart by vendor/model. Never touch boards that aren't the target.
+- A "BOOT" USB name doesn't mean the device is in its bootloader. Look for a mass-storage interface and check who holds the port (services such as bridges).
 - Identify the chip with esptool (chip_id, flash_id): arch, cores, clock, flash, PSRAM.
 - Check which toolchains exist (rustup, espup, espflash, ESP-IDF, PlatformIO) and install user-local only, no sudo.
 - For a display, run an I2C scan and check existing projects for pin configs. Don't guess the hardware.
 
-## 2. Decide what to measure
+## 2. Back up before flashing any device you don't own the firmware of
+- Export the app config and info, copy the full current firmware (UF2 CURRENT.UF2 or similar), fetch the matching official release as a second restore path, and checksum everything.
+- Flash only the app region, and verify the SoftDevice and bootloader regions are byte-identical afterwards.
+- Restore, diff the info before and after, and restart any services you stopped.
+
+## 3. Decide what to measure
 - Read the upstream project's own bench code, benchmark report, and any author blog post. Reuse its operations, sizes, and competitor set so results line up with its published numbers.
 - Check whether the library has assembly for the target. If not, say the portable path is being measured.
 - Try every competitor on the target. When one fails to build, record the concrete reason instead of dropping it silently.
 - Add the hardware accelerators as a clearly labelled baseline when practical.
 
-## 3. Benchmark honestly
+## 4. Benchmark honestly
 - Correctness first: every candidate must pass known test vectors and agree with the others. Only race the ones that pass.
-- Same work: same keys, nonces, sizes, core, and clock. Radios and interrupts off, caches warmed up.
+- Same work: same keys, nonces, sizes, core, and clock, plus the same seeded RNG when an op draws randomness. Radios and interrupts off, caches warmed up.
 - Time with the cycle counter, take many samples, and report the median plus spread, ns/op, cycles/op, and cycles/byte. Include binary size.
-- Run the full suite at least 3 times to show run-to-run variance, and disclose what the numbers don't prove.
-- Keep any UI or display work out of timed regions.
+- Run the full suite at least 3 times. Also rebuild once with a different layout: results that repeat exactly can still shift 0.6-1.6x on small inputs after a relink.
+- Keep UI, display work and prints out of timed regions: anything between timed calls (even one print) can evict the instruction cache and inflate a measurement 10x. Time calls in a tight loop and print afterwards. Start runs on an explicit host go line, since ModemManager can swallow serial output.
+- Host benches: the upstream tool may refuse a busy host. Disclose any relaxed limit and keep the noisy flag, and don't build while a run is going.
 
-## 4. Structure for upstream
-- For this work the firmware repo is [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware) (public; formerly the private `steelhead99x/rind-bench`, archived). Recorded provenance SHAs live in `legacy_rind_bench`; `rind_hardware` maps them onto the public history (`tools/legacy-rind-bench-map.json`). Never open upstream PRs or issues without the user's go-ahead.
-- Follow the upstream project's contribution rules: license, fmt, clippy, tests, commit style, unsafe/asm policy, and report rules.
-- Keep custom glue and patches small and in a clearly separate place, and note what an upstream PR would contain. Never open upstream PRs or issues without the user's go-ahead.
-- Firmware port and results/tools can live in separate repos that link to each other. Match upstream's license and keep attribution for anything copied.
-- Sync the latest upstream before final runs, and push progress as you go.
-- The firmware repository is [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware). It was published as a squash of the private `steelhead99x/rind-bench` history (root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`, 2026-11-12). Map each recorded SHA to a public commit only when the trees match, or when the only differences versus `8d9c1bb` are the publish-time rename and secret scrub (the RP2040 tip `f656f95` is that case). Earlier SHAs are ancestors with no public tree: write `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` in `rind_hardware` and keep the recorded string in `legacy_rind_bench`. Leave the crate, binary and protocol names (`rind-bench` crate, `rind-bench:go`, `rind-bench-esp32`, `.text.rind_bench_pad`) alone; they are real identifiers. `cargo verify` and `cargo xtask report` both read the map.
-- Several agents share these checkouts. Never `git rebase --autostash` (or stash) where others have uncommitted edits. If someone rewrote the remote's history, do not rebase your old commits onto it: cherry-pick only your new commits onto the new remote head in a clean worktree, check them for anything the rewrite scrubbed (serial ports, MAC addresses, home paths), and push from there.
-
-## 5. Report
-Give the repo URLs, what ran vs. what failed (with reasons), a headline table comparing the target library with the best competitor per operation, surprises, and open issues.
+## 5. Explain every gap with evidence
+- The upstream report tool refusing undocumented gaps is the point: each row over its threshold needs a measured reason, not a guess.
+- A large fixed per-call cost hidden at big sizes is instruction-cache misses until shown otherwise. Rebuild with a doubled instruction cache as a diagnostic; publish at the default config and keep the bigger-cache runs as diagnostics.
+- To rule the RNG in or out, count it: wrap the platform RNG backend (e.g. getrandom's custom backend) with call/byte/cycle counters, and add a seeded deterministic RNG behind a feature for a second build. When adding cfg rustflags, pass them via cargo `--config` (which merges with config.toml) rather than RUSTFLAGS (which replaces them).
+- Profile without JTAG when debug access needs root: a high-priority RTOS task on the other core can sample the preempted task's saved PC each tick; take a few hundred samples, run addr2line, and classify by function. 64-bit-limb code on 32-bit cores is a common culprit.
 
 ## 6. Verify before you publish
-- Recompute every published number from raw with a separate program that shares no code with the report generator (rind-results' `cargo verify`, its own crate beside `cargo xtask`): table cells, chart labels, display pages, the fastest-library call, ratios and spreads. It found two real errors the generator could not see in itself: truncated OLED headings that merged three pages, and provenance taken from HEAD at report time.
-- Record provenance when you build, not when you report: per image, its sha256, the source commits, the patches applied, and the build time (`images.json`). A tree that has moved on since will name the wrong commit.
-- Recheck by reflashing the published images, verified by hash, and rerunning them. Medians should land within max(1%, run spread). If they do, the remaining uncertainty is in the build, not in the noise.
-- Build the benchmark's own checks into the firmware:
-  - the cycle counter against an independent timer at every boot
-  - each benchmark's wall time against its cycles. Wall time can only be larger, because setup runs between samples, so treat it as an upper bound.
-  - an empty `iter` and `iter_batched` as the harness's own cost. Report it next to the fastest row; don't subtract it.
-- Check that time grows with input size within one message shape. A row that gets faster as its input grows may have been optimised out. Equal-block sizes such as SHA-512 at 32 B and 64 B are the exception.
-- Compare the board to public figures for the same chip. Look for the vendor's minimum hardware throughput and for third-party software numbers.
-- Gaps outside the upstream report's operation list (a bench file the pinned report doesn't know, such as SHA-3 at 99b509a) still need a recorded reason. The report generator won't ask for one, so check by hand.
-- Re-pull upstream before you finish. Check which commits touch code on your target and rerun those benches as a separate, labelled set rather than mixing them into the pinned one.
-- When the pin moves, diff the upstream report generator too, not only the library: rind's `admin/bench-report` added SHA-3 to its operations between 99b509a and 98568332, so the same raw data suddenly had a gap that needed a gaps.toml entry.
-- Measure layout sensitivity cheaply with a relink: a build-time padding knob (`RIND_BENCH_PAD=<bytes>`, a never-executed static) moves code without changing it, but only the code linked after it. Put the padding ahead of the libraries and check with `nm -n` (per library, mangled names, since generic functions share a demangled name) that each one moved before you describe it:
-  - ESP32-S3 (ESP-IDF's one `.flash.text` rule takes all `.text.*` and put the static after the libraries, even when its object was linked first): have build.rs pass `-Wl,--section-ordering-file=<file>` with `.flash.text : { *(.text.rind_bench_pad) }` (binutils 2.43+), so the static sits at `_stext`.
-  - nRF52840 (cortex-m-rt): give the static `#[unsafe(link_section = ".Reset")]`; `link.x` places `*(.Reset)` first in `.text`.
-  - Before this fix, the relinks moved the harness and the libraries by 8-12 bytes, so they did not test layout; a wrong-padding relink must be labelled as such, not quoted as a layout range.
-  - Rerun the pad0 image in the same session as a control: a match with the published set shows the moves are layout, not session.
-  - Paddings that move the code by amounts a multiple of 32 B apart keep its alignment to the cache line and time the same (ESP32-S3 pad1031 and pad2053, 1 KB apart, gave identical ratios; pad1039, at another alignment, moved SHA-256 64B to 3.07x from 2.80x). Pick paddings at different alignments, report one column per alignment, and show repeats as extra columns rather than counting them in the median.
-  - Build relinks from the same source as the baseline. If the shared checkout has picked up a newer patch (here rind-hardware's patch 0005 changed rind's code), build in a separate worktree at the baseline commit with its own `rind` worktree and only the baseline's patches, and rebuild pad0 there to confirm the addresses match. Crate hashes in mangled names change with the source path, so match functions by unique demangled names.
-  Run the short-input rows at two or three paddings and publish the spread as what it is.
-- Before calling a change after a repin a code change, diff the upstream source of that path, the firmware's lock file and each function's size (`nm -S`); if all match, compare where the path's functions sit relative to each other, and rerun with a cache big enough to hold the path (`sdkconfig.icache32`): identical cycles there mean layout. HMAC-SHA256 64B moved 3.61x to 2.20x ring and HKDF expand 5.31x to 6.93x with no code change, because other code moved rind's HMAC functions by 2.6-25 KB relative to libcrux's 12.6 KB `sha256_update`.
+- Recompute every published number from raw with a separate script that shares no code with the report generator (in rind-results, `cargo verify` beside `cargo xtask`): table cells, chart labels, display pages, the fastest-library call, ratios and spreads. It has already found real errors the generator could not see in itself: truncated OLED headings that merged three pages, and provenance taken from HEAD at report time.
+- Record provenance at build time, not report time: per image sha256, source commits, patches, build time.
+- Recheck by reflashing the published images (verified by hash) and rerunning; medians should land within max(1%, run spread).
+- Build self-checks into the firmware: cycle counter vs an independent timer at boot, wall time vs cycles per benchmark, and the empty-call harness cost (report it next to the fastest row; don't subtract).
+- Check time grows with input size; a row that gets faster with more input may be optimised out or a layout effect.
+- Compare against public figures for the same chip (vendor minimum hardware throughput, third-party software numbers).
+- Gaps in bench files the pinned report doesn't know still need a recorded reason.
+- Re-pull upstream before finishing; rerun affected benches as a separate labelled set rather than mixing into the pinned set.
+- ESP32: espflash writes the flash clock into the image header and defaults to 40 MHz regardless of sdkconfig. Always pass `--flash-freq 80mhz` and confirm the bootloader's `Boot SPI Speed` line in every run log; a wrong clock makes cache-missing rows up to ~2x slow.
+- Relink at least once and publish per-row shifts; on small instruction caches even the target library's short-input rows move a lot, so never claim layout immunity from one relink.
+- Display pages: keep headings unique and fitting; fail generation instead of truncating.
+- A patch script running `git submodule update --init` resets a hand-checked-out submodule; restore the pin before rerunning.
 
-## Lessons learned (ESP32-S3, Rust, ESP-IDF std)
+- Shared devices: keep the window short (trim to the essential runs), and measure downtime from the service's own "connected" log line, not from `systemctl is-active` (a service can auto-restart and show active while it can't reach the device). The first image flashed over a running vendor firmware may reset early, possibly from a hardware watchdog it left armed; record a run that fails to start rather than silently retrying.
+- When the pin moves, check whether the upstream report generator gained operations, and measure layout sensitivity with padded relinks (e.g. shifts of 0, ~1 KB, ~2 KB) and publish per-layout ratios plus the median.
+
+- nRF52 boards coming off a vendor firmware/bootloader may have the hardware watchdog running (it cannot be stopped short of a watchdog, pin or power-on reset). Read WDT RUNSTATUS/CRV/RREN at boot, log them, and reload every enabled RR register between timed regions and while idle. Also stop any companion timer/watcher that restarts the device's bridge service during the window, and don't chmod/copy-metadata onto a UF2 drive (it unmounts after the write).
+
+- Check with `nm -n` what a padded relink actually moved before describing it: padding can land after the libraries, moving only the harness. Put padding ahead of the code you want to shift, and record each library's shift.
+- Before calling a post-repin shift a code change, diff the upstream source for that path, the lock file and function sizes (`nm -S`). If all match, compare relative placement and rerun with a cache large enough to hold the path; identical cycles there mean layout.
+
+- Rerun the unpadded build in the same session as a control, and include a padding that differs mod 16 (paddings 1 KB apart keep the same alignment and may time identically). Label any relink that moved libraries only a few bytes as such.
+
+## 6b. Rewriting tooling in another language
+- Prove parity before deleting the old tools: regenerate every artifact with both and diff; record byte-identical vs wording-only vs pixel-identical differences in a diag folder.
+- Byte-matching JSON needs the same key order, separators and float formatting; Rust's `{:.2}` rounds like Python's `.2f`. PNG bytes only match with the same zlib, so compare pixels.
+- Keep the verifier independent of the report generator (no shared computation code) and test it with a deliberate mutation.
+- Copy instead of rename when writing outputs that may cross filesystems.
+
+## 7. Debugging crashes
+- Run the image in the vendor's QEMU to get clean faults when hardware reset-loops.
+- On Xtensa, over-aligned locals (align > 16) can make LLVM realign the stack without movsp, which breaks the register windows: interrupt saves then corrupt locals. Search the disassembly for functions that realign the stack; a small patch lowering the alignment on that target fixes it. Verify on hardware before calling it fixed.
+- Work out stack size from the disassembled frame sizes. ESP-IDF sdkconfig paths need to be absolute when the target dir is elsewhere.
+- A reset-looping board can get its USB port disabled by the hub, and recovering it then needs a physical replug. Disable reboot-on-panic for debug builds to avoid this.
+
+## 8. Structure for upstream
+- Follow the upstream project's contribution rules: license, fmt, clippy, tests, commit style, unsafe/asm policy, and report rules such as gap reasons.
+- Keep custom glue and patches small and in a clearly separate place, with minimal repros. Never open upstream PRs or issues without the user's go-ahead.
+- Firmware port and results/tools can live in separate repos that link to each other. Match upstream's license and keep attribution.
+- For this work the firmware repo is [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware) (public; formerly the private `steelhead99x/rind-bench`, archived). Recorded provenance SHAs live in `legacy_rind_bench`; `rind_hardware` maps them onto the public history (`tools/legacy-rind-bench-map.json` in rind-results). Map by tree, or treat squash root `8d9c1bb` as a match when the only differences are the publish-time rename and secret scrub (RP2040 tip `f656f95`). Earlier SHAs are ancestors: write `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` and keep the recorded string in `legacy_rind_bench`. Leave crate, binary and protocol names (`rind-bench` crate, `rind-bench:go`, `rind-bench-esp32`, `.text.rind_bench_pad`) alone.
+- Scan for home paths before publishing. Other agents may push to the same repo, so fetch and rebase before pushing, and commit often.
+- Media: render display pages on the PC at native and 4x size, and record terminals with script and asciinema with names and paths scrubbed.
+- A display/demo build that embeds the published results goes stale whenever results change: regenerate the embedded table and rebuild before flashing.
+
+- When a results checkout has diverged after a history rewrite, back up first (`git bundle --all`, diffs, a tar of small untracked files and a manifest of huge ones). Compare local-only commits to origin by tree and patch-id; do not cherry-pick content that is already on the rewritten history or that would re-introduce scrubbed secrets. Reset to origin/main and re-apply uncommitted edits with `git apply --3way`; leave a conflicting patch and report it. Never stash or discard another agent's work. Commit in a clean worktree, rebase, and do not force-push if that would drop someone else's commits.
+- A first rewrite can miss home-relative paths in rustc backtraces and cargo compile lines (`~/rind-bench/...`, `~/.cargo/...`). Scan for `~/` and `/home/<user>` as well as ports and MACs. A `by-id` path built from the firmware's own USB product string is a firmware identifier, not a host-specific serial.
+
+## 9. Report
+Give the repo URLs, what ran vs. what failed (with reasons), a headline table comparing the target library with the best competitor per operation, surprises, and open issues.
+
+## Lessons learned (target-specific)
+
+The checklist above is the procedure. The notes below keep board- and host-specific details that are easy to lose when the checklist is shortened.
+
+### ESP32-S3 (ESP-IDF std, Xtensa)
 
 Toolchain
 - espup's "esp" Rust toolchain plus `xtensa-esp32s3-espidf`, `build-std = ["std", "panic_abort"]`, ldproxy as linker, embuild fetching ESP-IDF into `.embuild/` (`ESP_IDF_TOOLS_INSTALL_DIR=workspace`). Use std/ESP-IDF when the library under test is std-only.
@@ -73,125 +106,48 @@ Toolchain
 - aws-lc-sys: `#error "Unknown target CPU"`. openssl-src: "don't know how to configure OpenSSL for xtensa-esp32s3-espidf". graviola off x86_64/aarch64 builds but exports only SHA-2/HMAC.
 - `esp_clk_cpu_freq`/`xPortGetCoreID` are not in esp-idf-sys bindings: use `esp_rom_get_cpu_ticks_per_us()` and `xTaskGetCoreID(xTaskGetCurrentTaskHandle())`. Bindgen unions: e.g. `i2c_master_bus_config_t.__bindgen_anon_1.clk_source`.
 
-LLVM Xtensa backend
-- It aborts with "Unable to properly handle scavenged register for indirect jump" on big generated crypto (libcrux-hacl-rs at O3; whole crate under thin LTO): use `lto = false` and a per-package `opt-level = 2`.
-- Link errors: `call8` out of range when everything is in one image (more than 512 KB of text): build one image per bench file via cargo features. `l32r` literal out of range for a huge function: per-package `opt-level = "s"`. `--mtext-section-literals` crashed LLVM.
+LLVM and link
+- The Xtensa backend can abort with "Unable to properly handle scavenged register for indirect jump" on big generated crypto (libcrux-hacl-rs at O3; whole crate under thin LTO): use `lto = false` and a per-package `opt-level = 2`.
+- `call8` is out of range when everything is in one image (more than 512 KB of text): build one image per bench file via cargo features. `l32r` literal out of range for a huge function: per-package `opt-level = "s"`. `--mtext-section-literals` crashed LLVM.
 - Disclose every per-package opt-level change: it changes whose code is being measured.
 
 Board and timing
 - If quad PSRAM init fails ("PSRAM chip is not connected") the board likely has octal PSRAM: turn PSRAM off and keep buffers in internal SRAM, which is also fairer.
-- Size the bench thread's stack from the disassembly, not by guess: on Xtensa, `entry a1, N` gives each frame. ML-KEM put a 27 KB frame (rind `DecapKey::generate`) under two ~31 KB bench frames, overflowing 96 KB into the heap; the symptom was a crash on core 0 ("Unhandled debug exception", corrupted backtrace) or a later `realloc` fault. 160 KB fixed it.
-- A crash that resets the chip (rst `USB_UART_CHIP_RESET`) drops the USB-Serial/JTAG port every few seconds: capture tools must reopen the port and keep logging, or the evidence is lost.
+- Size the bench thread's stack from the disassembly, not by guess: on Xtensa, `entry a1, N` gives each frame. ML-KEM put a 27 KB frame (rind `DecapKey::generate`) under two ~31 KB bench frames, overflowing 96 KB into the heap; 160 KB fixed it. The symptom was a crash on core 0 or a later `realloc` fault.
+- A crash that resets the chip (rst `USB_UART_CHIP_RESET`) drops the USB-Serial/JTAG port every few seconds: capture tools must reopen the port and keep logging.
 - Pin the bench thread to core 1 at high priority with a big stack (96 KB for ML-KEM/curves); watchdogs off; no WiFi; check 240 MHz at boot and print it.
-- CCOUNT through `xthal_get_ccount()`; it wraps at 2^32 (about 17.9 s at 240 MHz), so keep samples short (2 ms) and use wrapping subtraction.
-- Cycle counts that repeat to 0.0% are not robust. On a 16 KB flash-backed instruction cache, relinking the same benches moves short-input rows a lot:
-  - an added display feature moved competitors' 32-64 B rows by 0.6-1.6x
-  - an added harness function moved `sha256/rustcrypto/32B` by 0.12x, and also rind's own rows (by 0.48x)
+- CCOUNT through `xthal_get_ccount()` wraps at 2^32 (about 17.9 s at 240 MHz), so keep samples short (2 ms) and use wrapping subtraction.
+- Relink paddings: ESP-IDF's one `.flash.text` rule takes all `.text.*` and can put a pad static after the libraries even when its object is linked first. Have build.rs pass `-Wl,--section-ordering-file=<file>` with `.flash.text : { *(.text.rind_bench_pad) }` (binutils 2.43+) so the static sits at `_stext`. Paddings 1 KB apart (pad1031 and pad2053) kept the same alignment and timed identically; pad1039, a different alignment, moved SHA-256 64B from 2.36× to 3.07× libcrux (2.79× from the medians over three alignments).
 
-  ring's small C loops and the 16 KB rows barely move. Relink at least once, publish the per-row shift with a check on whether any gap verdict flips (none did, though magnitudes halved), and never claim one library is layout-immune from a single relink.
-- **espflash sets the SPI flash clock in the image header when it flashes, and defaults to 40 MHz whatever `sdkconfig` says.** The app keeps the bootloader's clock. Always pass `--flash-freq 80mhz`, and confirm the bootloader's `Boot SPI Speed` line in every run log (the report prints it, and the verifier fails a set that mixes clocks). The first published set ran at 40 MHz, which made cache-missing rows (SHA-512, short SHA-256) 1.92x slow and biased them against cached code such as ring.
-- Before you blame compute for a 30-150x gap between boards, rebuild with a 32 KB instruction cache. ring's and libcrux's X25519/P-256 dropped 13-23x (cache thrash), but libcrux's P-256 dropped only 4% (opt-level `s`), so one diagnostic build sorts them.
-- Try a bigger instruction cache as a diagnostic (`CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB`): it separates cache misses from compute, and turned rind's 6.6x SHA-256 gap into 1.06x (both at the 40 MHz flash clock; 2.29x at 80 MHz with 16 KB). Publish at the default and say so.
-- espflash flashes its own bundled bootloader unless you pass the build's: record which one was used.
-- Display pages: keep every heading unique and fitting at the panel's font. Fail generation on duplicates or overlap rather than truncating: truncated headings merged three QUIC pages into one and turned "1350B" into "135".
-- `git submodule update --init` (inside a patch script) resets a submodule you checked out at another commit by hand. Restore the pin with `checkout <pin>` before you rerun the script, and regenerate pinned reports only from the pinned tree.
+### nRF52840 (borrowed Meshtastic node, bare metal)
 
-Shared machines and other boards
-- rind's `admin/bench-report run` refuses a host where other work keeps over 10% of the CPUs busy. If a resident load (someone's stream) may not be stopped, relax `BUSY_SHARE` in a reverted local edit, pin with `taskset` to one physical core's SMT pair, and record governor, boost, EPP and load; it still marks the run `noisy`. Outside Nix, `RUSTUP_TOOLCHAIN=<flake.nix's version> IN_RIND_DEV_SHELL=1` stands in for the dev shell.
-- Don't run builds on the same machine while a host benchmark runs.
-- `taskset` shrinks `os.cpu_count()`'s view for tools that use the affinity mask: rind's `build_cost` step then judged 1.4 busy CPUs against a 2-CPU limit and refused. Pin only the timed step, or expect build cost to be skipped.
-- A noisy host run still shows its noise in place: one row at 3.8x its twin (aes256-gcm-open/1350B vs aes128) is the tell. Flag such rows rather than publish them as gaps.
-- Check what else uses a serial port before touching it (`/proc/*/fd`, systemd user units): a "BOOT" USB product string (Seeed's T1000-E reports `T1000-E-BOOT` even running Meshtastic) does not mean the board is in its bootloader; look for a mass-storage interface (class 08) instead.
-- Another agent's `espflash board-info` on the bench port mid-run left the capture waiting forever: give captures a per-run timeout well under the default, and coordinate port ownership.
-
-Porting a criterion suite
-- A tiny criterion API shim renamed `criterion` lets the upstream bench files compile unchanged via `#[path]` modules; print one JSON line per result with upstream's IDs so upstream's report tool can read them.
-- Cross-check every AEAD on the bench's own input (e.g. 1350 B), not only the RFC vector, and run KATs with heap and stack guards: a heap corruption showed up as a crash in a `Vec` realloc right after a library's seal, before any timing.
-- Capture script: reset via RTS, read until a `done` record, treat a panic or reboot banner as a failed run, and keep the raw log next to the JSONL.
-
-Media for sharing
-- Record with `script -q -e --log-timing T -c CMD LOG` (asciinema is rarely installed), then convert to an asciinema v2 cast and a plain log while replacing the home directory, user and host names; keep the raw log and timing out of git (byte offsets break if you edit the log itself).
-- Charts: a dependency-free SVG writer (log-scale ratio bars, green faster, red slower) plus `rsvg-convert` PNGs; screenshots: Markdown to HTML (pulldown-cmark) in headless Chrome, shot tall and autocropped (the `png` crate).
-- Render every display page on the host at native resolution and 4x from the same drawing code the firmware uses; that beats photographing a 0.96" panel.
-- Re-run one image while recording: it doubles as a reproducibility check (a rebuilt x25519 image matched the published run within 1.1%).
-- Scan for home paths before publishing: `sha256sum` with absolute paths leaked the home directory into a results file.
-
-OLED demo (SSD1306 128x64 on I2C)
-- Keep the UI as a `no_std` embedded-graphics crate drawing onto any `DrawTarget`, plus a host `Frame` target so every screen renders to PBM/PNG/Markdown text without the board.
-- Draw only from an observer called between benchmarks (before setup and warm-up, after the last sample); the panel self-refreshes, so a shown frame costs nothing. Count benchmarks with a dry run for the progress bar. Publish numbers from images built without the display feature.
-- Layout that reads at 128x64: inverted 9 px title bar (5x8 font), 5 rows of 9 px with a 4-char library tag, bar scaled to the slowest (target filled, rivals outlined), value right-aligned in 5x8, 4x6 footer with "X 1.19x faster than Y". 4x6 is too small for numbers.
-- Don't commit rendered PNGs when the upstream rules forbid binaries or build artifacts; commit the renderer.
-
-- **Crashes inside a library's safe Rust on Xtensa: suspect stack realignment first.** LLVM-Xtensa realigns SP with a plain `add` after `entry` for any local aligned past 32 bytes (espressif/llvm-project#140). Window spills then corrupt live locals, and the crash shows up later in the caller, often as heap corruption. Scan the linked ELF: `objdump -d` for an `and aX, a1, …` within the first instructions of a function lists every affected function. ring's Poly1305 state (`align(64)`) was the only hit; rind-hardware patches it to 16.
-- **Use Espressif's QEMU when the board misbehaves.** `idf_tools.py install qemu-xtensa` fails its self-test without the system SDL2 and libslirp. Extract the tarball instead, and put `libSDL2-2.0.so.0` from the `pysdl2-dll` wheel and `libslirp` from `dnf download` into a local `LD_LIBRARY_PATH`; no root is needed.
-  - Set the console to UART for that build.
-  - Skip `adc_hw_calibration` (it spins in QEMU) with a gdb `break` / `return`.
-  - Run QEMU under host gdb to read the guest PC and registers at a QEMU crash (`((XtensaCPU*)current_cpu)->env`), and break on `helper_exception_cause` to log the first guest exception.
-- **Layered sdkconfig files need absolute paths** once `CARGO_TARGET_DIR` points outside the crate. embuild resolves them against the target dir's parent and silently skips any that are missing.
-- **A reset-looping image can get the USB port disabled** by the host hub ("disabled by hub (EMI?)", "unable to enumerate"). Re-enabling it needs root or a physical replug. Build debug images with print-halt, and never leave a boot-looping image on the board.
-- **Clear exported env between steps** (`CARGO_TARGET_DIR`, `RUSTFLAGS`): a stale target dir silently copies the wrong ELF.
-- **A large fixed per-call cost that the 16 KB-or-bigger rows hide is the instruction cache, until shown otherwise.** XChaCha20-Poly1305 cost rind and libcrux ~2 ms a call (13x RustCrypto at 32 B); a 32 KB cache build brought it to 1.10x. Rebuild with `CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB` before chasing RNG or algorithm theories, publish at the default, and keep the 32 KB runs as a diagnostic.
-- **Anything between timed calls evicts the cache.** A `println!` between two measurements of the same seal moved it from 20k to ~220k cycles. Time a call in a loop with nothing else in it, and print after.
-- **To rule the RNG in or out, count it.** getrandom 0.4's custom backend (`__getrandom_v03_custom`) can wrap `esp_fill_random` with call, byte and cycle counters, and a seeded SplitMix64 behind a feature gives a deterministic second build. Enable it with `--config 'target.xtensa-esp32s3-espidf.rustflags=["--cfg","getrandom_backend=\"custom\""]'`, because cargo merges `--config` arrays with `.cargo/config.toml`'s rustflags, while `RUSTFLAGS` would replace them.
-- **Profile without JTAG.** OpenOCD over the built-in USB-JTAG needs a root udev rule (`LIBUSB_ERROR_ACCESS`). A priority-24 FreeRTOS task on the other core can wake every tick and read the preempted task's saved PC and a0 from `pxTopOfStack` (words 1 and 3). Spin the operation on core 0, take 400 samples, then run `addr2line -fC` on them and classify by function. That showed rind's 1.27x ChaCha20-Poly1305 gap to ring is Poly1305 (libcrux HACL's 64-bit limbs, emulated on 32-bit Xtensa, at 58% of samples), not ChaCha20.
-- **Check the gap before deciding a fix "verified".** `cargo xtask report` refusing undocumented gaps is the point: every new row over 10% needs measured evidence (cache diagnostic, RNG count, profile), not a guess.
-- **A display build that embeds the published table goes stale whenever results change.** Regenerate the table (`cargo xtask demo-tsv`), rebuild the showcase, and only then flash it.
-
-## Lessons learned (nRF52840 bare metal, a board that belongs to something else)
-
-- Borrowed board (a Meshtastic node): stop its user service, export config and `--info`, enter the UF2 bootloader and copy `CURRENT.UF2` + `INFO_UF2.TXT`, and check what `CURRENT.UF2` covers (here `0x1000`-`0xEA000`, family `0x28860057`, so it cannot be copied back as is). Compare its application range with the official release block for block, then build a family-`0xADA52840` restore UF2 of the exact app region from it. Checksum all of it before flashing anything.
-- Keep the image inside the application region (`0x27000`-`0xED000` with S140 7.3.0 and Adafruit's bootloader); have the UF2 writer refuse anything outside. Never call `embassy_nrf::init`, because it writes UICR. Afterwards, re-read `CURRENT.UF2` to prove the SoftDevice is byte-identical. For the restore, diff `--export-config` (identical means no re-import is needed) and the `--info` sections other than the node list.
+- Stop the user service, export config and `--info`, copy `CURRENT.UF2` + `INFO_UF2.TXT`, and check what `CURRENT.UF2` covers (here `0x1000`-`0xEA000`, family `0x28860057`, so it cannot be copied back as is). Compare its application range with the official release block for block, then build a family-`0xADA52840` restore UF2 of the exact app region. Checksum everything before flashing.
+- Keep the image inside the application region (`0x27000`-`0xED000` with S140 7.3.0 and Adafruit's bootloader); have the UF2 writer refuse anything outside. Never call `embassy_nrf::init`, because it writes UICR. Afterwards, re-read `CURRENT.UF2` to prove the SoftDevice is byte-identical.
 - Every exit should lead to the bootloader: a panic, a fault, a lockup, or a 1200-baud touch. Use a 300-baud touch to restart for the next run. Give UsageFault, BusFault and MemManage a priority below USB so they can report pc/cfsr before resetting.
-- ModemManager opens new CDC-ACM ports and eats output or drops the run. Start runs only on an explicit host token (`rind-bench:go`) sent after a settle delay, and fail any run whose first record isn't `start`. Use `sync -f <drive>`, not a global `sync`, after copying a UF2, since a busy disk elsewhere stalls the global one for minutes.
-- rind on `thumbv7em`: patch it to build `no_std` (patches/0003), with the portable backend for M-profile. Getting ring 0.17 onto bare metal takes three things:
-  - an `AsmTarget` for os `none`, minus the NEON-in-ARM-state `x25519-asm-arm.S` and `poly1305_arm_asm.S`, with the NEON Poly1305 cfg'd out
-  - `less-safe-getrandom-custom-or-rdrand`
-  - a getrandom 0.2 custom backend
-- getrandom 0.4's custom backend symbol is still `__getrandom_v03_custom`.
-- The p256 image (with libcrux-ecdh pulling in X25519) overflowed 792 KB at codegen-units 16. Fat LTO fixed it; apply it to every image on that board so they're built alike, and disclose it.
-- The nRF RNG with bias correction takes about 170 µs per byte, so rows that draw randomness inside the timed loop (ML-KEM keygen/encaps) can be RNG-bound. Say so in the gap reason until it's measured.
-- The first bench image flashed straight out of Meshtastic's DFU can reset about 90 s in (here aes_gcm run 1, after 128 of 167 results; later confirmed with a probe). Meshtastic starts the nRF52 hardware watchdog (`NRF_WDT->RUNSTATUS` = 1, `CRV` = 90 × 32,768). A started nRF52 watchdog cannot be stopped except by a watchdog, pin, or power-on reset; the UF2 bootloader feeds it in DFU, but the first app image has to keep feeding it or it fires after 90 s and clears it, which is why later images run clean. Read `RUNSTATUS`, `CRV` and `RESETREAS` at boot, print them in the start record, and reload every enabled RR register between timed regions (and while waiting for the host go token) when it is running. A first-image probe that feeds, then stops and waits, is how to confirm the timeout without poisoning a relink set; do not `chmod` a just-written UF2 (the drive disappears as soon as the write finishes; `cp` or `shutil.copyfile`, not `shutil.copy`).
-- Bound the window on a board someone else relies on: start with the published set, put relinks after it, and trim the relink queue if the window runs long (move images out of the directory before run-all reaches it; it lists the directory when it starts). Stop not only the board's service but also anything that will start it again (for example a timer that restarts the unit when it is down). A keep-down loop is a backstop. In the exit path, drop that loop, restore, wait for the service's own "connected: node …" line, then start the watcher again. Never end with the bridge down, even if a step fails.
-- A user service with `Restart=` can show `active` again seconds after you stop it while its device is away; measure downtime from the service's own "connected" line, not from `systemctl is-active`.
-- A relink can move a short-input ratio on one board and not another: over three alignments with every library moved together, ESP32-S3 SHA-256 64B was 2.36x, 2.80x and 3.07x libcrux (HMAC 64B 2.07x-2.34x, XChaCha 32B 7.50x-7.94x; no verdict flipped), while on the nRF52840 no short-input ratio moved by more than 0.01 (chacha20poly1305, hkdf, hmac and sha2). Publish per-layout ratios and the ratio of the medians over layouts (`cargo xtask relink`), not one layout's number. Keep a retry of the first image (`zz-…`) out of the relink input so it does not double-count a bench.
-- A capture that cannot even start a run (the port is gone) must still record that run as failed and write `runs.json`; aborting loses the record of what happened.
+- rind on `thumbv7em` needs `patches/0003` (`no_std`, portable M-profile backend). ring 0.17 needs an `AsmTarget` for os `none` (minus NEON-in-ARM-state assembly), `less-safe-getrandom-custom-or-rdrand`, and a getrandom 0.2 custom backend. getrandom 0.4's custom backend symbol is still `__getrandom_v03_custom`.
+- The p256 image overflowed 792 KB at codegen-units 16. Fat LTO fixed it; apply it to every image on that board so they're built alike, and disclose it.
+- The nRF RNG with bias correction takes about 170 µs per byte, so rows that draw randomness inside the timed loop (ML-KEM keygen/encaps) can be RNG-bound until measured.
+- On cortex-m-rt, give the relink pad `#[unsafe(link_section = ".Reset")]`; `link.x` places `*(.Reset)` first in `.text`.
 
-## Lessons learned (rewriting the tooling)
+### RP2040 (Cortex-M0+ / no CAS)
 
-- Keep the tooling in the project's language: a Cargo `xtask` crate per repository (subcommands like rind's `admin/`), with the verifier a separate crate that shares no code with it. Only the shell that sets up a toolchain's environment (`env.sh`, sourced) and the installer that bootstraps rustup stay shell.
-- Prove the rewrite before deleting the old tools: regenerate every published artifact with both from the same inputs and diff. Byte-identical is reachable for JSON written by Python if the new writer copies `json.dumps` exactly: `indent`, `", "`/`": "` separators, `ensure_ascii` escapes (`µ` as `\u00b5`), float `repr` (shortest digits, `1e-05`, `1.5e+16`), ints kept as ints, insertion order (serde_json `preserve_order`, `float_roundtrip`), and `statistics.median` returning the middle element itself for odd counts.
-- Python's `f"{x:.2f}"` and Rust's `{:.2}` both round the exact binary value half to even, so fixed-point formatting matches; add thousands separators by hand.
-- PNGs match byte for byte when both sides use the same zlib at the same level (flate2's `zlib` feature links the system library Python uses); screenshots from a browser are compared by pixels instead.
-- When the source of truth is a Python file built with comprehensions (rind's `SECTIONS`), snapshot its evaluated tables into JSON stamped with the file's sha256, and make every command refuse a stale snapshot.
-- Write through the destination's filesystem: `rename` out of the system temp dir fails across filesystems (`EXDEV`), so copy.
-- A serial capture can be checked offline: rebuild each run's `.jsonl` from its `.log` (`capture --replay`) and compare with what was published.
+- `patches/0005` makes `ReuseCache` work without CAS, via a `Cell` on targets that lack `target_has_atomic = "ptr"`. ring 0.17 is left out (its Arm assembly uses NEON).
+- Timing is SysTick at the processor clock (24-bit hardware, software-extended). A set COUNTFLAG must be consumed in the wrap handler; otherwise `cycles()` can count the same wrap twice (2^24 cycles extra). The boot cross-check should run long enough to cover at least two wraps.
+- The RP2040 has no TRNG. A seeded SplitMix64 is fine for "same work" but is not entropy; record `rng` in the start record.
+- Known-answer checks have passed on a Pico (2026-11-12). Published timing results are not in rind-results until a `results/rp2040/` tree lands on main; do not claim they are there.
 
-## Lessons learned (RP2040, Cortex-M0+ / no CAS)
+### Publishing a squash and a rewritten results history
 
-- Cortex-M0+ (`thumbv6m-none-eabi`) has no pointer-sized atomics, so `AtomicU8::compare_exchange` and `fetch_max` do not exist. For rind's `ReuseCache`, a `Cell` path under `cfg(not(target_has_atomic = "ptr"))` is the least invasive fallback: no new dependency, and it matches the existing "one execution context on `target_os = "none"`" assumption already used by the DIT guards. A `critical-section` or `portable-atomic` crate would add a dependency without changing that assumption. Do not disable the cache if the same state machine can run without CAS. The atomic path, including its memory ordering, stays unchanged; gate the threaded test on `target_has_atomic = "ptr"`.
-- Cortex-M0+ also has no DWT `CYCCNT`. Time with SysTick at the CPU clock (1 cycle resolution). SysTick is 24 bits (134.2 ms at 125 MHz); extend it in software to 32 bits (34.4 s). Use the RP2040 1 MHz TIMER only as a boot cross-check: 1 µs is too coarse for short rows. Document the resolution and wrap.
-- ring 0.17's Arm assembly uses NEON (`vpush` in `x25519-asm-arm.S`) and does not assemble for ARMv6-M. Leave ring rows and known-answer checks out in the port's `build.rs`, not by a rind patch, and say so in the results. aws-lc-rs already stays out on `target_os = "none"`.
-- `static_cell` uses `portable-atomic` CAS and has no critical-section feature of its own. On M0+, depend on `portable-atomic` with the `critical-section` feature (feature unification) and provide a `critical-section` impl (embassy-rp does).
-- There is no official QEMU machine for the RP2040 with enough RAM to run these images. Ship a UF2 build (family `0xE48BFF56`, XIP at `0x10000000`, boot2 first) and run known-answer checks on hardware. Need a Pico or compatible with a 12 MHz crystal and W25Q080 (or a matching `boot2-*` / `ClockConfig` rebuild).
-- The RP2040 has no TRNG. A seeded SplitMix64 is the same work for every library, not entropy; record `rng` in the start JSON.
+- Map recorded provenance SHAs with `tools/legacy-rind-bench-map.json`. The public rind-hardware root is `8d9c1bb`; earlier private trees are `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`. The RP2040 tip `f656f95` maps to `8d9c1bb` when the only differences are the publish-time rename and secret scrub. Leave crate, binary and protocol names (`rind-bench` crate, `rind-bench:go`, `rind-bench-esp32`, `.text.rind_bench_pad`) alone. `cargo verify` and `cargo xtask report` both read the map.
+- Never `git rebase --autostash` (or stash) where others have uncommitted edits. If the remote history was rewritten, cherry-pick only your new commits onto the new remote head in a clean worktree, check them for anything the rewrite scrubbed, and push from there.
 
-## Lessons learned (publishing a squash and a rewritten results history)
+### Linux SBC hosts (Jetson Orin Nano that runs live services)
 
-- When someone force-pushes a results repo to scrub ports, MACs or home paths, the local checkout can end up on the old history, ahead and behind, with another agent's uncommitted edits. First back up everything: a `git bundle --all`, `git diff` and `git diff --cached`, and a tar of the small untracked files plus a manifest of any huge untracked directories (do not copy tens of gigabytes of other agents' build trees). Then compare each local-only commit to `origin/main` by tree and by `git patch-id --stable`. If the content is already on the rewritten history (or differs only by the secrets the rewrite removed), do not cherry-pick it back. Reset the checkout to `origin/main` and re-apply the uncommitted edits with `git apply --3way`; leave a conflicting patch on disk and report it. Never stash or discard another agent's work. Do new commits in a clean worktree and rebase onto `origin/main` before pushing. Do not force-push if that would drop someone else's commits.
-- After a firmware repo is published as a squash, private provenance SHAs in `images.json` cannot be opened on GitHub. Map them by tree onto the public history, or treat the squash root as the match when the trees are equal aside from the publish-time rename and scrub. Keep the SHA that was recorded at build time in `legacy_rind_bench` so verification stays honest: do not claim an earlier ancestor is `8d9c1bb`. Teach both the report generator and the independent verifier to read the same map (`tools/legacy-rind-bench-map.json` here) without sharing code.
-- A first history rewrite can miss home-relative paths in rustc backtraces (`~/rind-bench/...`, `~/.cargo/...`) and cargo "Compiling crate (path)" lines in recorded terminal logs. Scan for `~/` and `/home/<user>` before publishing, not only `/dev/tty*` and MAC addresses. A Linux `by-id` path built from the firmware's own USB product string (`usb-rind-bench_...`) is a firmware identifier, not a host-specific serial, and can stay as a default.
-- Leave untracked directories that belong to other agents (CI checkouts, firmware trees, large `target/` dirs) in place when you reset a shared checkout. `git reset --hard` does not delete them; a blanket `git clean` would.
-
-## Lessons learned (Linux SBC hosts: a Jetson Orin Nano that runs live services)
-
-- Read the box's own notes first and list what must stay up (systemd units, tunnels). Record `systemctl is-active` for each before and after, and don't touch nvpmodel, clocks, services or the reboot button: record the power mode (`nvpmodel -q --verbose`), governor and min/max per core, and the cluster layout (`topology/cluster_id`) instead.
-- Check the clock and the network before planning a build. This one booted with its clock at 1970 and no route out, so rustup, crates.io, apt and NTP were all unreachable. Stage everything on the PC: the standalone `rust-<ver>-aarch64-unknown-linux-gnu.tar.xz` (installed with `install.sh --prefix`, no rustup), `cargo vendor` of the pinned lock with a source replacement in a private `CARGO_HOME`, the `libssl-dev` .deb that matches the board's `libssl3` (`dpkg -x` into a sysroot, `OPENSSL_INCLUDE_DIR`/`OPENSSL_LIB_DIR`), and test-vector submodules fetched at their pinned commits.
-- Extract tarballs with `tar -m` on a board whose clock is behind: source mtimes in its future would make cargo rebuild path crates on every invocation.
-- A wrong wall clock breaks benches that check certificates (rustls: `NotValidYetContext`). Don't change the board's clock without the owner's say-so. Wrap only the bench binaries in libfaketime (unpacked locally) through cargo's target runner (`CARGO_TARGET_<TRIPLE>_RUNNER`), with `FAKETIME_DONT_FAKE_MONOTONIC=1` so criterion's clock is untouched. Never run cargo or rustc under the preload: rustc deadlocked at 0% CPU, and a moved wall clock reran openssl-sys's build script and relinked every bench. Measure the wrapper with the same binaries run directly, pinned, with and without it.
+- Do not stop the box's own services to free a core. Pick the core from a per-CPU busy sample (`/proc/stat` over 10 s), skip cpu0 (interrupts), and record per-CPU load, frequencies, thermals and the top CPU users before and after every run.
+- Record the PC's UTC start and finish when the board's clock is wrong, and publish those.
 - `pkill -f <name>` over ssh matches the ssh command line itself and kills your own session; kill by pid or `pgrep -x`.
-- Build natively at `nice -n 19` with `-j 2` when cross-compiling C crates (aws-lc-sys, openssl-sys) needs a cross gcc and sysroot the PC lacks; prebuild the bench binaries and rind-cpuid in the same target dir so bench-report's own build step is a no-op, and run nothing else while it times.
-- Pick the core from a per-CPU busy sample (`/proc/stat` over 10 s), skip cpu0 (interrupts), and record per-CPU load, frequencies, thermals and the top CPU users before and after every run. Record the PC's UTC start and finish when the board's clock is wrong, and publish those.
+- Build natively at `nice -n 19` with `-j 2` when the PC lacks a cross gcc; prebuild the bench binaries and rind-cpuid in the same target dir so bench-report's own build step is a no-op, and run nothing else while it times.
 - On aarch64 the host's rind-cpuid line says which paths run: Cortex-A78AE has aes, pmull, sha2 and NEON but not the SHA-512/SHA-3 extension or DIT. libcrux's NEON code sits behind its `simd128` feature, which rind-bench does not enable, so libcrux runs its portable code; say so beside its rows.
-- Run the boards' known-answer checks on the host too (rind-hardware `host-kat/`, the same `vectors.rs` through a criterion shim, plus aws-lc-rs, graviola and OpenSSL), then rind's own test suite with its vector submodules, then every bench once in criterion's `--test` mode, before any timed run.
-- Check the core-picking output before you trust a pin. In awk, `printf "%s", x, d>0 ? a : b` parses `>` as an output redirect, writes a stray file named `0...` and prints nothing, so the sort fell through to another line and picked a core by name. Parenthesize ternaries inside `printf`, and stop and restart a run whose `pinned to` line doesn't follow the busy sample.
-- Write a short PROGRESS.md beside the staging files before each long step (runs of 35 min each here), and land tooling commits as soon as they pass verify, so an interrupted session resumes without redoing work.
+- Run the boards' known-answer checks on the host too (rind-hardware `host-kat/`), then rind's own test suite with its vector submodules, then every bench once in criterion's `--test` mode, before any timed run.
+- Check the core-picking output before you trust a pin. In awk, `printf "%s", x, d>0 ? a : b` parses `>` as an output redirect, writes a stray file named `0...` and prints nothing. Parenthesize ternaries inside `printf`, and stop and restart a run whose `pinned to` line doesn't follow the busy sample.
+- Write a short PROGRESS.md beside the staging files before each long step, and land tooling commits as soon as they pass verify, so an interrupted session resumes without redoing work.

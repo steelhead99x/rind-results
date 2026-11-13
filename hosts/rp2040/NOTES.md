@@ -8,9 +8,10 @@
 > with no new dependency, matching rind's existing "one execution context
 > on bare metal" assumption. A critical-section or portable-atomic crate
 > would have added a dependency without changing that assumption, so it
-> was not used. The images have not been run on a board (none is
-> attached); known-answer checks are in the firmware and will run on the
-> first flash.
+> was not used. Known-answer checks later passed on a Raspberry Pi Pico
+> (2026-11-12). Published timing results are not in this repository yet
+> (there is no `results/rp2040/` tree on main); do not treat the HTML decks'
+> unpublished snapshot figures as this repo's published set.
 
 - Board needed: a Raspberry Pi Pico, Pico W, or another RP2040 board with
   a 12 MHz crystal (the official Pico default) and W25Q080 or compatible
@@ -32,6 +33,6 @@
 - Image hashes and source: [images.json](images.json) and
   [images.sha256](images.sha256) next to this note. Built from rind-bench (the private history, same tree as later published rind-hardware)
   `f656f95` (2026-11-12 16:35 PST), rind `98568332`, patches 0001–0005.
-  The images have not been flashed or run.
+  The images in this folder are the pre-run build. Known-answer checks later passed on a Pico; timing results have not been published here.
 - There is no official QEMU machine for the RP2040 with enough RAM to run
   these images, so only a build is published.
