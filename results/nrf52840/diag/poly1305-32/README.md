@@ -7,7 +7,7 @@ on the Seeed T1000-E (Cortex-M4F, 64 MHz, DWT_CYCCNT). Image sha256 matched
 [SHA256SUMS](https://github.com/steelhead99x/rind-hardware/blob/7a14b38fd124786b9115b2b985c9eeed994dca1d/patches/poly1305-32/SHA256SUMS)
 on rind-hardware `7a14b38`; they were not rebuilt.
 
-The Meshtastic node was backed up first (`~/t1000e-backups/20261112-182202`):
+The Meshtastic node was backed up first (t1000e-backups/20261112-182202):
 config export, `CURRENT.UF2`, SoftDevice `0x1000`-`0x27000` sha256
 `52102c1f530069395431dab626cf618310dd54ce579b8bf25aba1908526afd0b` (unchanged
 after the run). `mesh-watcher.timer`, `jetson-mesh-relay.timer` and
