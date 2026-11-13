@@ -10,6 +10,7 @@ mod capture;
 mod charts;
 mod compare;
 mod demo_tsv;
+mod gen_frames;
 mod host_report;
 mod host_run;
 mod layout;
@@ -45,6 +46,8 @@ enum Cmd {
     Relink(relink::Args),
     /// Write the OLED demo's page table from a board's report JSON
     DemoTsv(demo_tsv::Args),
+    /// Draw the EFR32MG24 OLED demo's frames.h and preview PNGs from the logo SVGs
+    GenFrames(gen_frames::Args),
     /// Draw rind-over-fastest SVG charts from report JSON
     Charts(charts::Args),
     /// Attribute linked code and read-only data to the libraries raced
@@ -193,6 +196,7 @@ fn main() -> ExitCode {
         Cmd::Report(a) => report::run(a),
         Cmd::Compare(a) => compare::run(a),
         Cmd::DemoTsv(a) => demo_tsv::run(a),
+        Cmd::GenFrames(a) => gen_frames::run(a),
         Cmd::Relink(a) => relink::run(a),
         Cmd::Charts(a) => charts::run(a),
         Cmd::Sizes(a) => sizes::run(a),

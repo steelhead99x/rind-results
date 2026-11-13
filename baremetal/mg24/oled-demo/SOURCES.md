@@ -1,6 +1,6 @@
 # Logo sources
 
-Files are fetched by `tools/gen_frames.py` into `assets/` (gitignored). They are not committed.
+Files are fetched by `cargo xtask gen-frames` into `assets/` (gitignored). They are not committed, except that the wordmark is also a test fixture in `tools/xtask/tests/fixtures/gen-frames/`.
 
 | File | URL | License |
 |---|---|---|
