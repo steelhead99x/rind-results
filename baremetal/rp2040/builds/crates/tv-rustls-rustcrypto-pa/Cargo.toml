@@ -8,3 +8,7 @@ publish = false
 rustls-rustcrypto = { version = "=0.1.0-pre.0", default-features = false, features = ["alloc", "tls12"] }
 once_cell = { version = "1.21", default-features = false, features = ["race", "portable-atomic"] }
 portable-atomic = { version = "1", default-features = false, features = ["critical-section"] }
+
+[package.metadata.cargo-machete]
+# Pulled so the RP2040 build uses the portable-atomic once_cell. The lib only names rustls-rustcrypto.
+ignored = ["once_cell", "portable-atomic"]

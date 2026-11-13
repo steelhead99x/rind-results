@@ -34,12 +34,10 @@ jobs:
         run: cargo test --workspace
       - name: verify published trees
         run: cargo verify
-      # Each published host tree. `results/` as a whole also contains diagnostic
-      # compare-*.md files whose side names are not directories (pad0 is stored
-      # as pad0-control). Those files stay as history and are not rewritten.
-      - name: verify --dir on published trees
-        run: |
-          cargo verify --dir results/jetson-orin-nano
-          cargo verify --dir results/nrf52840
-          cargo verify --dir results/host
-          cargo verify --dir results/esp32s3
+      - name: verify --dir results
+        run: cargo verify --dir results
+      - name: cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check
+          arguments: --locked
