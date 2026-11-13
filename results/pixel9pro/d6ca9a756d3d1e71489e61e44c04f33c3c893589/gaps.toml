@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# Every report operation on pixel9pro where another library (OpenSSL included)
+# beats rind by more than 10%, in rind's benchmarks/gaps.toml format.
+# `cargo xtask host-report` refuses a gap without an entry and an entry that
+# covers no gap.
+
+[[gap]]
+operations = [
+  "chacha20poly1305/{lib}/16KB",
+  "rustls-bulk/chacha20poly1305/{lib}",
+]
+on = ["pixel9pro"]
+reason = "OpenSSL uses the Tensor G4's SVE2 ChaCha path. This unmodified upstream kixel-ai/rind d6ca9a75 build does not; rind-cpuid at this pin reports aes, pmull, sha2, sha3, neon, and dit, but not SVE2. The same gap appears in rustls bulk ChaCha20-Poly1305. rind is even with ring and aws-lc-rs on these rows."

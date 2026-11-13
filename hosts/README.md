@@ -45,6 +45,14 @@ Raw JSON, a trimmed log, and notes are in each folder. The top-level
 | RP2040 (Raspberry Pi Pico) | Cortex-M0+, 125 MHz | Known-answer checks passed on a Pico (2026-11-12). No `results/rp2040/` tree is on main yet, so this repo does not publish timing numbers for it. |
 
 
+## Comparable set (rind `d6ca9a75`)
+
+New publishes use `results/<host>/<upstream-sha>/`. The historical `hosts/pixel9pro/` tree above is the older `b6651423` set and stays there.
+
+| Board or host | Hardware | Where the numbers are |
+|---|---|---|
+| [pixel9pro](../results/pixel9pro/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md) | Google Pixel 9 Pro, Tensor G4, aarch64, Android 17 in Termux | [RESULTS.md](../results/pixel9pro/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md) at unmodified kixel-ai/rind `d6ca9a75` |
+
 ## Later Linux host (rind `a6577cb4`)
 
 New publishes use `results/<host>/<upstream-sha>/`. This is the first Linux host in that layout.

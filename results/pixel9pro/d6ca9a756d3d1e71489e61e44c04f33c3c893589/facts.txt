@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+host: pixel9pro
+board: Google Pixel 9 Pro
+soc: Google Tensor G4 (1x Cortex-X4, 3x Cortex-A720, 4x Cortex-A520), aarch64
+features: SVE2 present. rind-cpuid at this pin: aes, pmull, sha2, sha3, neon, dit (SVE2 is not a rind-cpuid key at d6ca9a75)
+cpu_online: 0-7 (8 CPUs). bench-report recorded logical_cpus 7
+os: Android 17 (API 37, build CP3A.261005.005) in Termux
+openssl: OpenSSL 3.6.3 9 Jun 2026 (as recorded in the host JSON linked field)
+rustc: rustc 1.96.0 (ac68faa20 2026-05-25) (built from a source tarball)
+cargo: cargo 1.96.0 (30a34c682 2026-05-25) (built from a source tarball)
+rind: d6ca9a756d3d1e71489e61e44c04f33c3c893589 (kixel-ai/rind, detached, unpatched)
+criterion: --noplot --warm-up-time 1 --measurement-time 3
+runner: scripts/host-run-android.py wrapping unmodified admin/bench-report run; not cargo xtask pixel-run, and not pinned to one core
+power: PLUGGED_AC the whole suite; battery still fell 27% to 22%, temperature 27.1 C at start to 35.0 C at end
+build_cost: not measured (skipped by host-run)
+validation: 91 of 91 host-kat checks passed; cargo test --release -p rind: 814 passed, 0 failed
