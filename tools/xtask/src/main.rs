@@ -6,6 +6,7 @@
 
 mod bench;
 mod boards;
+mod build_matrix;
 mod capture;
 mod charts;
 mod compare;
@@ -129,6 +130,8 @@ enum Cmd {
         #[arg(long, default_value = layout::COMPARABLE_PIN)]
         commit: String,
     },
+    /// Build each baremetal/rp2040/builds crate for a target, one TSV line per crate
+    BuildMatrix(build_matrix::Args),
     /// Re-check a result tree. With no flags, the published set.
     Verify {
         #[arg(long)]
@@ -268,6 +271,7 @@ fn main() -> ExitCode {
             let home = home.unwrap_or(boards::home_dir()?.join("rind-bench-run"));
             boards::pi_run(&home, &commit)
         })(),
+        Cmd::BuildMatrix(a) => build_matrix::run(a),
         Cmd::Verify { dir, board } => run_verify(&dir, &board),
         Cmd::AndroidConvert {
             rind,
