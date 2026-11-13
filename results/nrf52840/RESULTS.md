@@ -271,13 +271,15 @@ Run on the board before any timing, every run. A library failing an operation's 
 
 Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `nrf52840.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. Relinked builds that move every library by about 1 KB and about 2 KB (rind-bench's `--pad 1031` and `--pad 2053`, padding ahead of the libraries since 2026-11-12, checked with `nm -n`) moved no short-input ratio by more than 0.01 (`diag/nrf52840-relink-fixed-98568332/relink-short.md`: chacha20poly1305, hkdf, hmac and sha2). An earlier relink of all twelve benches (`diag/nrf52840-relink-98568332/`) moved the Rust code only 8 bytes, so it did not test layout. Unlike the ESP32-S3's, these rows hardly depend on layout (why is not tested).
 
+The `rind-bench` column and the recorded `rind_bench` commit IDs are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Those commit IDs are not in the public history and are left as recorded. Clone `rind-hardware` to rebuild.
+
 ## Reproduce
 
 ```sh
-git clone --recursive https://github.com/steelhead99x/rind-bench && cd rind-bench
+git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware
 cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images nrf
-cd ../rind-results && cargo xtask run-all-nrf ../rind-bench/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
-cargo xtask report --board nrf52840 --raw results/raw-nrf52840 --rind ../rind-bench/rind --firmware ../rind-bench/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
+cd ../rind-results && cargo xtask run-all-nrf ../rind-hardware/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
+cargo xtask report --board nrf52840 --raw results/raw-nrf52840 --rind ../rind-hardware/rind --firmware ../rind-hardware/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
 cargo verify
 ```
 

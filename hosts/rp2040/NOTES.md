@@ -1,6 +1,6 @@
 # `rp2040`: builds and is ready for hardware
 
-> **Update (2026-11-12):** rind-bench now builds every bench image for
+> **Update (2026-11-12):** rind-hardware now builds every bench image for
 > `thumbv6m-none-eabi`. `patches/0003` gives rind `no_std` on `target_os =
 > "none"` with the M-profile portable backend. `patches/0005` makes
 > `ReuseCache` work without CAS: on targets that do not set
@@ -16,8 +16,7 @@
   a 12 MHz crystal (the official Pico default) and W25Q080 or compatible
   QSPI flash (embassy-rp `boot2-w25q080`). Hold BOOTSEL, plug in over USB,
   copy `rp2040/images/<bench>.uf2`, open the CDC-ACM port, and send
-  `rind-bench:go\n`. See [rind-bench/rp2040/README.md](https://github.com/steelhead99x/rind-bench/blob/main/rp2040/README.md)
-  (private repo).
+  `rind-bench:go\n`. See [rind-hardware/rp2040/README.md](https://github.com/steelhead99x/rind-hardware/blob/main/rp2040/README.md).
 - Chip: RP2040, Cortex-M0+ (`thumbv6m-none-eabi`), 125 MHz, 264 KB RAM
   (256 KB main SRAM), 2 MiB XIP flash.
 - Timing: SysTick at the processor clock, 1 count = 1 cycle. The hardware
