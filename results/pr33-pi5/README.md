@@ -5,7 +5,7 @@
 RSA products on Cortex-A72/A76/Neoverse N1. Its results table said "not measured". This is that measurement.
 
 - Host: `pi5` — Raspberry Pi 5 Model B (BCM2712, 4× Cortex-A76 @ 2.4 GHz, 8 GB), Debian 13 (Linux 6.18.60+rpt-rpi-2712),
-  reached as `ssh pi5-ai-camera` (hostname `bp-cam02`) from the M1 Pro.
+  reached over SSH from the M1 Pro.
 - Toolchain: rustc 1.98.1 (rustup). OpenSSL headers unpacked from `libssl-dev` into the work dir (nothing installed), as `scripts/pi-run.sh` did.
 - One set of release bench binaries (`x25519 p256 p384 p521 ed25519 rsa_priv rsa_pub`) built with
   `RUSTFLAGS=--cfg rind_cpu_disable` (`scripts/pi5-pr33-build.sh`). Each run is either **narrow** (default detection,
