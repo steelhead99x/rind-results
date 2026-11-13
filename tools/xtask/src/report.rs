@@ -144,6 +144,47 @@ const LAYOUT_NRF: &str = "Relinked builds that move every library by about 1 KB 
 /// rind's gaps.toml. The hardware baseline is never a competitor.
 const RIVALS: &[&str] = &["ring", "rustcrypto", "libcrux", "graviola", "aws-lc-rs"];
 
+/// A provenance patch: a filename, as published trees record them, or
+/// `{name, sha256}` from a current `cargo xtask provenance`.
+fn patch_label(p: &Value) -> String {
+    if let Some(s) = p.as_str() {
+        return format!("`{s}`");
+    }
+    if let Some(o) = p.as_object() {
+        let name = o.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let sha = o.get("sha256").and_then(|v| v.as_str()).unwrap_or("");
+        if !name.is_empty() && !sha.is_empty() {
+            let n = 12.min(sha.len());
+            return format!("`{name}` ({})", &sha[..n]);
+        }
+        if !name.is_empty() {
+            return format!("`{name}`");
+        }
+    }
+    format!("`{}`", py_str(p))
+}
+
+/// `commit` on a provenance document is the upstream rind SHA. Older documents
+/// have no such field; `images.*.rind` was the sha they recorded.
+/// Returns `(commit, upstream_commit, fork_commit)`.
+fn commits_of(prov: &Value, image_rind: &Value) -> (Value, Value, Option<Value>) {
+    match prov
+        .get("commit")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        Some(up) => {
+            let fork = prov
+                .get("fork_commit")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| json!(s));
+            (json!(up), json!(up), fork)
+        }
+        None => (image_rind.clone(), image_rind.clone(), None),
+    }
+}
+
 /// Python's `str()` of a JSON value, for the few places one is formatted.
 fn py_str(v: &Value) -> String {
     match v {
@@ -489,13 +530,19 @@ pub fn run(args: Args) -> Result<(), String> {
             .flatten()
             .map(|(_, i)| py_str(&i["rind"]))
             .collect();
-        let c = if commits.len() == 1 {
+        let image_rind = if commits.len() == 1 {
             json!(commits.iter().next().unwrap())
         } else {
             json!(commits)
         };
-        host.insert("commit".into(), c.clone());
-        host.insert("upstream_commit".into(), c);
+        // New documents: `commit` is the upstream pin and `images.*.rind` is
+        // the fork. Old documents: `images.*.rind` is the sha to publish.
+        let (commit, upstream, fork) = commits_of(&prov, &image_rind);
+        host.insert("commit".into(), commit);
+        host.insert("upstream_commit".into(), upstream);
+        if let Some(fork) = fork {
+            host.insert("fork_commit".into(), fork);
+        }
     }
     let flash: BTreeSet<i64> = runs
         .iter()
@@ -953,12 +1000,23 @@ impl Ctx<'_> {
             .as_array()
             .into_iter()
             .flatten()
-            .map(|p| format!("`{}`", py_str(p)))
+            .map(patch_label)
             .collect();
-        w(format!(
-            "- rind: upstream {up}, plus the port's patches: {}",
-            patches.join(", ")
-        ));
+        let fork = host
+            .get("fork_commit")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty());
+        let rind_line = match fork {
+            Some(fork) => format!(
+                "- rind: upstream {up}, fork `{fork}`, plus the port's patches: {}",
+                patches.join(", ")
+            ),
+            None => format!(
+                "- rind: upstream {up}, plus the port's patches: {}",
+                patches.join(", ")
+            ),
+        };
+        w(rind_line);
         for line in self.images_lines() {
             w(line);
         }
@@ -1253,5 +1311,54 @@ impl Ctx<'_> {
                 + &rl.join("\n")
                 + "\n",
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn string_patches_label_as_filenames() {
+        let p = json!("0001-fix.patch");
+        assert_eq!(patch_label(&p), "`0001-fix.patch`");
+    }
+
+    #[test]
+    fn object_patches_label_name_and_sha256() {
+        let p = json!({"name": "poly1305-32/0001-faster.patch", "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"});
+        assert_eq!(
+            patch_label(&p),
+            "`poly1305-32/0001-faster.patch` (0123456789ab)"
+        );
+    }
+
+    #[test]
+    fn commit_field_is_the_upstream_sha_not_the_image_rind() {
+        let fork = "09fa48d964fc3aa6ef6eb35490d9d49e357a53bd";
+        let up = "0b1f1469c8e17e361e3353432bc7fceee9e04214";
+        let prov = json!({
+            "commit": up,
+            "fork_commit": fork,
+            "patches": [{"name": "0001-a.patch", "sha256": "aa"}],
+            "images": {"aes_gcm": {"rind": fork, "commit": up, "fork_commit": fork}}
+        });
+        let (commit, upstream, fork_commit) = commits_of(&prov, &json!(fork));
+        assert_eq!(commit, json!(up));
+        assert_eq!(upstream, json!(up));
+        assert_eq!(fork_commit, Some(json!(fork)));
+    }
+
+    #[test]
+    fn old_provenance_keeps_image_rind_as_upstream() {
+        let rind = "985683329fb98aebfaae6c493f205f20070a8fca";
+        let prov = json!({
+            "patches": ["0001-a.patch"],
+            "images": {"aes_gcm": {"rind": rind}}
+        });
+        let (commit, upstream, fork) = commits_of(&prov, &json!(rind));
+        assert_eq!(commit, json!(rind));
+        assert_eq!(upstream, json!(rind));
+        assert!(fork.is_none());
     }
 }

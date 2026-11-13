@@ -1092,12 +1092,82 @@ fn hw_cell(hw: &str) -> String {
     }
 }
 
+/// A current provenance document names the upstream pin in `commit` and the
+/// patched tree in `fork_commit`, and lists patches as `{name, sha256}`.
+/// Published documents list patch filenames and have no `commit` field.
+fn new_provenance(doc: &Value) -> bool {
+    doc.get("commit").and_then(|v| v.as_str()).is_some()
+        && doc.get("fork_commit").and_then(|v| v.as_str()).is_some()
+}
+
+fn check_patch_list(label: &str, patches: &Value, rep: &mut Report) {
+    if patches.is_null() {
+        return;
+    }
+    let Some(arr) = patches.as_array() else {
+        rep.bad(label, "patches is not a list".into());
+        return;
+    };
+    for (i, p) in arr.iter().enumerate() {
+        match p {
+            Value::String(s) if !s.is_empty() => {}
+            Value::Object(o) => {
+                let name = o.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let sha = o.get("sha256").and_then(|v| v.as_str()).unwrap_or("");
+                let hex = sha.len() == 64 && sha.chars().all(|c| c.is_ascii_hexdigit());
+                if name.is_empty() || !hex {
+                    rep.bad(label, format!("patches[{i}] needs name and a sha256"));
+                }
+            }
+            _ => rep.bad(
+                label,
+                format!("patches[{i}] is not a filename or {{name, sha256}}"),
+            ),
+        }
+    }
+}
+
+/// `commit` is the upstream SHA. `images.*.rind` is the fork commit when
+/// `fork_commit` is set, and the recorded rind sha otherwise.
+fn check_upstream_pin(label: &str, doc: &Value, rep: &mut Report) {
+    let Some(imgs) = doc.get("images").and_then(|v| v.as_object()) else {
+        return;
+    };
+    let upstream = doc.get("commit").and_then(|v| v.as_str());
+    let fork = doc.get("fork_commit").and_then(|v| v.as_str());
+    if upstream.is_none() && fork.is_none() {
+        return;
+    }
+    for (name, i) in imgs {
+        if let (Some(up), Some(c)) = (upstream, i.get("commit").and_then(|v| v.as_str())) {
+            if c != up {
+                rep.bad(label, format!("{name}: commit {c} != upstream {up}"));
+            }
+        }
+        if let Some(fork) = fork {
+            if let Some(rind) = i.get("rind").and_then(|v| v.as_str()) {
+                if rind != fork {
+                    rep.bad(label, format!("{name}: rind {rind} != fork_commit {fork}"));
+                }
+            }
+            if let Some(f) = i.get("fork_commit").and_then(|v| v.as_str()) {
+                if f != fork {
+                    rep.bad(label, format!("{name}: fork_commit {f} != {fork}"));
+                }
+            }
+        }
+    }
+}
+
 fn check_provenance(rep: &mut Report) {
     let map = load_hw_map();
     let mut images = 0;
     for rel in IMAGE_JSON {
         let path = root().join(rel);
         let v: Value = serde_json::from_str(&read(&path)).expect("images json");
+        check_patch_list(rel, &v["patches"], rep);
+        check_upstream_pin(rel, &v, rep);
+        let fresh = new_provenance(&v);
         let Some(imgs) = v["images"].as_object() else {
             rep.bad("provenance", format!("{rel}: no images object"));
             continue;
@@ -1109,6 +1179,11 @@ fn check_provenance(rep: &mut Report) {
                 .and_then(|x| x.as_str())
                 .unwrap_or("");
             if rec.is_empty() {
+                // A current document names commit and fork_commit instead of a
+                // legacy rind-bench SHA. Published documents still have one.
+                if fresh {
+                    continue;
+                }
                 rep.bad(
                     "provenance",
                     format!("{rel}:{name}: missing legacy_rind_bench"),
@@ -1142,6 +1217,24 @@ fn check_provenance(rep: &mut Report) {
         let img_path = root().join(rel).with_file_name("images.json");
         let v: Value =
             serde_json::from_str(&read(&img_path)).expect("images json beside RESULTS.md");
+        check_patch_list(rel, &v["patches"], rep);
+        check_upstream_pin(rel, &v, rep);
+        if let Some(up) = v.get("commit").and_then(|c| c.as_str()) {
+            if !text.contains(up) {
+                rep.bad(
+                    "provenance",
+                    format!("{rel}: RESULTS.md does not name upstream commit {up}"),
+                );
+            }
+        }
+        if let Some(fork) = v.get("fork_commit").and_then(|c| c.as_str()) {
+            if !text.contains(fork) {
+                rep.bad(
+                    "provenance",
+                    format!("{rel}: RESULTS.md does not name fork commit {fork}"),
+                );
+            }
+        }
         let imgs = v["images"].as_object().expect("images");
         let mut in_table = false;
         for line in text.lines() {
@@ -1506,5 +1599,66 @@ fn main() -> ExitCode {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
+    }
+}
+
+#[cfg(test)]
+mod provenance_tests {
+    use super::*;
+
+    fn doc_new() -> Value {
+        serde_json::json!({
+            "commit": "0b1f1469c8e17e361e3353432bc7fceee9e04214",
+            "fork_commit": "09fa48d964fc3aa6ef6eb35490d9d49e357a53bd",
+            "patches": [
+                {"name": "0001-a.patch", "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},
+                {"name": "poly1305-32/0001-b.patch", "sha256": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"}
+            ],
+            "images": {
+                "aes": {
+                    "rind": "09fa48d964fc3aa6ef6eb35490d9d49e357a53bd",
+                    "commit": "0b1f1469c8e17e361e3353432bc7fceee9e04214",
+                    "fork_commit": "09fa48d964fc3aa6ef6eb35490d9d49e357a53bd"
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn object_patches_and_the_upstream_pin_pass() {
+        let doc = doc_new();
+        let mut rep = Report::default();
+        check_patch_list("t", &doc["patches"], &mut rep);
+        check_upstream_pin("t", &doc, &mut rep);
+        assert!(rep.problems.is_empty(), "{:?}", rep.problems);
+        assert!(new_provenance(&doc));
+    }
+
+    #[test]
+    fn filename_patch_lists_still_pass() {
+        let doc = serde_json::json!({
+            "patches": ["0001-a.patch", "ring-0.17.14-xtensa-poly1305-align.patch"]
+        });
+        let mut rep = Report::default();
+        check_patch_list("t", &doc["patches"], &mut rep);
+        check_upstream_pin("t", &doc, &mut rep);
+        assert!(rep.problems.is_empty(), "{:?}", rep.problems);
+        assert!(!new_provenance(&doc));
+    }
+
+    #[test]
+    fn image_rind_must_be_the_fork_when_fork_commit_is_set() {
+        let doc = serde_json::json!({
+            "commit": "0b1f1469c8e17e361e3353432bc7fceee9e04214",
+            "fork_commit": "09fa48d964fc3aa6ef6eb35490d9d49e357a53bd",
+            "images": {"aes": {"rind": "985683329fb98aebfaae6c493f205f20070a8fca"}}
+        });
+        let mut rep = Report::default();
+        check_upstream_pin("t", &doc, &mut rep);
+        assert!(
+            rep.problems.iter().any(|p| p.contains("fork_commit")),
+            "{:?}",
+            rep.problems
+        );
     }
 }

@@ -353,6 +353,8 @@ fn check_images(label: &str, images: &Path, results_md: Option<&Path>, rep: &mut
         rep.bad(label, format!("{}: not JSON", images.display()));
         return;
     };
+    super::check_patch_list(label, &v["patches"], rep);
+    super::check_upstream_pin(label, &v, rep);
     let Some(imgs) = v["images"].as_object() else {
         return;
     };
