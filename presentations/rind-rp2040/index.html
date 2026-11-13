@@ -21,21 +21,21 @@ const DATA = {
   meta: { date: "November 12, 2026", rustc: "1.99.1", repo: "https://github.com/steelhead99x/rind-results" },
 
   /* baremetal/rp2040/README.md, hosts/rp2040/DEVICE.md, hosts/rp2040/NOTES.md */
-  chip: { name: "RP2040", rev: "B2", cores: 2, core: "Cortex-M0+", mhz: 125, flashKiB: 2048, sramKB: 264, mainSramKB: 256,
+  chip: { name: "RP2040", rev: "B2", cores: 2, core: "Cortex-M0+", mhz: 125, flashKiB: 2048, flashMiB: 2, sramKiB: 264, mainSramKiB: 256,
           stockKiB: 92, backupReads: 3, picotool: "2.3.1" },
 
   /* hosts/rp2040/FEASIBILITY.md (rind a4759c48 section) */
-  start: { rind: "a4759c48", errors: 1672, allocModules: 30,
+  start: { rind: "a4759c48", errors: 1672, allocModules: 30, depsCount: 8,
     depsOk: ["curve25519-dalek 5", "fiat-crypto 0.3", "libcrux-sha2 0.0.9", "libcrux-poly1305 0.0.7",
              "libcrux-hacl-rs 0.0.6", "subtle", "rand_core", "getrandom (custom backend)"] },
 
   /* TARGET-SURVEY.md, COMPETITOR-BUILDS.md Notes, hosts/rp2040/NOTES.md */
   constraints: [
-    { k: "No OS", v: "no std", what: "No threads, no locks, no files. Code that uses std does not compile.", fix: "patch 0003: no_std on bare metal" },
-    { k: "No CAS", v: "ARMv6-M", what: "No compare-and-swap instruction, so no lock-free updates and no atomic Arc.", fix: "patch 0005: Cell path, one context" },
-    { k: "Multiplier", v: "32×32→32", what: "No 64-bit product in hardware. muls is fixed-time (1 or 32 cycles by design option); the 64-bit product is four muls in software, branch-free on rustc 1.99.1.", fix: "slower, but branch-free" },
-    { k: "No hardware RNG", v: "no TRNG", what: "Only a ring-oscillator bit, which is not a vetted entropy source.", fix: "board supplies getrandom" },
-    { k: "Little RAM", v: "264 KB", what: "256 KB of it is main SRAM. Data, tables and the stack all share it.", fix: "to be checked on the device" }
+    { k: "No OS", v: "no std", what: "No operating system, so no std: no thread-locals and no OS mutex. Code that needs std does not compile.", fix: "patch 0003: no_std on bare metal" },
+    { k: "No CAS", v: "ARMv6-M", what: "No compare-and-swap, so compare_exchange and fetch_max are missing, and so is alloc::sync::Arc.", fix: "patch 0005: Cell path, one context" },
+    { k: "Multiplier", v: "32×32→32", what: "No 64-bit product in hardware. muls takes a fixed 1 or 32 cycles, by the chip maker's implementation option; the 64-bit product is four muls in software, branch-free on rustc 1.99.1.", fix: "slow in software, but branch-free" },
+    { k: "No hardware RNG", v: "no TRNG", what: "Only a ring-oscillator bit, which is not a vetted entropy source.", fix: "the program supplies getrandom's backend" },
+    { k: "Little RAM", v: "264 KiB", what: "264 KiB of SRAM in total, 256 KiB of it main SRAM.", fix: "listed as a blocker in the survey" }
   ],
 
   /* hosts/rp2040/images.json, hosts/rp2040/NOTES.md (commit 2cb88c3) */
@@ -63,9 +63,9 @@ const DATA = {
     ["Cortex-M0/M0+", "RP2040, STM32G0/L0/F0, nRF51, SAMD21", "no", "software, branch-free", "RP2040: none"],
     ["Cortex-M23", "v8-M baseline", "yes", "software (no umull)", "vendor-specific"],
     ["Cortex-M3", "STM32F1/F2, LPC17xx", "yes", "umull, not constant time", "vendor-specific"],
-    ["Cortex-M4/M7", "STM32F4/F7, nRF52", "yes", "umull, 1 cycle fixed", "RNG on most parts"],
+    ["Cortex-M4/M7", "STM32F4/F7, nRF52", "yes", "umull, 1 cycle fixed", "STM32F4: RNG on most parts; nRF52: RNG"],
     ["Cortex-M33", "EFR32MG24, RP2350, nRF5340", "yes", "umull, timing undocumented", "MG24: crypto engine, TRNG"],
-    ["Hazard3 (RISC-V)", "RP2350", "yes", "fast config only", "SHA-256, TRNG"],
+    ["Hazard3 (RISC-V)", "RP2350", "yes", "constant time only in fast config", "SHA-256, TRNG"],
     ["ESP32-C3", "riscv32imc", "no", "timing undocumented", "AES, SHA, RSA, RNG"],
     ["ESP32-C6 / H2", "riscv32imac", "yes", "timing undocumented", "AES, SHA, ECC, RNG"],
     ["riscv32 without M", "riscv32i", "no", "software loop, not constant time", "none"]
@@ -75,18 +75,18 @@ const DATA = {
   mg24: [
     "Cortex-M33F at 78 MHz, 1536 KiB flash, 256 KiB RAM.",
     "Has CAS, so rustls (no provider) and rustls-rustcrypto compile for it.",
-    "Its Secure Engine does AES-GCM, ChaCha20-Poly1305, SHA-2, ECDSA/ECDH, X25519 and Ed25519, and has a TRNG: a software-vs-engine comparison once rind runs there.",
-    "rind fails on std here too. Nothing rind-related has been flashed to it."
+    "Its Secure Engine does AES-GCM, ChaCha20-Poly1305, SHA-2, ECDSA/ECDH, X25519 and Ed25519, and has a TRNG. That would give a software-vs-engine comparison once rind is no_std there.",
+    "Unpatched rind 0.3.2 fails on std here too. Nothing rind-related has been flashed to it."
   ],
 
   /* hosts/rp2040/NOTES.md, baremetal/rp2040/README.md, builds/README.md */
   plan: [
-    { ph: "Done", h: "Back up flash", t: "Full flash read three times, all copies match." , done: true },
+    { ph: "Done", h: "Back up flash", t: "Full flash read three times; all copies matched." , done: true },
     { ph: "Step 1", h: "Copy the image", t: "Hold BOOTSEL, plug in USB, copy one .uf2 file." },
     { ph: "Step 2", h: "Start the run", t: "Open the USB serial port and send rind-bench:go." },
-    { ph: "Step 3", h: "Check, then time", t: "Known-answer checks run first, then the timed rows." },
-    { ph: "Step 4", h: "Record", t: "Save the output and publish it with the image hash." },
-    { ph: "Step 5", h: "Restore", t: "Write the saved firmware back with picotool and verify it." }
+    { ph: "Step 3", h: "Check and time", t: "Known-answer checks built into the firmware run, along with the timed rows." },
+    { ph: "Step 4", h: "Record", t: "Save the serial output." },
+    { ph: "Step 5", h: "Restore", t: "Write the saved firmware back with picotool, with verify." }
   ],
 
   /* Measurement plan, rind-bench team, 2026-11-12 (plan, not results).
@@ -272,6 +272,12 @@ table.sv td:first-child{white-space:nowrap}
 #deck{bottom:26px}
 #hud{bottom:6px}
 @media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
 </style>
 </head>
 <body>
@@ -292,84 +298,85 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 2. BOARD ============ -->
 <section class="slide" data-section="Board">
   <div class="kicker">The board</div>
-  <h2>The test board is an RP2040, a small dual-core microcontroller, and its original firmware was saved before any work began</h2>
+  <h2>The test board is an RP2040, and its original firmware was saved and left in place</h2>
   <div class="board" id="board-cells" style="margin-top:22px"></div>
-  <div class="cols c64" style="margin-top:6px">
-    <div class="card"><h3>What the chip is</h3><ul class="b sm">
+  <div class="cols c64" style="margin-top:8px">
+    <div class="card tall"><h3>The chip</h3><ul class="b">
       <li>The RP2040 is the chip on the Raspberry Pi Pico. This one is silicon revision <span data-k="chip.rev"></span>.</li>
-      <li>Cortex-M0+ is Arm's smallest 32-bit core. Rust calls this target <code>thumbv6m-none-eabi</code>: the ARMv6-M instruction set, with no operating system underneath.</li>
-      <li>Programs run straight from external flash (XIP, "execute in place") or from on-chip SRAM.</li>
+      <li>Rust calls this target <code>thumbv6m-none-eabi</code>: the ARMv6-M instruction set, with no operating system underneath.</li>
+      <li>Code runs from the <span data-k="chip.flashMiB"></span> MiB external flash (XIP, "execute in place") or from on-chip SRAM.</li>
     </ul></div>
-    <div class="card"><h3>What was done to the board</h3><ul class="b sm">
-      <li>It shipped with an Arduino (Mbed OS) sketch of about <span data-k="chip.stockKiB"></span> KiB.</li>
-      <li>The whole <span data-k="chip.flashKiB"></span> KiB flash was read <span data-k="chip.backupReads"></span> times with picotool <span data-k="chip.picotool"></span>. All three copies matched.</li>
-      <li>The flash has not been written. The backup is kept outside this repository.</li>
+    <div class="card tall"><h3>What was done to the board</h3><ul class="b">
+      <li>It came with an Arduino (Mbed OS) sketch of about <span data-k="chip.stockKiB"></span> KiB.</li>
+      <li>The full flash was read <span data-k="chip.backupReads"></span> times with picotool <span data-k="chip.picotool"></span>. All copies matched.</li>
+      <li>The flash has not been written. The backup is not in this repository.</li>
     </ul></div>
   </div>
-  <div class="callout" style="margin-top:20px">Why this chip: the target survey calls the RP2040 "the floor", the smallest and most limited chip in its suggested benchmark set. If rind runs here, larger microcontrollers are an easier step.</div>
-  <div class="foot"><span class="src">baremetal/rp2040/README.md · hosts/rp2040/DEVICE.md · hosts/rp2040/NOTES.md (commit 2cb88c3)</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:22px">The target survey lists the RP2040 as "the floor" of its suggested benchmark chips.</div>
+  <div class="foot"><span class="src">baremetal/rp2040/README.md · hosts/rp2040/DEVICE.md · hosts/rp2040/NOTES.md (commit 2cb88c3) · baremetal/rp2040/TARGET-SURVEY.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 3. CONSTRAINTS ============ -->
 <section class="slide" data-section="Constraints">
   <div class="kicker">Why it is hard</div>
-  <h2>Five things a desktop library takes for granted are missing or limited on this chip</h2>
+  <h2>rind has to work within five limits on this chip that desktop targets do not have</h2>
   <div class="cons" id="cons" style="margin-top:22px"></div>
-  <div class="callout" style="margin-top:20px">Every one of these is shared by other small chips (slide 8), so solving them for the RP2040 covers a whole class of targets.</div>
+  <div class="callout" style="margin-top:20px">Other microcontrollers share some or all of these limits (slide 8).</div>
   <div class="foot"><span class="src">baremetal/rp2040/TARGET-SURVEY.md · baremetal/rp2040/COMPETITOR-BUILDS.md (Notes)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 4. STARTING POINT ============ -->
 <section class="slide" data-section="Start">
   <div class="kicker">Starting point</div>
-  <h2>At rind <span data-k="start.rind"></span> the library itself failed with 1672 errors, but every dependency it needs already compiled</h2>
+  <h2>At commit a4759c48, rind failed to build with 1672 errors, while every dependency of its portable backend compiled</h2>
   <div class="cols c46" style="margin-top:20px">
     <div>
       <div class="board b2">
         <div class="cell"><div class="k">errors in rind</div><div class="v bad" data-k="start.errors"></div></div>
-        <div class="cell"><div class="k">dependencies that build</div><div class="v">all</div></div>
+        <div class="cell"><div class="k">backend dependencies that build</div><div class="v">all <span data-k="start.depsCount"></span></div></div>
       </div>
       <div class="chart-title">First error</div>
       <div class="err"><code>error[E0463]: can't find crate for `std`</code></div>
-      <p class="small">rind had no <code>#![no_std]</code>, so the compiler went looking for the standard library, which does not exist for this target. Before that, getrandom 0.4.3 stops with "target is not supported" unless the build sets its custom-backend option.</p>
+      <p class="small">rind had no <code>#![no_std]</code>, so the compiler looked for the standard library (<code>std</code>), which this target does not have. Without the custom-backend option, getrandom 0.4.3 fails first with "target is not supported".</p>
       <p class="small">Command: <code>cargo build -p rind --release --target thumbv6m-none-eabi</code> with <code>--cfg getrandom_backend="custom"</code>, rustc <span data-k="meta.rustc"></span>.</p>
+      <p class="small">About the label: FEASIBILITY.md calls a4759c48 a rind commit. COMPETITOR-BUILDS.md takes its versions, including rind 0.3.2, from <code>rind-bench/Cargo.toml</code> at a4759c48.</p>
     </div>
     <div>
       <div class="chart-title">What in rind needs the standard library</div>
       <table class="t" style="margin-bottom:14px">
-        <tr><th>Use</th><th>Where</th><th>Why it breaks</th></tr>
-        <tr><td><code>thread_local!</code></td><td>CPU-feature cache, DIT guards*</td><td>no threads, no OS</td></tr>
-        <tr><td><code>std::sync::Mutex</code></td><td>the ABI layer</td><td>needs OS locks</td></tr>
-        <tr><td><code>Vec</code>, <code>Box</code>, <code>vec!</code></td><td>about <span data-k="start.allocModules"></span> modules</td><td>fine with <code>alloc</code>, wrong import path</td></tr>
+        <tr><th>Use</th><th>Where</th><th>Change the notes call for</th></tr>
+        <tr><td><code>thread_local!</code></td><td>CPU-feature cache, DIT guards*</td><td>a static, or cfg it out on <code>target_os = "none"</code></td></tr>
+        <tr><td><code>std::sync::Mutex</code></td><td>the ABI layer (<code>abi.rs</code>)</td><td>gate behind a <code>std</code> feature</td></tr>
+        <tr><td><code>Vec</code>, <code>Box</code>, <code>vec!</code></td><td>about <span data-k="start.allocModules"></span> modules</td><td><code>extern crate alloc</code>, <code>core::</code> paths</td></tr>
       </table>
       <div class="chart-title">Dependencies of the portable backend: all compile for thumbv6m</div>
       <div class="chk" id="deps-ok"></div>
-      <p class="small" style="margin-top:10px">* DIT: data-independent timing, a CPU mode that keeps instruction timing independent of the data. "Portable backend" means rind's pure-Rust code path, with no CPU-specific assembly.</p>
+      <p class="small" style="margin-top:10px">* DIT: data-independent timing, an Arm CPU mode that keeps instruction timing from depending on data values. The portable backend is rind's code path for CPUs without a dedicated backend; patch 0003 uses it on M-profile chips.</p>
     </div>
   </div>
-  <div class="foot"><span class="src">hosts/rp2040/FEASIBILITY.md (lower section) · baremetal/rp2040/COMPETITOR-BUILDS.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">hosts/rp2040/FEASIBILITY.md (a4759c48 section) · baremetal/rp2040/COMPETITOR-BUILDS.md · hosts/rp2040/NOTES.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 5. FIXES ============ -->
 <section class="slide" data-section="Fixes">
   <div class="kicker">The fixes</div>
-  <h2>Two patches and a stand-in random number source make rind build for the RP2040 with no new dependency</h2>
-  <div class="cols3" style="margin-top:22px">
+  <h2>Patches 0003 and 0005 remove rind's need for std and CAS, and the images use a placeholder random source</h2>
+  <div class="cols3 fixes" style="margin-top:22px">
     <div class="card fix"><div class="pn">patch 0003</div><h3>no_std on bare metal</h3><ul class="b sm">
-      <li>rind becomes <code>#![no_std]</code> when <code>target_os = "none"</code>, using <code>core</code> and <code>alloc</code> instead of <code>std</code>.</li>
-      <li>On Arm M-profile chips (the microcontroller line) it uses the portable backend.</li>
+      <li>rind builds as <code>no_std</code> when <code>target_os = "none"</code>, that is, with no operating system.</li>
+      <li>On Arm M-profile chips (Arm's microcontroller cores) it uses the portable backend.</li>
     </ul></div>
     <div class="card fix"><div class="pn">patch 0005</div><h3>ReuseCache without CAS</h3><ul class="b sm">
       <li><code>ReuseCache</code> used compare-and-swap. On targets where <code>target_has_atomic = "ptr"</code> is not set, the same state machine now runs in a <code>Cell</code>.</li>
-      <li>This matches rind's existing assumption of one execution context on bare metal. A critical-section or portable-atomic crate would have added a dependency without changing that, so neither was used.</li>
+      <li>No new dependency. This matches rind's existing assumption of one execution context on bare metal; a critical-section or portable-atomic crate would have added a dependency without changing that.</li>
     </ul></div>
     <div class="card fix warnc"><div class="pn">getrandom</div><h3>Custom backend, not real entropy</h3><ul class="b sm">
       <li>The chip has no hardware random number generator, so the bench images plug a seeded SplitMix64 generator into getrandom's custom-backend hook.</li>
-      <li>That is enough to run benchmarks. It is not a source of entropy and must not be used for real keys.</li>
+      <li>It is not a source of entropy.</li>
     </ul></div>
   </div>
   <div class="callout" style="margin-top:20px">rind itself takes no position on randomness: the program that uses it supplies getrandom's backend. The RP2040's ring-oscillator bit is not a vetted source.</div>
-  <div class="foot"><span class="src">hosts/rp2040/FEASIBILITY.md · hosts/rp2040/NOTES.md · commits 2cb88c3, f4e0b1d · TARGET-SURVEY.md (randomness)</span><span class="num"></span></div>
+  <div class="foot"><span class="src">hosts/rp2040/FEASIBILITY.md · hosts/rp2040/NOTES.md · commits 2cb88c3, f4e0b1d · baremetal/rp2040/TARGET-SURVEY.md (randomness)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 6. NOW ============ -->
@@ -381,14 +388,14 @@ table.sv td:first-child{white-space:nowrap}
     <div>
       <div class="chart-title">The <span data-k="images.count"></span> UF2 images (one per bench file)</div>
       <div class="chk" id="img-list"></div>
-      <p class="small" style="margin-top:10px">UF2 is the file format the RP2040's boot ROM accepts: hold the BOOTSEL button, plug in USB, and copy the file to the drive that appears.</p>
+      <p class="small" style="margin-top:10px">UF2 is the file you copy to the board: hold the BOOTSEL button, plug it in over USB, and copy the file across.</p>
     </div>
     <div>
       <ul class="b sm">
         <li>Libraries in the images: rind, RustCrypto, dalek, libcrux.</li>
-        <li><b>ring <span data-k="images.ringVer"></span> is left out.</b> Its Arm assembly uses NEON vector instructions (<code>vpush</code>), which ARMv6-M does not have. aws-lc-rs is left out because it needs an OS.</li>
+        <li><b>ring <span data-k="images.ringVer"></span> is left out.</b> Its Arm assembly uses NEON (<code>vpush</code>) and does not assemble for ARMv6-M. aws-lc-rs is left out because it needs an OS.</li>
         <li>Known-answer checks are built into the firmware and will run on the first flash.</li>
-        <li>No official QEMU machine for the RP2040 can run these images, so only the build is published.</li>
+        <li>There is no official QEMU machine for the RP2040 with enough RAM to run these images, so only the build is published.</li>
       </ul>
     </div>
   </div>
@@ -399,21 +406,21 @@ table.sv td:first-child{white-space:nowrap}
 <section class="slide" data-section="Competitors">
   <div class="kicker">Other libraries</div>
   <h2>The RustCrypto and dalek crates compile for every target tested, while ring, aws-lc-rs and rustls do not compile for the RP2040</h2>
-  <div class="legend" style="margin-top:14px"><span><i style="background:var(--accent)"></i>compiles</span><span><i style="background:var(--bad)"></i>fails</span><span>Compile only: no link, nothing run. rustc <span data-k="meta.rustc"></span>, 2026-11-12, default features off.</span></div>
+  <div class="legend" style="margin-top:14px"><span><i style="background:var(--accent)"></i>compiles</span><span><i style="background:var(--bad)"></i>fails</span><span>Compile only: no link, nothing run, and most crates are only re-exported, so generic code is not instantiated. rustc <span data-k="meta.rustc"></span>, 2026-11-12, default features off.</span></div>
   <table class="t grid" id="tb-comp"></table>
-  <p class="small" style="margin-top:8px">rind 0.3.2 failed at <span data-k="start.rind"></span>, the version in this table. With patches 0003 and 0005 it now builds for thumbv6m (slide 6); the other columns have not been re-checked with the patches.</p>
+  <p class="small" style="margin-top:8px">The rind row is unpatched rind 0.3.2 (a4759c48). With patches 0003 and 0005 the bench images now build for thumbv6m (slide 6); the other columns were not re-checked with the patches.</p>
   <div class="foot"><span class="src">baremetal/rp2040/COMPETITOR-BUILDS.md · baremetal/rp2040/builds/README.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 8. SURVEY ============ -->
 <section class="slide" data-section="Survey">
   <div class="kicker">Other chips</div>
-  <h2>Many common microcontrollers share at least one of these limits, and the EFR32MG24 adds a crypto engine to compare against</h2>
+  <h2>Other Cortex-M and RISC-V chips share some of these limits, and the EFR32MG24 adds a crypto engine to compare against</h2>
   <div class="cols c64" style="margin-top:12px">
     <table class="t sv" id="tb-survey"></table>
     <div>
-      <div class="card"><h3>EFR32MG24 (second board)</h3><ul class="b sm" id="mg24"></ul></div>
-      <p class="small" style="margin-top:10px">On every surveyed target that was compiled, rind 0.3.2's dependencies build and rind itself fails on <code>std</code>. CAS "no" also means no atomic <code>Arc</code>. MSP430 and AVR are out of scope (16-bit and 8-bit, too little RAM).</p>
+      <div class="card"><h3>EFR32MG24 board</h3><ul class="b sm" id="mg24"></ul></div>
+      <p class="small" style="margin-top:10px">On every surveyed target that was compiled, unpatched rind 0.3.2 fails on <code>std</code> while its dependencies build. CAS "no" also means no atomic <code>Arc</code>. MSP430 and AVR are out of scope (16-bit and 8-bit, too little RAM).</p>
     </div>
   </div>
   <div class="foot"><span class="src">baremetal/rp2040/TARGET-SURVEY.md · baremetal/mg24/README.md · baremetal/rp2040/COMPETITOR-BUILDS.md (Notes)</span><span class="num"></span></div>
@@ -446,7 +453,7 @@ table.sv td:first-child{white-space:nowrap}
     <div>
       <div class="chart-title">Two clocks, because the M0+ has no cycle counter</div>
       <table class="t" id="tb-timers"></table>
-      <p class="small">Larger Cortex-M cores have a DWT cycle counter; the M0+ does not. The 1 MHz timer is read as RAWH, RAWL, RAWH, repeating if the high half changed, to avoid a torn read.</p>
+      <p class="small">The M0+ has no DWT cycle counter, which the survey suggests using on the M33. The 1 MHz timer is read as RAWH, RAWL, RAWH, repeating if the high half changed, to avoid a torn read.</p>
       <p class="small"><b>In the images built so far</b> (commit 2cb88c3): SysTick is extended in software to 32 bits, wrapping about every <span data-k="methods.systick32"></span> at 125 MHz, and the 1 MHz TIMERAW timer is used only as a startup cross-check.</p>
       <div class="chart-title" style="margin-top:12px">Each reported number</div>
       <ul class="b sm" id="m-sample"></ul>
@@ -482,9 +489,12 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 12. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Every fact in this deck comes from one of these files in steelhead99x/rind-results</h2>
-  <table class="t" id="tb-src" style="margin-top:14px;font-size:13.5px"></table>
-  <p class="small" style="margin-top:10px">All other branches (<code>results/*</code>, <code>docs/*</code>) were checked on 2026-11-12. None has RP2040 data newer than <code>main</code> at commit 2cb88c3.</p>
+  <h2>Every fact comes from these files in steelhead99x/rind-results, except the measurement plan, which is the rind-bench team's</h2>
+  <table class="t" id="tb-src" style="margin-top:14px;font-size:14.5px"></table>
+  <div class="cols" style="margin-top:20px">
+    <div class="card"><h3>Branches checked</h3><p class="small" style="margin:0">All branches (<code>main</code>, <code>results/*</code>, <code>docs/*</code>) were checked on 2026-11-12. None has RP2040 data newer than <code>main</code> at commit 2cb88c3.</p></div>
+    <div class="card"><h3>Not in this deck</h3><p class="small" style="margin:0">On-device numbers (none exist yet), flash backup hashes, and links into the benchmark harness repository, which is not public.</p></div>
+  </div>
   <div class="foot"><span class="src">Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
 </section>
 
@@ -499,7 +509,7 @@ table.sv td:first-child{white-space:nowrap}
   const c=D.chip;
 
   // Slide 2: board cells
-  $('#board-cells').innerHTML = [["chip",`${c.name} rev ${c.rev}`],["cores",`${c.cores} × ${c.core}`],["clock",`${c.mhz} MHz`],["flash / SRAM",`${c.flashKiB/1024} MB / ${c.sramKB} KB`]]
+  $('#board-cells').innerHTML = [["chip",`${c.name} rev ${c.rev}`],["cores",`${c.cores} × ${c.core}`],["clock",`${c.mhz} MHz`],["flash / SRAM",`${c.flashMiB} MiB / ${c.sramKiB} KiB`]]
     .map(([k,v])=>`<div class="cell"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
 
   // Slide 3: constraint cards
@@ -542,18 +552,18 @@ table.sv td:first-child{white-space:nowrap}
     const done=L.rows.filter(r=>r.rind!=null&&r.best!=null);
     if(L.status!=='pending'&&done.length) $('#live-title').textContent = L.status==='complete' ? `On-device results for ${done.length} benchmarks are in` : `On-device results are in for ${done.length} of ${L.rows.length} benchmarks, with the rest pending`;
     $('#live-status').innerHTML = L.status==='pending'
-      ? `<b>Pending, updated as on-device runs land.</b> No benchmark has run on the RP2040 yet. Rows below list the planned benchmarks.`
+      ? `<b>Pending, updated as on-device runs land.</b> No benchmark has run on the RP2040 yet. The rows are the ${L.rows.length} bench images listed in images.json.`
       : `<b>${L.status==='complete'?'Complete':'Partial, updated as on-device runs land'}.</b> As of ${L.asOf||'?'} · code in ${L.placement||'?'} · source: ${L.source||'?'}`;
     $('#tb-live').innerHTML = `<tr><th>Bench</th><th>Operation</th><th class="n">rind</th><th class="n">Fastest other</th><th class="n">rind / other</th></tr>` +
       L.rows.map(r=>{ const a=cyc(r.rind,r.unit), b=cyc(r.best,r.unit);
         return `<tr><td><code>${r.bench}</code></td><td>${r.op||'<span class="mut">to be set</span>'}</td><td class="n">${show(r.rind,r.unit)}</td><td class="n">${show(r.best,r.unit)}${r.bestLib?`<br><span class="sub2">${r.bestLib}</span>`:''}</td><td class="n">${a!=null&&b!=null?(a/b).toFixed(2)+'×':P}</td></tr>`; }).join('');
-    const w=440, rowH=34, h=L.rows.length*rowH+34, s=el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img'}), x0=120, x1=w-50;
+    const w=440, rowH=34, h=L.rows.length*rowH+34, s=el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img','aria-label':'Bar chart of rind time divided by the fastest other library for each benchmark; bars appear as results land'}), x0=120, x1=w-50;
     const vals=L.rows.map(r=>{const a=cyc(r.rind,r.unit),b=cyc(r.best,r.unit); return a!=null&&b!=null?a/b:null;});
     const max=Math.max(2,...vals.filter(v=>v!=null).map(v=>Math.ceil(v*2)/2)), sc=v=>x0+(x1-x0)*v/max;
     for(let t=0;t<=max+1e-9;t+=max>4?1:0.5){ el('line',{x1:sc(t),x2:sc(t),y1:4,y2:h-24,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-8,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,t.toFixed(1)+'×'); }
     L.rows.forEach((r,i)=>{ const y=6+i*rowH, v=vals[i];
       el('text',{x:x0-8,y:y+rowH/2+3,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,r.bench);
-      if(v==null){ el('rect',{x:x0,y:y+8,width:x1-x0,height:16,rx:2,fill:'none',stroke:'#dfe4ea','stroke-dasharray':'4 3'},s); el('text',{x:x0+8,y:y+20,'font-size':11,fill:'#a08a3c'},s,'pending'); }
+      if(v==null){ el('rect',{x:x0,y:y+8,width:x1-x0,height:16,rx:2,fill:'none',stroke:'#dfe4ea','stroke-dasharray':'4 3'},s); el('text',{x:x0+8,y:y+20,'font-size':11,fill:'#6f5a0a'},s,'pending'); }
       else { el('rect',{x:x0,y:y+8,width:sc(v)-x0,height:16,rx:2,fill:v<=1?'#0f766e':'#b4532a'},s); el('text',{class:'v',x:sc(v)+5,y:y+20,'font-size':11,fill:'#465467','font-weight':600},s,v.toFixed(2)+'×'); } });
     el('line',{x1:sc(1),x2:sc(1),y1:2,y2:h-24,stroke:'#0e2238','stroke-width':1.5,'stroke-dasharray':'4 3'},s);
     $('#ch-live').appendChild(s);
