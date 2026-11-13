@@ -10,6 +10,7 @@ mod compare;
 mod demo_tsv;
 mod host_report;
 mod host_run;
+mod layout;
 mod legacy_map;
 mod md2png;
 mod py;
@@ -69,6 +70,15 @@ enum Cmd {
         #[arg(long)]
         rind: PathBuf,
     },
+    /// Print `results/<host>/<upstream-sha>[-<label>]/`, the directory a new publish uses.
+    PublishDir {
+        #[arg(long)]
+        host: String,
+        #[arg(long)]
+        commit: String,
+        #[arg(long)]
+        label: Option<String>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -89,6 +99,12 @@ fn main() -> ExitCode {
         Cmd::HostRun(a) => host_run::run(a),
         Cmd::Check => check(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
+        Cmd::PublishDir {
+            host,
+            commit,
+            label,
+        } => layout::publish_dir(&root(), &host, &commit, label.as_deref())
+            .map(|p| println!("{}", p.display())),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,
