@@ -23,7 +23,7 @@ It covers:
 18. The upstreamable std / alloc feature split for no_std (thumbv6m 1,739 → 0 errors, identical desktop codegen)
 19. Which other Rust crypto libraries compile for this and nearby targets (compile only)
 20. Other chips with the same limits, including the EFR32MG24
-21. Status and next steps: verified, pending timing, and the pull requests being prepared (none opened; the P-256, AES and sram-hot stacks are not pushed)
+21. Status and next steps: verified, pending timing, and the pull requests (draft fork PRs #84 no_std and #87 32-bit Poly1305 on steelhead99x/rind, not opened upstream; the P-256, AES and sram-hot stacks are not pushed)
 22. Sources
 
 Every number is labeled as measured on the board or as a model or emulator estimate. Old-base measured rows are labeled "old base". New-base board timing had started by 21:13 PST but had no completed medians; those slides carry a "status: pending board timing" marker.
@@ -98,8 +98,10 @@ The 2026-11-12 on-device work is not yet published in this repository. Slides 2 
 
 The fairness rules on slide 9 come from the rind-bench team's measurement plan as of 2026-11-12. The SysTick
 extension to 32 bits and the 1 MHz timer as a startup cross-check come from `hosts/rp2040/NOTES.md` at 2cb88c3.
-No pull request has been opened upstream; slide 21 lists the branches being prepared. The P-256 CT, fixsliced AES
-and sram-hot stacks have not been pushed.
+Draft fork PRs steelhead99x/rind#84 (no_std on bare metal) and #87 (32-bit Poly1305, including thumbv6m mul16)
+were opened on 13 November 2026; neither has been sent to upstream kixel-ai/rind (formerly moq-dev/rind).
+Slide 21 lists those drafts and the unpushed P-256 CT, fixsliced AES, and sram-hot stacks. #87 has been
+measured on other boards; RP2040 board timing for it is still pending.
 
 The a4759c48 label: `hosts/rp2040/FEASIBILITY.md` calls it a rind commit; `baremetal/rp2040/COMPETITOR-BUILDS.md` takes its
 versions (including rind 0.3.2) from `rind-bench/Cargo.toml` at a4759c48. The deck cites both.
