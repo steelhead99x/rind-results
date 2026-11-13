@@ -2,6 +2,22 @@
 
 Each refresh reworks the whole deck into one story; this log records what changed in each refresh. Times are PST.
 
+## 2026-11-13 13:40
+
+- New: two timeline slides (19 and 20) rendered from a new `DATA.timeline` block: 25 dated entries from 2026-11-11 to
+  13:40 PST on 11-13, each with what changed, host or board, measured effect and state. Unfinished items are yellow.
+- New Phase 6 slide (16) from a new `DATA.pr82` block: draft rind PR #82 re-proposes the narrow dispatch on current
+  fork main. Pi 5 A/B, 5 interleaved rounds at 1.5 GHz: X25519 252.8 → 107.7 µs, RSA-2048 sign 5209.2 → 3071.6 µs
+  (PR #33 107.6 / 3069.8 in the same run); P-256 ECDH / sign / verify / keygen 0.613 / 0.745 / 0.902 / 0.703 of wide.
+  Pi tests pass at 92cbbf21; still draft while CI regenerate on b6f71072 is pending.
+- Story refactor: title, summary lede and first KPI, the phase map (now six phases), status, next steps and
+  "where the numbers live" now end on PR #82 and the board benches. 25 slides (was 22).
+- Boards in the timeline: RP2040 (first bench, SysTick fix, ARMv6-M stack, SHA-256 short-message fix), XIAO MG24,
+  ESP32-S3 on a second host, Pi 2, a second and a third Pi 5; Uno R3 and Nano 33 BLE pending. rind-results #2, #3
+  and #17 merged on 11-13; rind-agent #49 closed unmerged.
+- Public text scrubbed of the bench-lock path, account names in the title and appendix, and service names.
+- Every number in the Nov 11–12 DATA blocks is unchanged.
+
 ## 2026-11-13 08:30
 
 - No new measurements. Status changes only; every number in the DATA block is unchanged.

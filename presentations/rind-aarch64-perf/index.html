@@ -22,13 +22,13 @@ const DATA = {
   meta: {
     title: "rind on aarch64: performance work, phase by phase",
     subtitle: "Raspberry Pi 5 (Cortex-A76) and Apple M1 Pro · public-key dispatch and Argon2id",
-    asOf: "2026-11-13 08:30 PST",
+    asOf: "2026-11-13 13:40 PST",
     start: "2026-11-11",
     piNote: "Pi 5 figures: fixed 1.5 GHz clock on a passively cooled board (see “Why the Pi 5 runs at 1.5 GHz”). Both sides of every A/B ran at the same clock, so ratios hold."
   },
   /* Executive-summary cards: value, label, detail, source */
   kpis: [
-    { v: "252.8 → 107.6 µs", l: "X25519 on Pi 5 (PR #33)", d: "narrow/wide 0.43; now 0.99× aws-lc-rs", src: "results/pr33-pi5/README.md" },
+    { v: "252.8 → 107.6 µs", l: "X25519 on Pi 5 (PR #33)", d: "narrow/wide 0.43, 0.99× aws-lc-rs; draft PR #82 reproduces it on current main (107.7 µs)", src: "results/pr33-pi5/README.md · PR #82" },
     { v: "14 of 16", l: "Pi 5 ops at or ahead of aws-lc-rs", d: "with PR #33; P-256 verify 1.07× and P-384 verify 1.13× remain", src: "results/pr33-pi5/README.md" },
     { v: "0.75× / 0.73×", l: "P-256 / P-384 ECDSA verify vs aws-lc-rs", d: "narrow NIST + P-384 w7 on Pi 5 (was 1.07× / 1.13× with #33)", src: "hosts/pi5/ab-narrow-mul/README.md" },
     { v: "2.578 ms", l: "Argon2id 1 MiB, t=3 on Pi 5", d: "interleave + scalar riders: 0.611× RustCrypto (4.218 ms); 0.55× the original fill (4.728 ms)", src: "results/argon2-scalar-rider/RESULTS.md" }
@@ -125,6 +125,46 @@ const DATA = {
     ["16 MiB", "1817 → 1645", "1.44 → 1.95", "1059 → 744"],
     ["64 MiB", "1758 → 1584", "1.48 → 2.02", "1002 → 686"]
   ],
+  /* Phase 6: draft PR #82 (narrow dispatch on current fork main), Pi 5, 2026-11-13. 5 interleaved rounds, one core, 1.5 GHz.
+     op, wide µs, PR #82 µs, ratio as printed in the source (null = not printed; computed from the two medians), PR #33 µs, aws-lc-rs µs */
+  pr82: [
+    ["X25519 ECDH", 252.8, 107.7, null, "107.6", "–"],
+    ["RSA-2048 sign", 5209.2, 3071.6, null, "3069.8", "–"],
+    ["P-256 ECDH", 326.7, 200.2, 0.613, "–", "213.6"],
+    ["P-256 ECDSA sign", 60.8, 45.3, 0.745, "–", "75.9"],
+    ["P-256 ECDSA verify", 303.5, 273.9, 0.902, "–", "256.6"],
+    ["P-256 keygen", 52.1, 36.6, 0.703, "–", "43.2"]
+  ],
+  /* Improvement timeline since 2026-11-11, in time order (PST). day: "11-11" | "11-12" | "11-13".
+     k: perf | fix | board | rust | pr.  st: kept | pushed | done | merged | open | draft | closed | pending | preliminary.
+     eff: measured effect from the source files, or "" when there is none. */
+  timeline: [
+    { day:"11-11", t:"", k:"perf", what:"Argon2id NEON fill: fused loads and stores, SHA3 <code>xar</code> (4ad61ae3)", host:"M1 Pro", eff:"1 MiB, t=3: 1.106 → 0.724 ms (RustCrypto 1.054 ms)", st:"kept" },
+    { day:"11-12", t:"10:06–12:24", k:"perf", what:"BlaMka via <code>umlal</code>, kept only in the SHA3 fill (a05b78e4)", host:"M1 Pro, Pi 5", eff:"M1 SHA3 0.865× at 1 MiB; Pi 5 NEON 1.025×, so not used there", st:"kept" },
+    { day:"11-12", t:"11:39–11:58", k:"perf", what:"PR #33 narrow vs wide multiplier A/B, 3 interleaved rounds", host:"Pi 5", eff:"X25519 252.77 → 107.61 µs (0.43); RSA-2048 sign 5.209 → 3.071 ms; 14 of 16 ops ≤ aws-lc-rs", st:"done" },
+    { day:"11-12", t:"≈12:00–15:03", k:"perf", what:"Follow-ups: narrow NIST, rsa-8n, mont-uninit, P-384 and P-521 width-7 NAF", host:"Pi 5", eff:"ECDSA verify 0.75× / 0.73× / 0.73× aws-lc-rs; RSA-3072 sign 0.753× of #33", st:"pushed" },
+    { day:"11-12", t:"13:20–14:14", k:"perf", what:"Argon2id PMU diagnosis, two-round interleave (d7b1f399), scalar riders (3025440d)", host:"Pi 5", eff:"1 MiB: 4.728 → 3.113 → 2.578 ms, 0.611× RustCrypto", st:"pushed" },
+    { day:"11-12", t:"≈13:45–17:20", k:"fix", what:"Constant-time matrix on every branch; five tool and test fixes pushed", host:"aarch64 under emulation", eff:"ct-qemu, ctgrind and BINSEC pass; each failure traced to a test or tool bug", st:"done" },
+    { day:"11-12", t:"15:20–18:35", k:"fix", what:"P-256 generator table aligned to 64 bytes (3d7dd094; alone as 8e6f1670)", host:"Pi 5", eff:"cpu-detect P-256 sign 1.025× → 1.002× of #33; the fix alone 1.000×", st:"pushed" },
+    { day:"11-12", t:"16:43 → 11-13 00:19", k:"board", what:"RP2040 benched for the first time: SysTick wrap fix, 5-round base on two boards", host:"RP2040 (Pico, Pico W)", eff:"The wrap had added 2<sup>24</sup> cycles to some samples; the two boards agree within 0.10%", st:"done" },
+    { day:"11-12", t:"17:05–21:45", k:"perf", what:"ARMv6-M stack: rolled SHA-512, muls-only GHASH, fixsliced AES and Thumb-1 AES rounds", host:"RP2040", eff:"SHA-512 16 KB 36.06M → 3.42M cycles (0.095×); AES-128-GCM 16 KB 16.55M → 6.33M (0.383×); round 1 only", st:"preliminary" },
+    { day:"11-12", t:"≈18:25–20:20", k:"perf", what:"Cortex-M0+: no-std build (3dc5634b); static codegen fixes for P-256, Curve25519, Poly1305", host:"Cortex-M0+ builds", eff:"Build errors 1739 → 0; 64-bit multiply calls: rind P-256 305 → 0, X25519 193 → 0, Poly1305 52 → 0", st:"pushed" },
+    { day:"11-12", t:"18:52", k:"pr", what:"PR #33 closed unmerged, recorded as superseded by upstream #672", host:"–", eff:"#672 carries none of the narrow schedules", st:"closed" },
+    { day:"11-12", t:"20:42–22:45", k:"board", what:"XIAO MG24 benched at 78 MHz; ESP32-S3 rebuilt on a second host, run on two boards", host:"EFR32MG24, 2× ESP32-S3", eff:"5 runs per bench, 0 KAT failures; the two ESP32-S3 boards agree within 0.3%", st:"done" },
+    { day:"11-12", t:"23:10", k:"rust", what:"rind-agent #49: bench helpers ported to Rust (closed unmerged Nov 13, 07:19)", host:"–", eff:"Rust share of the repo 37.2% → 85.3% on the branch", st:"closed" },
+    { day:"11-13", t:"00:04–01:39", k:"pr", what:"Portable perf PRs opened: #69 (ESP32-S3 I-cache gaps), #70 (P-521 verify), #71 (RSA square), #76 (Montgomery rows)", host:"–", eff:"", st:"open" },
+    { day:"11-13", t:"00:20–01:40", k:"fix", what:"RP2040 P-256 slowdown traced to XIP cache conflicts; hot code packed into one section (0d143bcf)", host:"RP2040 (model)", eff:"CT stack ECDH 21.80M → 33.16M cycles (1.521×); modelled misses per window 2660 → 0; board timing pending", st:"pending" },
+    { day:"11-13", t:"07:10–11:16", k:"rust", what:"Bench tooling in Rust: rind-results #7, #8, #10–#15 merged (board runners in cargo xtask); #18–#23 open; rind-agent #51 merged", host:"–", eff:"", st:"merged" },
+    { day:"11-13", t:"07:23", k:"pr", what:"PRs #79 (P-256 table alignment) and #80 (RSA-2048/3072/4096 bench) opened on fork main", host:"–", eff:"#79 measured 1.000× on narrow NIST (that table already sat at +32)", st:"open" },
+    { day:"11-13", t:"07:23–13:05", k:"board", what:"Pi 2 (Cortex-A7) and a third Pi 5: full test matrices; 5 timed rounds finished on the Pi 2", host:"Pi 2, Pi 5 #3", eff:"Pi 2: 1023 passed, 0 failed, NEON on and off; Pi 5 #3: 1239 passed, 0 failed; timings not summarized yet", st:"pending" },
+    { day:"11-13", t:"07:41–09:19", k:"pr", what:"rind-results #2 (MG24), #3 (ESP32-S3 second host), #4 (Pi 5 follow-ups), #5 (Argon2, PR #33 A/B), #17 (ESP32-S3 set) merged", host:"–", eff:"", st:"merged" },
+    { day:"11-13", t:"08:26–09:24", k:"board", what:"Second Pi 5 (16 GB) at upstream main: full test matrix", host:"Pi 5 #2", eff:"1269 passed, 0 failed in each tier; timed rounds pending", st:"pending" },
+    { day:"11-13", t:"08:54–12:29", k:"perf", what:"Draft PR #82 (narrow dispatch on current main, opened 09:24): Pi 5 A/B, 5 interleaved rounds", host:"Pi 5", eff:"X25519 252.8 → 107.7 µs; RSA-2048 sign 5209.2 → 3071.6 µs; P-256 ECDH 0.613×", st:"draft" },
+    { day:"11-13", t:"10:55", k:"pr", what:"Draft PRs #84 (rind without std on bare metal) and #87 (Poly1305 in 26-bit limbs on 32-bit targets)", host:"–", eff:"", st:"draft" },
+    { day:"11-13", t:"11:44–13:29", k:"perf", what:"RP2040 short-message SHA-256: 8 rounds per iteration in a hot section, HACL from 2 KB", host:"RP2040", eff:"SHA-256 32 B 11,486 → 8,467 cycles (0.737×); HMAC 32 B 0.876×; HKDF expand 0.814× (2–3 rounds)", st:"pushed" },
+    { day:"11-13", t:"13:01–13:31", k:"fix", what:"PR #82: Pi tests run; CI regenerate fix b6f71072 (narrow driver runs last)", host:"Pi 5", eff:"703 lib tests pass in default, wide and narrow; 13 CI checks still pending", st:"draft" },
+    { day:"11-13", t:"from 13:09", k:"board", what:"Arduino Uno R3 (AVR) and Nano 33 BLE benches", host:"ATmega328P, nRF52840", eff:"No numbers yet: Uno toolchain in progress; the Nano 33 BLE has not enumerated", st:"pending" }
+  ],
   interleaveM1: [
     ["1 MiB", "sha3", "624.95 µs", "562.30 µs", "0.900"],
     ["16 MiB", "sha3", "3.538 ms", "3.233 ms", "0.914"],
@@ -206,12 +246,19 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 .slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
 .slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
 .slide.section-start .kicker::after{content:""}
-.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.timeline{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:8px}
 .tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
 .tl.argon{border-top-color:var(--accent2)}
 .tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
 .tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
 .tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+table.tlt{border-collapse:collapse;width:100%;font-size:11.2px;line-height:1.3;font-variant-numeric:tabular-nums}
+table.tlt th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:4px 6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+table.tlt td{border-bottom:1px solid var(--line);padding:3px 6px;vertical-align:top}
+table.tlt td.when{white-space:nowrap;color:var(--ink2);font-weight:600}
+table.tlt tr.pend td{background:var(--pend-bg)}
+.kind{display:inline-block;min-width:38px;text-align:center;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;padding:1px 4px;margin-right:6px;color:#fff;vertical-align:1px}
+.kind.perf{background:var(--accent)} .kind.fix{background:var(--accent2)} .kind.board{background:var(--ref)} .kind.rust{background:#8a5a1f} .kind.pr{background:var(--mute)}
 #hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
 @media print{
   @page{size:1280px 720px;margin:0}
@@ -231,9 +278,9 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="inner">
     <div class="kicker">rind · aarch64 performance</div>
     <h1>From trailing to leading on the Cortex-A76: the aarch64 work, phase by phase</h1>
-    <div class="sub">PR #33's narrow-multiplier dispatch, the Pi 5 follow-up series, and three rounds of Argon2id NEON work, measured on a Raspberry Pi 5 and an Apple M1 Pro</div>
+    <div class="sub">PR #33's narrow-multiplier dispatch and its re-proposal as PR #82, the Pi 5 follow-up series, and three rounds of Argon2id NEON work, measured on a Raspberry Pi 5 and an Apple M1 Pro, with the boards benched alongside</div>
   </div>
-  <div class="meta">steelhead99x/rind · steelhead99x/rind-results<br>Window: 2026-11-11 → <span data-k="meta.asOf"></span></div>
+  <div class="meta">The rind fork · rind-results<br>Window: 2026-11-11 → <span data-k="meta.asOf"></span></div>
   <div class="foot"><span class="src">Every number in this deck comes from the rind-results branches, rind commit messages and status files listed in the appendix.</span><span class="num"></span></div>
 </section>
 
@@ -241,7 +288,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <section class="slide" data-section="Summary">
   <div class="kicker">Executive summary</div>
   <h2>On the Pi 5, rind now matches or beats the reference libraries in most measured operations</h2>
-  <p class="lede">The cause was the same on both tracks: code tuned for Apple's wide cores was running on the A76. PR #33 changed the dispatch, and the Argon2 fill now overlaps its dependency chains. All results are now on rind-results main; the code is not on rind main yet, and PR #33 was closed unmerged on Nov 12.</p>
+  <p class="lede">The cause was the same on both tracks: code tuned for Apple's wide cores was running on the A76. PR #33 changed the dispatch, and the Argon2 fill now overlaps its dependency chains. The Nov 11–12 results are on rind-results main. The code is not on rind main yet: PR #33 was closed unmerged on Nov 12, and on Nov 13 draft PR #82 re-proposed the dispatch on current main and reproduced its gains.</p>
   <div class="kpis" id="kpis"></div>
   <div class="cols">
     <ul class="b sm">
@@ -300,7 +347,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <li>Shared with the owner's desktop and other agents' builds, at load 4–214. Medians are noisy, so only large effects are used.</li>
       <li>No core pinning on macOS; rustc 1.98.1</li></ul></div>
     <div class="card"><h3>Protocol</h3>
-      <ul class="b sm"><li><code>rind-work/.bench.lock</code> is held for each round; the load is logged for each variant.</li>
+      <ul class="b sm"><li>A shared bench lock is held for each round; the load is logged for each variant.</li>
       <li>Interleaved variants with the order rotated. Criterion slope or mean. <b>Medians of 3 (PR #33) or 5–8 rounds</b>, with the spread reported.</li>
       <li>Same binary where possible (<code>--cfg rind_cpu_disable</code> plus env toggles). aws-lc-rs or RustCrypto in the same binary is the drift control.</li></ul></div>
   </div>
@@ -337,7 +384,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ 5. TIMELINE ============ -->
 <section class="slide" data-section="Phases">
   <div class="kicker">The phases</div>
-  <h2>Five phases on two tracks</h2>
+  <h2>Six phases on two tracks</h2>
   <p class="lede">Green is the public-key track and blue is the Argon2id track. Each phase has its own section, in this order.</p>
   <div class="timeline">
     <div class="tl argon"><div class="ph">Phase 3</div><h4>Argon2 NEON fill</h4><div class="when">2026-11-11 · M1 Pro</div>Fused loads/stores, SHA3 <code>xar</code>. <span class="tag win">kept</span></div>
@@ -345,9 +392,10 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <div class="tl"><div class="ph">Phase 1</div><h4>PR #33 on Pi 5</h4><div class="when">2026-11-12 11:39–11:58</div>Narrow vs wide multiplier A/B. <span class="tag win">measured</span></div>
     <div class="tl"><div class="ph">Phase 2</div><h4>Pi 5 follow-ups</h4><div class="when">2026-11-12 ≈12:00–18:35</div>NIST, RSA sizes, 8n, uninit, P-384/P-521 w7, detect, table alignment. <span class="tag win">all kept</span></div>
     <div class="tl argon"><div class="ph">Phase 5</div><h4>Interleave + scalar riders</h4><div class="when">2026-11-12 13:20–14:14</div>PMU root cause, two fixes. <span class="tag win">kept</span></div>
-    <div class="tl" style="border-top-color:var(--mute)"><div class="ph">Now</div><h4>Verify and next steps</h4><div class="when">as of <span data-k="meta.asOf"></span></div>Results on main; PR #33 closed unmerged; PRs #79 and #80 open. <span class="tag pending">open</span></div>
+    <div class="tl"><div class="ph">Phase 6</div><h4>PR #82 on current main</h4><div class="when">2026-11-13 08:54–13:31</div>Narrow dispatch re-proposed and re-measured. <span class="tag tooling">draft</span></div>
+    <div class="tl" style="border-top-color:var(--mute)"><div class="ph">Now</div><h4>Verify and next steps</h4><div class="when">as of <span data-k="meta.asOf"></span></div>Nov 11–12 results on main; PR #33 closed; PRs #79, #80 open. <span class="tag pending">open</span></div>
   </div>
-  <p style="font-size:14px;color:var(--ink2);margin-top:22px">The cards are in time order. The phase numbers follow the presentation order: public key (1–2), then Argon2id (3–5).</p>
+  <p style="font-size:14px;color:var(--ink2);margin-top:22px">The cards are in time order. The phase numbers follow the presentation order: public key (1–2), Argon2id (3–5), then the re-proposal (6). The two timeline slides before “Where things stand” list every change, board and PR in date order.</p>
   <div class="foot"><span class="src">Run times from the results files' method sections and the lane status notes</span><span class="num"></span></div>
 </section>
 
@@ -514,6 +562,25 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="foot"><span class="src">results/argon2-scalar-rider/RESULTS.md, raw/pi5-criterion-r6.md, raw/pi5-pmu-h2.tsv, raw/m1pro-sha3-wall-h1-20alt.tsv (results/argon2-a76-interleave @ cad6be3)</span><span class="num"></span></div>
 </section>
 
+<!-- ============ PHASE 6 ============ -->
+<section class="slide" data-section="Phase 6 · PR #82">
+  <div class="kicker">Phase 6 · PR #82: the narrow dispatch on current main (Pi 5, 2026-11-13)</div>
+  <h2>On current main, draft PR #82 reproduces PR #33's gains: X25519 252.8 → 107.7 µs</h2>
+  <p class="lede">With PR #33 closed, the dispatch was rebuilt on fork main as <code>perf/aarch64-narrow-dispatch</code>, with the Lean <code>wide_mux</code> fix and the ct-qemu seed fix. The same binary was timed narrow (default detection) and wide (forced).</p>
+  <div class="cols c46">
+    <div><div class="chart-title">PR #82 / wide time ratio (lower is better), median of 5 interleaved rounds</div><div id="ch-pr82"></div>
+      <table class="t" style="font-size:12.5px;margin-top:10px" id="tb-pr82"></table></div>
+    <div><ul class="b sm">
+      <li><b>X25519</b> 252.8 → 107.7 µs and <b>RSA-2048 sign</b> 5209.2 → 3071.6 µs, against 107.6 and 3069.8 µs for PR #33 in the same run (08:54–09:01).</li>
+      <li><b>P-256</b> (12:20–12:29): ECDH 0.613×, sign 0.745×, verify 0.902×, keygen 0.703× of wide. Spreads ≤ 0.1%. Narrow ECDH, sign and keygen beat aws-lc-rs; verify (273.9 vs 256.6 µs) is what the Phase 2 branches fix.</li>
+      <li><b>Tests:</b> M1 Pro 705 lib tests pass, forced wide and narrow. Pi 5 at 92cbbf21 (13:01–13:15): clippy clean, 703 lib tests pass in default, wide and narrow; the Lean build passes.</li>
+      <li><b>Still a draft:</b> CI regenerate failed on 92cbbf21 because the narrow driver ran before the others; b6f71072 runs it last. 13 checks were still pending at 13:31.</li>
+    </ul></div>
+  </div>
+  <div class="pi-note" data-k="meta.piNote"></div>
+  <div class="foot"><span class="src">rind PR #82 description and the Pi 5 A/B notes, 2026-11-13 (5 interleaved rounds, one core, 1.5 GHz) · results/pr33-pi5/README.md for PR #33</span><span class="num"></span></div>
+</section>
+
 <!-- ============ VERIFICATION ============ -->
 <section class="slide" data-section="Verification">
   <div class="kicker">Verification and correctness</div>
@@ -560,20 +627,37 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <tr><td>Scalar fill on the A76 (probe)</td><td>4.967 ms at 1 MiB, slower than both NEON forms</td><td><span class="tag drop">dropped</span> wip probe</td></tr>
     <tr><td><code>round()</code> as a function (f1)</td><td>Out of line: 107 stack accesses in <code>compress</code></td><td><span class="tag drop">superseded</span> by macro</td></tr>
     <tr><td>Scalar riders in the SHA3 fill (h1)</td><td>M1: 0.944 / 0.918 / <b>1.062</b> at 64 MiB (20 alternations)</td><td><span class="tag drop">dropped</span> NEON fill only</td></tr>
-    <tr><td>M1 rounds 4–5 (Argon2)</td><td>Load 50–105 (Spotlight, Falcon scans), spreads 20–168%</td><td><span class="tag drop">invalid</span> not used</td></tr>
+    <tr><td>M1 rounds 4–5 (Argon2)</td><td>Load 50–105 (background indexing and scans), spreads 20–168%</td><td><span class="tag drop">invalid</span> not used</td></tr>
   </table>
   <div class="foot"><span class="src">results/argon2/RESULTS.md · results/argon2-interleave/RESULTS.md · results/argon2-scalar-rider/RESULTS.md · hosts/pi5/ab-narrow-mul/README.md · lane status notes</span><span class="num"></span></div>
+</section>
+
+<!-- ============ TIMELINE (driven by DATA.timeline) ============ -->
+<section class="slide" data-section="Timeline">
+  <div class="kicker">Improvement timeline · 1 of 2 · Nov 11–12, 2026 (PST)</div>
+  <h2>Nov 11–12: A76 gaps closed on branches; RP2040 and MG24 benched</h2>
+  <div class="legend" id="lg-tl1"></div>
+  <table class="tlt" id="tb-tl1"></table>
+  <div class="foot"><span class="src">Lane status notes for Argon2, the Pi 5, constant-time checks, RP2040, MG24, ESP32-S3, Cortex-M0+ codegen and the Rust ports · rind-results results files · PR state on the rind fork, rind-results and rind-agent</span><span class="num"></span></div>
+</section>
+
+<section class="slide" data-section="Timeline">
+  <div class="kicker">Improvement timeline · 2 of 2 · Nov 13, 2026 (PST), to <span data-k="meta.asOf"></span></div>
+  <h2>Nov 13: results merged, PR #82 re-measured, more boards benched</h2>
+  <div class="legend" id="lg-tl2"></div>
+  <table class="tlt" id="tb-tl2"></table>
+  <div class="foot"><span class="src">Lane status notes (Pi 5, Pi 2, RP2040, P-256 on ARMv6-M, Rust ports, Uno R3, Nano 33 BLE) · PR state on the rind fork, rind-results and rind-agent. Yellow rows are unfinished.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ WHERE THINGS STAND ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Where things stand · <span data-k="meta.asOf"></span></div>
-  <h2>On the Pi 5, every measured public-key and Argon2 gap is closed on a pushed branch, but none has landed</h2>
-  <p class="lede">Before and after for each item, with its branch status. PR #33, which the public-key rows build on, was closed unmerged on 2026-11-12 at 18:52 PST.</p>
+  <h2>Every measured Pi 5 gap is closed on a pushed branch; none has landed, and the dispatch is back as draft PR #82</h2>
+  <p class="lede">Before and after, with branch status. PR #33 was closed unmerged on Nov 12 at 18:52 PST; draft PR #82 carries its dispatch on current main and reproduced the X25519 and RSA rows on Nov 13.</p>
   <table class="t">
     <tr><th>Area (Pi 5 unless noted)</th><th>Start</th><th>Now</th><th>Branch</th><th>State</th></tr>
-    <tr><td>X25519 vs aws-lc-rs</td><td>2.32×</td><td>0.99×</td><td><code>cursor/aarch64-narrow-mul-132a</code></td><td><span class="tag pending">PR #33 closed</span></td></tr>
-    <tr><td>RSA-2048 sign vs aws-lc-rs</td><td>1.66×</td><td>0.98×</td><td>PR #33</td><td><span class="tag pending">PR #33 closed</span></td></tr>
+    <tr><td>X25519 vs aws-lc-rs</td><td>2.32×</td><td>0.99× (107.7 µs on PR #82)</td><td><code>perf/aarch64-narrow-dispatch</code></td><td><span class="tag tooling">PR #82 draft</span></td></tr>
+    <tr><td>RSA-2048 sign vs aws-lc-rs</td><td>1.66×</td><td>0.98× (3071.6 µs on PR #82)</td><td>PR #82 (was PR #33)</td><td><span class="tag tooling">PR #82 draft</span></td></tr>
     <tr><td>P-256 / P-384 / P-521 ECDSA verify vs aws-lc-rs</td><td>1.18× / 1.29× / 1.22×</td><td>0.75× / 0.73× / 0.73×</td><td><code>perf/pi5-narrow-nist</code> + w7</td><td><span class="tag win">pushed</span></td></tr>
     <tr><td>RSA-3072 sign vs aws-lc-rs</td><td>1.27×</td><td>0.96×</td><td><code>perf/pi5-rsa-8n</code></td><td><span class="tag win">pushed</span></td></tr>
     <tr><td>cpu-detect overhead (P-256 sign)</td><td>–</td><td>1.002× with the 64-byte table fix (was 1.025×)</td><td><code>perf/pi5-cpu-detect</code>, <code>fix/p256-table-align</code></td><td><span class="tag win">fix: PR #79 open</span></td></tr>
@@ -582,14 +666,14 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   </table>
   <p style="font-size:13px;color:var(--ink2);margin-top:10px">The Pi 5 "start" columns come from the wide/<code>_alt</code> runs (main's code) in the same sessions. The Argon2 rows are from different sessions; compare them by ratio.</p>
   <div class="pi-note" data-k="meta.piNote"></div>
-  <div class="foot"><span class="src">results/pr33-pi5/README.md · hosts/pi5/ab-narrow-mul/*.md, series2-layout/, table-align/ · results/argon2/RESULTS.md · results/argon2-interleave/RESULTS.md · results/argon2-scalar-rider/RESULTS.md · rind 4ad61ae3</span><span class="num"></span></div>
+  <div class="foot"><span class="src">results/pr33-pi5/ · PR #82 A/B notes · hosts/pi5/ab-narrow-mul/ · RESULTS.md in results/argon2/, argon2-interleave/, argon2-scalar-rider/ · rind 4ad61ae3</span><span class="num"></span></div>
 </section>
 
 <!-- ============ NEXT STEPS ============ -->
 <section class="slide" data-section="Next">
   <div class="kicker">Open items and next steps</div>
-  <h2>Next: decide how to land the narrow dispatch now that PR #33 is closed, then the follow-ups, rider splits and a clean M1 rerun</h2>
-  <p class="lede">Every Pi 5 follow-up has a measured result and all results are on rind-results main. Items marked pending or not tried have no result yet.</p>
+  <h2>Next: get draft PR #82 ready, then land the follow-ups, finish the board benches, and rerun the M1 cleanly</h2>
+  <p class="lede">Every Pi 5 follow-up has a measured result, and the Nov 11–12 results are on rind-results main. Items marked pending or not tried have no result yet.</p>
   <div class="cols3">
     <div class="card"><h3>Performance</h3><ul class="b sm">
       <li><b>Argon2 rider splits:</b> try two scalar riders per pair, or riders in the row pass only. The A76 is now at IPC 2.62. <span class="tag pending">not tried</span></li>
@@ -599,41 +683,45 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <li><b>Pi 5 rerun at 2.4 GHz with active cooling</b>, for stock-clock absolute times. Needs the board owner to lift the deliberate 1.5 GHz cap and add a fan. <span class="tag pending">not started</span></li>
       <li><b>Clean M1 Pro rerun</b> under the lock with nothing else running. Current M1 medians are noisy.</li>
       <li>Native ct-qemu and ctgrind on the Argon2 commits</li>
+      <li><b>Boards:</b> summarize the Pi 2 and Pi 5 #3 rounds, time the second Pi 5 and the RP2040 P-256 pack, and get first numbers from the Uno R3 and Nano 33 BLE. <span class="tag pending">pending</span></li>
     </ul></div>
     <div class="card"><h3>Review and landing</h3><ul class="b sm">
-      <li><b>PR #33 closed unmerged</b> (603b7120). The close is recorded as superseded by upstream #672, but #672 only removes upstream's aarch64 X25519 quest note; it carries none of the narrow schedules. Reopen it or re-propose on current main with the p521 seed fix (b5eb9ec2), the Lean <code>wide_mux</code> patch and the table fix. <span class="tag pending">needs decision</span></li>
-      <li>PRs #79 (P-256 table alignment) and #80 (RSA size bench) are open on fork main. Open PRs for the other pushed perf branches, and get <b>CodeRabbit reviews</b>.</li>
+      <li><b>PR #82</b> re-proposes the narrow dispatch on current main (PR #33 was closed unmerged). Gains and tests hold; mark it ready once regenerate passes on b6f71072. The table fix stays in #79. <span class="tag pending">CI pending</span></li>
+      <li>PRs #79 (P-256 table alignment) and #80 (RSA size bench) are open on fork main. Open PRs for the other pushed perf branches and get them reviewed.</li>
       <li>Land the tooling patches: Argon2 ctgrind test taint, ct-qemu reserved VA, prove SIGPIPE</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">results/argon2-scalar-rider/RESULTS.md ("Not tried") · hosts/pi5/ab-narrow-mul/README.md · lane and verification status notes</span><span class="num"></span></div>
+  <div class="foot"><span class="src">results/argon2-scalar-rider/RESULTS.md ("Not tried") · hosts/pi5/ab-narrow-mul/README.md · PR #82 state · lane and verification status notes</span><span class="num"></span></div>
 </section>
 
 <!-- ============ WHERE THE NUMBERS LIVE (added 2026-11-12 evening) ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Where the numbers live · checked <span data-k="meta.asOf"></span></div>
-  <h2>Every Pi 5 and M1 Pro number in this deck is now on rind-results main</h2>
+  <h2>Every Nov 11–12 Pi 5 and M1 Pro number is on rind-results main; the Nov 13 PR #82 A/B is not yet</h2>
   <table class="t" style="margin-top:16px;font-size:14.5px">
     <tr><th style="width:30%">Source used in this deck</th><th style="width:34%">Where it is</th><th>Status</th></tr>
     <tr><td><code>hosts/pi5/NOTES.md</code>, <code>hosts/pi5/pi5.json</code></td><td>main (the b6651423 host run)</td><td><span class="tag ok">on main</span></td></tr>
     <tr><td><code>hosts/pi5/ab-narrow-mul/</code>, incl. <code>series2-layout/</code> and <code>table-align/</code></td><td>PR #4 from <code>results/pi5-lane-2026-11-12</code>, merged 2026-11-13 07:49 PST</td><td><span class="tag ok">on main</span></td></tr>
     <tr><td><code>results/pr33-pi5/</code>, <code>results/argon2/</code>, <code>results/m1pro-8feee30e/</code></td><td>PR #5 from <code>results/argon2-a76-interleave</code>, merged 07:52 PST (the same files as <code>results/m1pro-pi5-argon2-2026-11-12</code>)</td><td><span class="tag ok">on main</span></td></tr>
     <tr><td><code>results/argon2-interleave/</code>, <code>results/argon2-scalar-rider/</code></td><td>PR #5, merged 07:52 PST</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td>PR #82 A/B (Phase 6, 2026-11-13)</td><td>Pi 5 A/B notes and the PR #82 description; no rind-results PR for it yet</td><td><span class="tag pending">not on main</span></td></tr>
+    <tr><td>MG24 and ESP32-S3 board results (timeline)</td><td>rind-results PRs #2, #3 and #17, merged 2026-11-13</td><td><span class="tag ok">on main</span></td></tr>
     <tr><td>NVIDIA Jetson Orin Nano</td><td>full-suite results on main (<code>results/jetson-orin-nano/</code>, 3 pinned runs at another rind commit); not an A/B of this work</td><td><span class="tag ok">on main</span></td></tr>
   </table>
   <div class="callout" style="margin-top:18px">The merge also corrected one M1 spread in the interleave table (64 MiB NEON, before: 11.7% → 10.7%); no median or ratio in this deck changed. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy.</div>
-  <div class="foot"><span class="src">git ls-tree of steelhead99x/rind-results main (f88cc53) · rind-results PRs #4 and #5 · results/argon2-interleave/RESULTS.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">git ls-tree of rind-results main (f88cc53) · rind-results PRs #2–#5 and #17 · results/argon2-interleave/RESULTS.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ APPENDIX ============ -->
 <section class="slide" data-section="Appendix">
   <div class="kicker">Appendix A · branches</div>
   <h2>Branches referenced in this deck</h2>
-  <p class="lede">steelhead99x/rind unless noted. Heads as of <span data-k="meta.asOf"></span>.</p>
+  <p class="lede">The rind fork unless noted. Heads as of <span data-k="meta.asOf"></span>.</p>
   <div class="cols">
     <table class="t" style="font-size:12.5px">
       <tr><th>rind branch</th><th>head</th><th>where</th></tr>
       <tr><td><code>cursor/aarch64-narrow-mul-132a</code> (PR #33, closed)</td><td class="mono">603b7120</td><td>origin (measured at 86de4410)</td></tr>
+      <tr><td><code>perf/aarch64-narrow-dispatch</code> (PR #82, draft)</td><td class="mono">b6f71072</td><td>origin (A/B from 0ec13b3a code)</td></tr>
       <tr><td><code>perf/pi5-narrow-nist</code></td><td class="mono">529a9d64</td><td>origin</td></tr>
       <tr><td><code>perf/pi5-rsa-bench-sizes</code></td><td class="mono">bba85832</td><td>PR #80 (was 41f45409)</td></tr>
       <tr><td><code>perf/pi5-rsa-8n</code></td><td class="mono">850e9c34</td><td>origin</td></tr>
@@ -656,13 +744,13 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <tr><td><code>results/m1pro-pi5-argon2-2026-11-12</code></td><td class="mono">665e1be</td><td>no PR; files in PR #5</td></tr>
     </table>
   </div>
-  <div class="foot"><span class="src">git ls-remote origin, steelhead99x/rind and steelhead99x/rind-results</span><span class="num"></span></div>
+  <div class="foot"><span class="src">git ls-remote of the rind fork and rind-results</span><span class="num"></span></div>
 </section>
 
 <section class="slide" data-section="Appendix">
   <div class="kicker">Appendix B · data files and sources</div>
   <h2>Data files behind each phase</h2>
-  <p class="lede">Paths are in steelhead99x/rind-results unless marked otherwise.</p>
+  <p class="lede">Paths are in rind-results unless marked otherwise.</p>
   <table class="t" style="font-size:12.5px">
     <tr><th style="width:20%">Phase</th><th>Files</th></tr>
     <tr><td>Starting point</td><td><code>hosts/pi5/NOTES.md</code>, <code>hosts/pi5/pi5.json</code> (b6651423) · <code>results/m1pro-8feee30e/</code> · the static scout notes (llvm-mca)</td></tr>
@@ -794,6 +882,23 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     D.riderPmu.map(r=>`<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td></tr>`).join('');
   $('#tb-im1').innerHTML = `<tr><th>size</th><th>fill</th><th class="n">e1 before</th><th class="n">g1 after</th><th class="n">ratio</th></tr>` +
     D.interleaveM1.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td><td class="n"><b>${r[4]}</b></td></tr>`).join('');
+
+  // Phase 6: PR #82
+  const r82 = D.pr82.map(r=>[r[0], r[3]!=null ? r[3] : r[2]/r[1]]);
+  hbar('#ch-pr82', r82, {w:560, max:1.0, ref:null, rowH:24, digits:3});
+  $('#tb-pr82').innerHTML = `<tr><th style="text-transform:none">time (µs)</th><th class="n">wide</th><th class="n">PR #82</th><th class="n">ratio</th><th class="n">PR #33</th><th class="n">aws-lc-rs</th></tr>` +
+    D.pr82.map(r=>`<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n"><b>${r[2]}</b></td><td class="n">${fmt(r[3]!=null?r[3]:r[2]/r[1],3)}</td><td class="n">${r[4]}</td><td class="n">${r[5]}</td></tr>`).join('');
+  // Timeline
+  const stCls={kept:'win',pushed:'win',done:'win',merged:'win',open:'tooling',draft:'tooling',closed:'drop',pending:'pending',preliminary:'pending'};
+  const kindTxt={perf:'perf',fix:'fix',board:'board',rust:'rust',pr:'PR'};
+  const dayTxt={'11-11':'Nov 11','11-12':'Nov 12','11-13':'Nov 13'};
+  function tl(target, days){
+    $(target).innerHTML = `<tr><th style="width:13%">When</th><th style="width:37%">What changed</th><th style="width:13%">Host / board</th><th>Measured effect</th><th style="width:8%">State</th></tr>` +
+      D.timeline.filter(e=>days.includes(e.day)).map(e=>`<tr class="${stCls[e.st]==='pending'?'pend':''}"><td class="when">${dayTxt[e.day]}${e.t?' '+e.t:''}</td><td><span class="kind ${e.k}">${kindTxt[e.k]}</span>${e.what}</td><td>${e.host}</td><td>${e.eff||'<span style="color:#7b8797">no measurement</span>'}</td><td><span class="tag ${stCls[e.st]}">${e.st}</span></td></tr>`).join('');
+  }
+  const kl = Object.keys(kindTxt).map(k=>`<span><span class="kind ${k}">${kindTxt[k]}</span></span>`).join('') + '<span>Yellow rows: unfinished (pending or preliminary)</span>';
+  tl('#tb-tl1', ['11-11','11-12']); tl('#tb-tl2', ['11-13']);
+  $('#lg-tl1').innerHTML = kl; $('#lg-tl2').innerHTML = kl;
 
   // Navigation
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
