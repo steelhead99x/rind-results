@@ -61,6 +61,9 @@ fn board_files(b: &str) -> Option<BoardFiles> {
     }
 }
 
+/// Linux hosts published under results/<host>/ by `cargo xtask host-report`.
+const HOSTS: &[&str] = &["jetson-orin-nano"];
+
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -1074,6 +1077,239 @@ fn check_provenance(rep: &mut Report) {
     println!("provenance: {images} images, {rows} RESULTS.md rows checked");
 }
 
+/// A Linux host's directory under results/: raw/run-*.json (bench-report's
+/// schema 1) recomputed into medians and compared with the median JSON,
+/// RESULTS.md (headline and every-library tables, the win count) and RUNS.md.
+fn check_host(name: &str, rep: &mut Report) {
+    let dir = root().join("results").join(name);
+    let heading = |l: &str| -> String {
+        match l {
+            "rustcrypto" => "RustCrypto + dalek".into(),
+            "openssl" => "OpenSSL".into(),
+            other => other.into(),
+        }
+    };
+    let mut runs: Vec<(u32, Value)> = vec![];
+    for e in std::fs::read_dir(dir.join("raw"))
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
+        let n = e.file_name().to_string_lossy().into_owned();
+        if let Some(k) = n.strip_prefix("run-").and_then(|x| x.strip_suffix(".json")) {
+            if let Ok(k) = k.parse() {
+                runs.push((k, serde_json::from_str(&read(&e.path())).expect("run json")));
+            }
+        }
+    }
+    runs.sort_by_key(|r| r.0);
+    if runs.is_empty() {
+        rep.bad(name, "no raw/run-*.json".into());
+        return;
+    }
+    // operation -> library -> each run's estimate, in first-seen order.
+    let mut by: Ordered<Ordered<Vec<f64>>> = Ordered::default();
+    for (_, v) in &runs {
+        for r in v["results"].as_array().into_iter().flatten() {
+            by.entry(&s(&r["operation"]), Ordered::default)
+                .entry(&s(&r["library"]), Vec::new)
+                .push(fv(&r["ns"]));
+        }
+    }
+    let spread = |xs: &[f64]| {
+        let lo = xs.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        (hi - lo) / med(xs) * 100.0
+    };
+    let mut n = 0;
+    for (op, libs) in &by.0 {
+        for (l, xs) in &libs.0 {
+            if xs.len() != runs.len() {
+                rep.bad(
+                    name,
+                    format!("{op} {l}: in {} of {} runs", xs.len(), runs.len()),
+                );
+            }
+        }
+        n += libs.0.len();
+    }
+    // The median JSON.
+    let host: Value =
+        serde_json::from_str(&read(&dir.join(format!("{name}.json")))).expect("host json");
+    let mut seen = 0;
+    for r in host["results"].as_array().into_iter().flatten() {
+        let (op, l) = (s(&r["operation"]), s(&r["library"]));
+        match by.get(&op).and_then(|t| t.get(&l)) {
+            Some(xs) => {
+                seen += 1;
+                if (fv(&r["ns"]) - med(xs)).abs() > 1e-9 * med(xs) {
+                    rep.bad(
+                        name,
+                        format!(
+                            "{name}.json {op} {l}: ns {} vs median {}",
+                            fv(&r["ns"]),
+                            med(xs)
+                        ),
+                    );
+                }
+            }
+            None => rep.bad(name, format!("{name}.json {op} {l}: not in the raw runs")),
+        }
+    }
+    if seen != n {
+        rep.bad(
+            name,
+            format!("{name}.json has {seen} results, the raw runs {n}"),
+        );
+    }
+    // RESULTS.md.
+    let md = read(&dir.join("RESULTS.md"));
+    let cell_re = Regex::new(r"^([\d.,]+) (ns|µs|us|ms|s)").unwrap();
+    let head = Regex::new(r"^\| (\S+) \| ([\d.,]+ \S+) \| ([^,|]+), ([\d.,]+ \S+) \| ([\d.]+)× \| ([\d.]+)%, ([\d.]+)% \|$").unwrap();
+    let (mut rows, mut wins, mut timed) = (0, 0, 0);
+    for (op, libs) in &by.0 {
+        let Some(rind) = libs.get("rind") else {
+            continue;
+        };
+        let mut best: Option<(&str, &Vec<f64>)> = None;
+        for (l, xs) in &libs.0 {
+            if l != "rind" && !l.starts_with("rind-") && best.is_none_or(|(_, b)| med(xs) < med(b))
+            {
+                best = Some((l, xs));
+            }
+        }
+        let Some((bl, bx)) = best else { continue };
+        timed += 1;
+        wins += usize::from(med(rind) <= med(bx));
+        let want = label(op);
+        let Some(m) = md
+            .lines()
+            .filter_map(|x| head.captures(x))
+            .find(|m| m[1] == *want)
+        else {
+            rep.bad(name, format!("RESULTS.md: no headline row for {want}"));
+            continue;
+        };
+        rows += 1;
+        let t = |c: &str| parse_cell(c, &cell_re).expect("a time");
+        let (rc, bc) = (t(&m[2]), t(&m[4]));
+        if !close(rc.ns, rc.ns_tol, med(rind)) || !close(bc.ns, bc.ns_tol, med(bx)) {
+            rep.bad(
+                name,
+                format!(
+                    "{want}: shows {} and {}, raw {:.1} and {:.1} ns",
+                    &m[2],
+                    &m[4],
+                    med(rind),
+                    med(bx)
+                ),
+            );
+        }
+        let ratio = med(rind) / med(bx);
+        let shown: f64 = m[5].parse().unwrap_or(f64::NAN);
+        if m[3] != heading(bl) || (shown - ratio).abs() > 0.005 + 1e-9 {
+            rep.bad(
+                name,
+                format!("{want}: shows {}x {}, raw {ratio:.3}x {bl}", &m[5], &m[3]),
+            );
+        }
+        for (shown, xs) in [(&m[6], rind), (&m[7], bx)] {
+            let v: f64 = shown.parse().unwrap_or(f64::NAN);
+            if (v - spread(xs)).abs() > 0.05 + 1e-9 {
+                rep.bad(
+                    name,
+                    format!("{want}: spread shows {v}%, raw {:.2}%", spread(xs)),
+                );
+            }
+        }
+    }
+    let tally = format!("rind is the fastest on {wins} of {timed} operations");
+    if !md.contains(&tally) {
+        rep.bad(name, format!("RESULTS.md does not say: {tally}"));
+    }
+    // The every-library table: its header names the columns.
+    let mut cols: Vec<String> = vec![];
+    let mut cells = 0;
+    for line in md.lines() {
+        let parts: Vec<&str> = line.trim_matches('|').split(" | ").map(str::trim).collect();
+        if line.starts_with("| Operation | rind | aws-lc-rs") {
+            cols = parts[1..].iter().map(|x| x.to_string()).collect();
+            continue;
+        }
+        if cols.is_empty() || !line.starts_with("| ") || parts.len() != cols.len() + 1 {
+            continue;
+        }
+        let Some((op, libs)) = by.0.iter().find(|(o, _)| label(o) == parts[0]) else {
+            continue;
+        };
+        for (c, h) in parts[1..].iter().zip(&cols) {
+            let l = libs.0.iter().find(|(l, _)| heading(l) == *h);
+            match (l, *c) {
+                (None, "-") => {}
+                (None, c) => rep.bad(name, format!("{op} {h}: shows {c}, not in raw")),
+                (Some(_), "-") => rep.bad(name, format!("{op} {h}: raw has it, table shows -")),
+                (Some((_, xs)), c) => {
+                    let p = parse_cell(c, &cell_re).expect("a time");
+                    cells += 1;
+                    if !close(p.ns, p.ns_tol, med(xs)) {
+                        rep.bad(
+                            name,
+                            format!("{op} {h}: shows {c}, raw median {:.1} ns", med(xs)),
+                        );
+                    }
+                }
+            }
+        }
+    }
+    // RUNS.md: each run's estimate and the median.
+    let runs_md = read(&dir.join("RUNS.md"));
+    let mut run_rows = 0;
+    for line in runs_md.lines() {
+        let parts: Vec<&str> = line.trim_matches('|').split(" | ").map(str::trim).collect();
+        if parts.len() != runs.len() + 4 || !line.starts_with("| ") {
+            continue;
+        }
+        let Some((_, libs)) = by.0.iter().find(|(o, _)| label(o) == parts[0]) else {
+            continue;
+        };
+        let Some((l, xs)) = libs.0.iter().find(|(l, _)| heading(l) == parts[1]) else {
+            continue;
+        };
+        run_rows += 1;
+        for (i, x) in xs.iter().enumerate() {
+            let p = parse_cell(parts[2 + i], &cell_re).expect("a time");
+            if !close(p.ns, p.ns_tol, *x) {
+                rep.bad(
+                    name,
+                    format!(
+                        "RUNS.md {} {l} run {}: {} vs {x:.1} ns",
+                        parts[0],
+                        i + 1,
+                        parts[2 + i]
+                    ),
+                );
+            }
+        }
+        let p = parse_cell(parts[2 + xs.len()], &cell_re).expect("a time");
+        if !close(p.ns, p.ns_tol, med(xs)) {
+            rep.bad(
+                name,
+                format!("RUNS.md {} {l}: median {}", parts[0], parts[2 + xs.len()]),
+            );
+        }
+    }
+    if run_rows != n {
+        rep.bad(
+            name,
+            format!("RUNS.md has {run_rows} rows, the raw runs {n}"),
+        );
+    }
+    println!(
+        "{name}: {} runs, {n} results; {name}.json, {rows} headline rows, {cells} table cells and {run_rows} RUNS.md rows checked",
+        runs.len()
+    );
+}
+
 fn main() -> ExitCode {
     let mut boards = vec![];
     let mut args = std::env::args().skip(1);
@@ -1082,7 +1318,9 @@ fn main() -> ExitCode {
             "--board" => boards.push(args.next().expect("--board needs a value")),
             s if s.starts_with("--board=") => boards.push(s["--board=".len()..].to_string()),
             "-h" | "--help" => {
-                println!("usage: cargo verify [--board esp32s3|nrf52840|msi-001 ...]");
+                println!(
+                    "usage: cargo verify [--board esp32s3|nrf52840|msi-001|<host under results/> ...]"
+                );
                 return ExitCode::SUCCESS;
             }
             other => {
@@ -1093,11 +1331,18 @@ fn main() -> ExitCode {
     }
     if boards.is_empty() {
         boards = vec!["esp32s3".into(), "nrf52840".into(), "msi-001".into()];
+        for h in HOSTS {
+            if root().join("results").join(h).join("raw").is_dir() {
+                boards.push((*h).into());
+            }
+        }
     }
     let mut rep = Report::default();
     for b in &boards {
         if b == "msi-001" {
             check_msi(&mut rep);
+        } else if HOSTS.contains(&b.as_str()) {
+            check_host(b, &mut rep);
         } else if board_files(b).is_some() {
             check_board(b, &mut rep);
         } else {
