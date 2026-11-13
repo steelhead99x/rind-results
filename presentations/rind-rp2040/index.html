@@ -292,7 +292,8 @@ const DATA = {
       "rind-hardware main still lacks the SysTick wrap fix. Restore MicroPython backups after the last round."
     ],
     prs: [
-      ["rind", "no_std/alloc gating", "fork branch no-std/thumbv6m-alloc (3dc5634b); message drafted"],
+      ["rind", "no_std on bare metal", "draft fork PR #84, head 54df92b7 on current main; not opened upstream. Nov 12 gates were on 3dc5634b"],
+      ["rind", "Poly1305 32-bit limbs (thumbv6m mul16)", "draft fork PR #87; RP2040 board timing pending"],
       ["rind", "rolled SHA-512 + muls-only GHASH", "to be rebased onto the no_std branch"],
       ["rind", "P-256 CT stack", "local branch rp2040/p256-ct-on-3dc, not pushed"],
       ["rind", "fixsliced AES (A pure Rust, B generated asm)", "not pushed; B is experimental"],
@@ -625,7 +626,7 @@ table.t td.est,table.t th.est{background:#fdf8ec}
     </ul></div>
     <div class="card"><h3>What's next after the numbers</h3><ul class="b sm">
       <li>Finish the planned <span data-k="snap.planned"></span> rounds, then publish the raw results and tables in this repository and in this deck (slide 10).</li>
-      <li>Upstream pull requests are being prepared but none has been opened (slide 21).</li>
+      <li>A draft no_std pull request is open on the steelhead99x/rind fork (#84); nothing has been opened upstream (slide 21).</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src">RP2040 bench lane: STATUS notes (16:44 backup, 18:33 lock change), round logs, raw run JSON start records</span><span class="num"></span></div>
@@ -894,8 +895,8 @@ table.t td.est,table.t th.est{background:#fdf8ec}
       <p class="small">Functions identical. clippy <code>-D warnings</code> is clean on native, portable and thumbv6m (release and debug); MSRV <span data-k="nostd.msrv"></span> checks. On the Mac, fmt passes; aarch64 clippy, tests and the thumbv6m build are still pending.</p>
     </div>
   </div>
-  <div class="callout" style="margin-top:16px">Overlap: fork branch <code>rp2040/armv6m-no-std</code> carries the harness's patches 0003 and 0005. This branch replaces them, and the SHA-512 and GHASH commits are to be rebased onto it.</div>
-  <div class="foot"><span class="src">no_std lane: STATUS.md and gates log (thumbv6m errors with rustc 1.98.1)</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:10px">Overlap: fork branch <code>rp2040/armv6m-no-std</code> carries the harness's patches 0003 and 0005. This branch replaces them, and the SHA-512 and GHASH commits are to be rebased onto it. On 13 November a draft, steelhead99x/rind#84, opened a no_std series on current main (head 54df92b7). The counts on this slide remain the 12 November gates on 3dc5634b. #84 has not been re-counted here, timed on a board, or sent upstream.</div>
+  <div class="foot"><span class="src">no_std lane: STATUS.md and gates log (thumbv6m errors with rustc 1.98.1) · steelhead99x/rind#84 (13 November 2026)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 19. COMPETITORS ============ -->
@@ -925,14 +926,14 @@ table.t td.est,table.t th.est{background:#fdf8ec}
 <!-- ============ 21. STATUS ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Status and next steps</div>
-  <h2>What is verified, what still needs timing, and the pull requests being prepared, none of them opened yet</h2>
+  <h2>What is verified, what still needs timing, and the pull requests</h2>
   <div class="cols3 st3" style="margin-top:16px">
     <div class="card fix"><div class="pn">verified</div><ul class="b sm" id="st-ver"></ul></div>
     <div class="card fix warnc"><div class="pn">pending or in progress</div><ul class="b sm" id="st-pend"></ul></div>
-    <div class="card fix"><div class="pn">being prepared · not opened</div><ul class="b sm" id="st-pr"></ul></div>
+    <div class="card fix"><div class="pn">pull requests</div><ul class="b sm" id="st-pr"></ul></div>
   </div>
-  <div class="callout" style="margin-top:12px">No pull request has been opened upstream. The branches stay on steelhead99x forks until a pull request is approved.</div>
-  <div class="foot"><span class="src">Bench lane STATUS through 21:13 PST · P-256, placement and AES lane reports · no_std lane STATUS · snapshot of old-base live rows: <span data-k="snap.asOf"></span></span><span class="num"></span></div>
+  <div class="callout" style="margin-top:12px">No pull request has been opened on upstream kixel-ai/rind (formerly moq-dev/rind). Drafts #84 and #87 are on the steelhead99x/rind fork and have not been sent upstream.</div>
+  <div class="foot"><span class="src">Bench lane STATUS through 21:13 PST · P-256, placement and AES lane reports · no_std lane STATUS · fork PR status 13 November 2026 · snapshot of old-base live rows: <span data-k="snap.asOf"></span></span><span class="num"></span></div>
 </section>
 
 <!-- ============ 22. SOURCES ============ -->
