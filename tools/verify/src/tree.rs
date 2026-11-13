@@ -12,6 +12,11 @@
 //! - a parent of those, including a compare-*.md over board subdirectories
 
 use super::{Report, check_board_at, check_host_at, check_summary, load_hw_map, med};
+
+/// Comparable set: kixel-ai/rind OPRF #705. Same constant as `xtask::layout`.
+const COMPARABLE_PIN: &str = "d6ca9a756d3d1e71489e61e44c04f33c3c893589";
+/// Previous comparable set. Kept, and not mixed into [`COMPARABLE_PIN`] tables.
+const PREVIOUS_COMPARABLE_PIN: &str = "0b1f1469c8e17e361e3353432bc7fceee9e04214";
 use regex::Regex;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -98,7 +103,25 @@ fn walk(dir: &Path, rep: &mut Report) -> bool {
         })
         .collect();
     children.sort();
+    let history = history_dirs(&children);
+    for h in &history {
+        let name = h.file_name().unwrap_or_default().to_string_lossy();
+        let previous =
+            revision_sha(&name).is_some_and(|sha| sha_matches(sha, PREVIOUS_COMPARABLE_PIN));
+        let kind = if previous {
+            format!("history from the previous comparable set {PREVIOUS_COMPARABLE_PIN}")
+        } else {
+            "an older set".to_string()
+        };
+        rep.note(
+            &label,
+            format!("{name} is {kind}; not in {COMPARABLE_PIN} tables"),
+        );
+    }
     for child in children {
+        if history.iter().any(|h| h == &child) {
+            continue;
+        }
         if raw_used.as_ref().is_some_and(|r| r == &child) {
             continue;
         }
@@ -126,6 +149,59 @@ fn walk(dir: &Path, rep: &mut Report) -> bool {
         );
     }
     found
+}
+
+fn revision_sha(name: &str) -> Option<&str> {
+    let sha = name.split_once('-').map(|(s, _)| s).unwrap_or(name);
+    if (7..=40).contains(&sha.len())
+        && sha
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+    {
+        Some(sha)
+    } else {
+        None
+    }
+}
+
+fn sha_matches(sha: &str, pin: &str) -> bool {
+    let (short, long) = if sha.len() <= pin.len() {
+        (sha, pin)
+    } else {
+        (pin, sha)
+    };
+    short.len() >= 7 && long.starts_with(short)
+}
+
+/// Older pin directories, and only when the current pin is also a child.
+/// A directory that holds just the previous set is not history of itself.
+fn history_dirs(children: &[PathBuf]) -> Vec<PathBuf> {
+    let mut saw_current = false;
+    let mut revisions = vec![];
+    for c in children {
+        let Some(name) = c.file_name().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        let Some(sha) = revision_sha(name) else {
+            continue;
+        };
+        if sha_matches(sha, COMPARABLE_PIN) {
+            saw_current = true;
+        }
+        revisions.push(c.clone());
+    }
+    if !saw_current {
+        return vec![];
+    }
+    revisions
+        .into_iter()
+        .filter(|c| {
+            c.file_name()
+                .and_then(|s| s.to_str())
+                .and_then(revision_sha)
+                .is_some_and(|sha| !sha_matches(sha, COMPARABLE_PIN))
+        })
+        .collect()
 }
 
 fn has_host_runs(dir: &Path) -> bool {
@@ -1262,5 +1338,67 @@ Known-answer checks: board-1 1/1, board-2 1/1. Runs: 1 and 1. Rows: 1 in both.
             rep.problems.join("\n")
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn agg(spread_ok: bool) -> String {
+        let max = if spread_ok { "10 ns" } else { "20 ns" };
+        format!(
+            "\
+| id | mode | runs | median | min | max | spread |
+|---|---|---|---|---|---|---|
+| a | b | 1 | 10 ns | 10 ns | {max} | 0.00% |
+"
+        )
+    }
+
+    #[test]
+    fn both_pins_use_the_current_set_and_list_the_previous_as_history() {
+        let dir = scratch();
+        let current = dir.join(COMPARABLE_PIN);
+        let previous = dir.join(PREVIOUS_COMPARABLE_PIN);
+        std::fs::create_dir_all(&current).unwrap();
+        std::fs::create_dir_all(&previous).unwrap();
+        std::fs::write(current.join("table.md"), agg(true)).unwrap();
+        std::fs::write(previous.join("table.md"), agg(false)).unwrap();
+
+        let mut rep = Report::default();
+        assert!(verify_dir(&dir, &mut rep));
+        assert!(
+            rep.problems.is_empty(),
+            "previous pin leaked into the check: {}",
+            rep.problems.join("\n")
+        );
+        assert!(
+            rep.notes.iter().any(|n| {
+                n.contains(PREVIOUS_COMPARABLE_PIN)
+                    && n.contains("previous comparable set")
+                    && n.contains(COMPARABLE_PIN)
+            }),
+            "{:?}",
+            rep.notes
+        );
+
+        let mut old = Report::default();
+        assert!(verify_dir(&previous, &mut old));
+        assert!(
+            old.problems.iter().any(|p| p.contains("spread")),
+            "the previous set is still checked on its own: {:?}",
+            old.problems
+        );
+
+        let only = scratch();
+        let lone = only.join(PREVIOUS_COMPARABLE_PIN);
+        std::fs::create_dir_all(&lone).unwrap();
+        std::fs::write(lone.join("table.md"), agg(false)).unwrap();
+        let mut lone_rep = Report::default();
+        assert!(verify_dir(&only, &mut lone_rep));
+        assert!(
+            lone_rep.problems.iter().any(|p| p.contains("spread")),
+            "a host with only the previous pin is still checked: {:?}",
+            lone_rep.problems
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&only);
     }
 }
