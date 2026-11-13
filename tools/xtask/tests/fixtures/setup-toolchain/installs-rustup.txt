@@ -1,0 +1,24 @@
+== run 1: 0
+done: in $T/rind-hardware, cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images esp
+the board's USB-Serial/JTAG port needs your user in the dialout (or uucp) group
+== run 2: 0
+done: in $T/rind-hardware, cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images esp
+the board's USB-Serial/JTAG port needs your user in the dialout (or uucp) group
+== log
+uname -m
+curl --proto =https --tlsv1.2 -sSf https://sh.rustup.rs
+rustup-init -y --profile minimal
+rustup toolchain install stable --profile minimal --component rustfmt,clippy
+curl -sSfL -o $T/rind-hardware/.tools/espup https://github.com/esp-rs/espup/releases/download/v0.19.0/espup-x86_64-unknown-linux-gnu
+espup install --targets esp32s3 --toolchain-version 1.97.0.0 --export-file $T/rind-hardware/.tools/export-esp.sh
+cargo install --locked ldproxy --version 0.3.5
+curl -sSfL -o $T/rind-hardware/.tools/espflash.zip https://github.com/esp-rs/espflash/releases/download/v4.7.0/espflash-x86_64-unknown-linux-musl.zip
+unzip -o -q espflash.zip (in $T/rind-hardware/.tools)
+uname -m
+rustup toolchain install stable --profile minimal --component rustfmt,clippy
+espup install --targets esp32s3 --toolchain-version 1.97.0.0 --export-file $T/rind-hardware/.tools/export-esp.sh
+cargo install --locked ldproxy --version 0.3.5
+== files
+$T/home/.cargo/bin/rustup x
+$T/rind-hardware/.tools/espflash x
+$T/rind-hardware/.tools/espup x
