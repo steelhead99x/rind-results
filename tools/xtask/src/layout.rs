@@ -65,6 +65,116 @@ pub fn publish_dir(
         .join(revision(upstream_sha, label)?))
 }
 
+/// Comparable set: kixel-ai/rind OPRF #705. Full 40-character SHA.
+/// `tools/verify` keeps the same two constants; the crates share no code.
+pub const COMPARABLE_PIN: &str = "d6ca9a756d3d1e71489e61e44c04f33c3c893589";
+
+/// Previous comparable set. Directories named with this sha are history:
+/// never deleted, overwritten, or mixed into [`COMPARABLE_PIN`] tables.
+pub const PREVIOUS_COMPARABLE_PIN: &str = "0b1f1469c8e17e361e3353432bc7fceee9e04214";
+
+/// The current pin's directory, and the older pin directories beside it.
+pub struct TablePick {
+    pub dir: PathBuf,
+    /// Older comparable sets. Their numbers are not part of `dir`'s tables.
+    pub history: Vec<PathBuf>,
+}
+
+/// `<sha>` or `<sha>-<label>` yields the sha. Anything else is not a pin directory.
+pub fn revision_sha(name: &str) -> Option<&str> {
+    let sha = name.split_once('-').map(|(s, _)| s).unwrap_or(name);
+    if (7..=40).contains(&sha.len())
+        && sha
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+    {
+        Some(sha)
+    } else {
+        None
+    }
+}
+
+/// `sha` and `pin` name the same commit when one is a prefix of the other.
+pub fn sha_matches(sha: &str, pin: &str) -> bool {
+    let (short, long) = if sha.len() <= pin.len() {
+        (sha, pin)
+    } else {
+        (pin, sha)
+    };
+    short.len() >= 7 && long.starts_with(short)
+}
+
+pub fn is_previous_comparable_set(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|s| s.to_str())
+        .and_then(revision_sha)
+        .is_some_and(|sha| sha_matches(sha, PREVIOUS_COMPARABLE_PIN))
+}
+
+/// Refuse to write a previous comparable-set directory.
+pub fn refuse_history_out(out: &Path) -> Result<(), String> {
+    if is_previous_comparable_set(out) {
+        return Err(format!(
+            "{} is the previous comparable set ({PREVIOUS_COMPARABLE_PIN}); it stays as history \
+             and is not overwritten or mixed into {COMPARABLE_PIN} tables",
+            out.display()
+        ));
+    }
+    Ok(())
+}
+
+fn child_dirs(dir: &Path) -> Vec<PathBuf> {
+    let mut v: Vec<PathBuf> = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    v.sort();
+    v
+}
+
+/// When `dir` holds the current pin and any other upstream sha, tables use the
+/// current pin. Other sha directories are history. A directory with only the
+/// previous pin is left alone, so that set can still be checked on its own.
+pub fn table_dir(dir: &Path) -> Option<TablePick> {
+    let mut current = vec![];
+    let mut history = vec![];
+    for c in child_dirs(dir) {
+        let Some(name) = c.file_name().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        let Some(sha) = revision_sha(name) else {
+            continue;
+        };
+        if sha_matches(sha, COMPARABLE_PIN) {
+            current.push(c);
+        } else {
+            history.push(c);
+        }
+    }
+    if current.is_empty() || history.is_empty() {
+        return None;
+    }
+    let picked = current
+        .iter()
+        .find(|p| p.file_name().and_then(|s| s.to_str()) == Some(COMPARABLE_PIN))
+        .or_else(|| {
+            current.iter().find(|p| {
+                p.file_name()
+                    .and_then(|s| s.to_str())
+                    .is_some_and(|n| revision_sha(n) == Some(n))
+            })
+        })
+        .or_else(|| current.first())?
+        .clone();
+    Some(TablePick {
+        dir: picked,
+        history,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,5 +205,42 @@ mod tests {
         assert!(publish_dir(Path::new("."), "Jetson", "0b1f1469", None).is_err());
         assert!(publish_dir(Path::new("."), "pi5", "0b1f1469", Some("../x")).is_err());
         assert!(publish_dir(Path::new("."), "pi5", "HEAD", None).is_err());
+    }
+
+    #[test]
+    fn current_pin_tables_leave_the_previous_set_as_history() {
+        let root = std::env::temp_dir().join(format!("rind-pin-sets-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let current = root.join(COMPARABLE_PIN);
+        let labeled = root.join(format!("{COMPARABLE_PIN}-icache"));
+        let previous = root.join(PREVIOUS_COMPARABLE_PIN);
+        let previous_labeled = root.join(format!("{PREVIOUS_COMPARABLE_PIN}-relink"));
+        for d in [&current, &labeled, &previous, &previous_labeled] {
+            std::fs::create_dir_all(d).unwrap();
+        }
+        std::fs::create_dir_all(root.join("notes")).unwrap();
+        let pick = table_dir(&root).unwrap();
+        assert_eq!(pick.dir, current);
+        let hist: Vec<_> = pick
+            .history
+            .iter()
+            .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            hist,
+            vec![
+                PREVIOUS_COMPARABLE_PIN.to_string(),
+                format!("{PREVIOUS_COMPARABLE_PIN}-relink"),
+            ]
+        );
+        assert!(refuse_history_out(&previous).is_err());
+        assert!(refuse_history_out(&previous_labeled).is_err());
+        assert!(refuse_history_out(&current).is_ok());
+        assert!(refuse_history_out(&labeled).is_ok());
+        // The previous pin on its own is still that set, not dropped.
+        let only = root.join("only-old");
+        std::fs::create_dir_all(only.join(PREVIOUS_COMPARABLE_PIN)).unwrap();
+        assert!(table_dir(&only).is_none());
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
