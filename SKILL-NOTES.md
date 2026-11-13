@@ -34,7 +34,7 @@ suggestions for whoever updates it.
 4. **`admin/bench-report run` refusals.** The host side refuses (a) outside the dev shell
    (`IN_RIND_DEV_SHELL=1`), (b) any rustc other than the flake's pinned `1.98.1`, and (c) a host with
    more than 10% of CPUs (min 1 CPU) busy before the build or the benchmarks. On a shared VM or a laptop
-   in use, (c) fires almost every time (box: 2.3 of 8 CPUs busy). This run used `host-run.py`, which
+   in use, (c) fires almost every time (box: 2.3 of 8 CPUs busy). This run used `cargo xtask host-run`, which
    loads the real script and relaxes only (b) and (c), recording the busy CPUs in the JSON.
 5. **`admin/build-cost` has its own busy check** (25% of CPUs) and runs right after the benchmarks,
    so on a shared host it often fails with `host is busy` and the JSON records `build_cost.status:
