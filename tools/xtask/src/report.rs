@@ -594,7 +594,7 @@ pub fn run(args: Args) -> Result<(), String> {
         Some(p) if p.exists() => Some(read_json(p)?),
         _ => None,
     };
-    let gaps = load_gaps(&t, &host, &args.gaps)?;
+    let gaps = load_gaps(&t, &host, &args.gaps, &|l| RIVALS.contains(&l))?;
     let ctx = Ctx {
         t: &t,
         host: &host,
@@ -624,7 +624,11 @@ fn write(path: &Path, text: String) -> Result<(), String> {
 /// Each operation where another Rust library beats rind by more than
 /// admin/bench-report's SLOWER (1.1), as (operation, ratio, library), in the
 /// order the results first name the operation.
-fn gaps_of(t: &Tables, host: &Value) -> Vec<(String, f64, String)> {
+pub(crate) fn gaps_of(
+    t: &Tables,
+    host: &Value,
+    rival: &dyn Fn(&str) -> bool,
+) -> Vec<(String, f64, String)> {
     let mut by: Vec<(String, Vec<(String, f64)>)> = vec![];
     for r in host["results"].as_array().into_iter().flatten() {
         let op = py_str(&r["operation"]);
@@ -644,10 +648,7 @@ fn gaps_of(t: &Tables, host: &Value) -> Vec<(String, f64, String)> {
     }
     let mut out = vec![];
     for (op, libs) in by {
-        let others: Vec<&(String, f64)> = libs
-            .iter()
-            .filter(|(l, _)| RIVALS.contains(&l.as_str()))
-            .collect();
+        let others: Vec<&(String, f64)> = libs.iter().filter(|(l, _)| rival(l)).collect();
         let Some(rind) = libs.iter().find(|(l, _)| l == "rind") else {
             continue;
         };
@@ -706,12 +707,17 @@ fn fnmatch(name: &str, pat: &str) -> bool {
     Regex::new(&re).is_ok_and(|r| r.is_match(name))
 }
 
-type Gap = (toml::Table, Vec<(String, f64, String)>);
+pub(crate) type Gap = (toml::Table, Vec<(String, f64, String)>);
 
 /// rind's gaps.toml rule on this host: every gap needs an entry with a quest
 /// or a reason, and every entry must cover a gap.
-fn load_gaps(t: &Tables, host: &Value, path: &Path) -> Result<Vec<Gap>, String> {
-    let mut found = gaps_of(t, host);
+pub(crate) fn load_gaps(
+    t: &Tables,
+    host: &Value,
+    path: &Path,
+    rival: &dyn Fn(&str) -> bool,
+) -> Result<Vec<Gap>, String> {
+    let mut found = gaps_of(t, host, rival);
     let mut entries = vec![];
     if path.exists() {
         let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;

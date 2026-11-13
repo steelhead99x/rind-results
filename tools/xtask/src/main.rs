@@ -8,6 +8,7 @@ mod capture;
 mod charts;
 mod compare;
 mod demo_tsv;
+mod host_report;
 mod host_run;
 mod legacy_map;
 mod md2png;
@@ -56,6 +57,8 @@ enum Cmd {
     Md2png(md2png::Args),
     /// Turn a `script --log-timing` recording into an asciinema cast and a text log
     Script2cast(script2cast::Args),
+    /// A Linux host's repeated bench-report runs into its median JSON, RESULTS.md and RUNS.md
+    HostReport(host_report::Args),
     /// Run rind's own `admin/bench-report run` on this Linux host
     HostRun(host_run::Args),
     /// rustfmt --check, clippy -D warnings and the tests, for this workspace
@@ -81,6 +84,7 @@ fn main() -> ExitCode {
         Cmd::RunAllNrf(a) => run_all::run(capture::Board::Nrf, a),
         Cmd::Md2png(a) => md2png::run(a),
         Cmd::Script2cast(a) => script2cast::run(a),
+        Cmd::HostReport(a) => host_report::run(a),
         Cmd::HostRun(a) => host_run::run(a),
         Cmd::Check => check(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
