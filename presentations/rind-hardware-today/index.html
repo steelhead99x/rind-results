@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rind on the boards: 12 November 2026</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  STYLE: the CSS of presentations/rind-rp2040. SLIDES: one <section class="slide"> per slide.
+  Every number is typed into the slide with its source file in the footer.
+-->
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions (reused) */
+.flow text{font-family:var(--sans)}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .t1{font-size:15px;fill:var(--ink)}
+.flow .t2{font-size:12.5px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:12px;fill:var(--navy)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board.b2{grid-template-columns:1fr 1fr}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+/* RP2040 deck additions */
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+.err{background:var(--bad-bg);border-left:4px solid var(--bad);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px;color:var(--bad)}
+.cons{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.con{position:relative;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--bad);border-radius:0 0 10px 10px;padding:16px 14px 64px;min-height:330px}
+.con .ix{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.con .ck{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:12px}
+.con .cv{font-size:26px;font-weight:700;color:var(--navy);margin:4px 0 10px;white-space:nowrap}
+.con .cw{font-size:13.5px;line-height:1.45;color:var(--ink)}
+.con .cf{position:absolute;left:14px;right:14px;bottom:14px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--good-bg);border-radius:6px;padding:6px 8px;line-height:1.3}
+.card.fix{border-top:4px solid var(--accent)}
+.card.fix.warnc{border-top-color:#c9a227}
+.card .pn{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.card.warnc .pn{color:#8a6d0b}
+table.grid th.c,table.grid td.c{text-align:center}
+table.grid th span{font-size:10px;color:var(--mute);text-transform:none;letter-spacing:0}
+table.grid td{padding:5px 8px}
+table.grid td.r{font-size:12.5px;color:var(--ink2)}
+i.dot{display:inline-block;font-style:normal;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+i.dot.y{background:var(--good-bg);color:var(--accent)}
+i.dot.n{background:var(--bad-bg);color:var(--bad)}
+table.sv{font-size:12.5px}
+table.sv td.bad{color:var(--bad);font-weight:700}
+.timeline.t6{grid-template-columns:repeat(6,1fr)}
+.tl.done{border-top-color:var(--mute);background:#eef0f3}
+.pendbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:9px 14px;border-radius:0 8px 8px 0;font-size:14.5px;color:#5c4a08}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.sub2{font-size:11px;color:var(--mute)}
+.mut{color:var(--mute);font-style:italic}
+a{color:var(--accent2);text-decoration:none}
+table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · microcontroller benchmarks</div>
+    <h1>rind on the boards: what changed on 12 November 2026, and when</h1>
+    <div class="sub">The Poly1305 patch A/B on the ESP32-S3 and nRF52840, three-alignment relinks, the 32 KB cache check, the flash-clock and watchdog fixes, the RP2040 port, and the move to rind-hardware, with a timeline from git history.</div>
+  </div>
+  <div class="meta">steelhead99x/rind-results · steelhead99x/rind-hardware<br>Times are America/Los_Angeles (PST)</div>
+  <div class="foot"><span class="src">Every number is from a file on rind-results main (95300f2) or rind-hardware main (7a14b38). The file is named on each slide; the full list is on the last slide.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 2. SUMMARY ============ -->
+<section class="slide" data-section="Summary">
+  <div class="kicker">Today in one table</div>
+  <h2>Six changes are published on main; the RP2040 first run, the Pi 5 lane and the Orin are not yet</h2>
+  <table class="t" style="margin-top:18px;font-size:14.5px">
+    <tr><th style="width:22%">Change</th><th>What it showed</th><th style="width:12%">Status</th><th style="width:27%">File on main</th></tr>
+    <tr><td>Poly1305 32-bit patch A/B</td><td>rind's ChaCha20-Poly1305 16 KB seal takes 0.735× the cycles on the ESP32-S3 and 0.698× on the nRF52840; faster at every size on both boards</td><td><span class="tag ok">published</span></td><td><code>results/{esp32s3,nrf52840}/diag/poly1305-32/</code></td></tr>
+    <tr><td>Relinks at three alignments</td><td>ESP32-S3 SHA-256 64B is 2.36×, 2.80× or 3.07× libcrux depending on code alignment; no verdict flips</td><td><span class="tag ok">published</span></td><td><code>results/diag/esp32s3-relink-fixed-98568332/</code></td></tr>
+    <tr><td>32 KB icache at 80 MHz</td><td>XChaCha20-Poly1305 32B goes from 7.50× to 1.10× RustCrypto: the gap is the 16 KB cache</td><td><span class="tag ok">published</span></td><td><code>results/diag/esp32s3-icache32-80mhz-98568332/</code></td></tr>
+    <tr><td>Flash clock 40 → 80 MHz</td><td>The first ESP32-S3 set ran at 40 MHz; cache-missing rows were up to 1.92× slow, and the set was rerun</td><td><span class="tag ok">fixed</span></td><td><code>results/diag/flash-80mhz/README.md</code></td></tr>
+    <tr><td>nRF52840 watchdog</td><td>A leftover 90 s Meshtastic watchdog reset the first image; the firmware now feeds it</td><td><span class="tag ok">fixed</span></td><td><code>results/diag/nrf52840-watchdog-2026-11-12/</code></td></tr>
+    <tr><td>Firmware repo move</td><td>rind-bench is archived; the firmware is public as rind-hardware</td><td><span class="tag ok">done</span></td><td>rind-hardware <code>README.md</code></td></tr>
+    <tr><td>RP2040 port</td><td>All 12 images build for <code>thumbv6m-none-eabi</code>; on-device results are not on main yet</td><td><span class="tag pending">partial</span></td><td><code>hosts/rp2040/NOTES.md</code></td></tr>
+    <tr><td>Orin and Pi 5 hosts</td><td>Today's lanes are on branches or not pushed; not on main</td><td><span class="tag pending">in progress</span></td><td>none yet</td></tr>
+  </table>
+  <div class="foot"><span class="src">rind-results main 95300f2: the files in the right column · rind-hardware main 7a14b38: README.md (board status table)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 3. POLY1305 ============ -->
+<section class="slide" data-section="Poly1305-32">
+  <div class="kicker">Poly1305 in 32-bit limbs</div>
+  <h2>The optional 32-bit Poly1305 patch makes rind's ChaCha20-Poly1305 faster at every size on both boards</h2>
+  <div class="cols c64" style="margin-top:14px">
+    <div>
+      <div class="chart-title">rind with the patch over rind with the HACL* baseline, median cycles (below 1 is faster)</div>
+      <table class="t">
+        <tr><th>Board</th><th>Row</th><th class="n">HACL* cycles</th><th class="n">Patch cycles</th><th class="n">B/A</th></tr>
+        <tr class="hl"><td>ESP32-S3</td><td><code>chacha20poly1305/16KB</code></td><td class="n">1,610,381</td><td class="n">1,184,190</td><td class="n">0.735</td></tr>
+        <tr><td>ESP32-S3</td><td><code>chacha20poly1305/32B</code></td><td class="n">12,879</td><td class="n">8,962</td><td class="n">0.696</td></tr>
+        <tr><td>ESP32-S3</td><td><code>xchacha20poly1305/16KB</code></td><td class="n">1,909,178</td><td class="n">1,372,709</td><td class="n">0.719</td></tr>
+        <tr class="hl"><td>ESP32-S3</td><td><code>xchacha20poly1305/32B</code></td><td class="n">288,956</td><td class="n">141,457</td><td class="n">0.490</td></tr>
+        <tr class="hl"><td>nRF52840</td><td><code>chacha20poly1305/16KB</code></td><td class="n">895,189</td><td class="n">624,562</td><td class="n">0.698</td></tr>
+        <tr><td>nRF52840</td><td><code>chacha20poly1305/32B</code></td><td class="n">9,877</td><td class="n">6,503</td><td class="n">0.658</td></tr>
+        <tr><td>nRF52840</td><td><code>xchacha20poly1305/16KB</code></td><td class="n">1,098,677</td><td class="n">838,153</td><td class="n">0.763</td></tr>
+        <tr><td>nRF52840</td><td><code>xchacha20poly1305/32B</code></td><td class="n">222,925</td><td class="n">219,949</td><td class="n">0.987</td></tr>
+      </table>
+      <p class="small">Seal rows shown; open rows track them (ESP32-S3 16 KB open 0.737, nRF 0.705). 3 runs each, known-answer checks 21/21 on every image.</p>
+    </div>
+    <div class="card"><h3>Read it with these caveats</h3><ul class="b sm">
+      <li>This compares rind against rind. It does not say rind now beats ring or RustCrypto.</li>
+      <li><b>Flagged on the ESP32-S3:</b> libcrux also moved (32B open 0.497, seal 1.321) although its code did not change. The README puts this down to a layout shift in the 16 KB cache.</li>
+      <li>nRF52840 XChaCha 32B gains only 1.3% (0.987).</li>
+      <li>The patch is an optional set (<code>patches/poly1305-32</code>, five 26-bit limbs). The images were prebuilt and hash-checked at rind-hardware 7a14b38. No upstream PR has been opened.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">results/esp32s3/diag/poly1305-32/compare.md and README.md · results/nrf52840/diag/poly1305-32/compare.md and README.md (rind-results 95300f2) · rind-hardware patches/poly1305-32/SHA256SUMS (7a14b38)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 4. RELINKS ============ -->
+<section class="slide" data-section="Relinks">
+  <div class="kicker">Layout, not code</div>
+  <h2>On the ESP32-S3, moving the same code to a new cache alignment moves short-input ratios by up to 0.7</h2>
+  <div class="cols c64" style="margin-top:14px">
+    <div>
+      <div class="chart-title">rind's time over the fastest other library, by layout (rind 98568332, flash at 80 MHz, 3 runs each)</div>
+      <table class="t">
+        <tr><th>Row</th><th>vs</th><th class="n">pad0</th><th class="n">pad1031</th><th class="n">pad1039</th></tr>
+        <tr class="hl"><td>SHA-256 64B</td><td>libcrux</td><td class="n">2.36×</td><td class="n">2.80×</td><td class="n">3.07×</td></tr>
+        <tr><td>HMAC-SHA256 64B</td><td>ring</td><td class="n">2.20×</td><td class="n">2.34×</td><td class="n">2.07×</td></tr>
+        <tr><td>XChaCha20-Poly1305 32B</td><td>RustCrypto</td><td class="n">7.50×</td><td class="n">7.94×</td><td class="n">7.59×</td></tr>
+        <tr><td>AES-256-GCM 32B</td><td>ring</td><td class="n">0.56×</td><td class="n">0.61×</td><td class="n">0.56×</td></tr>
+      </table>
+      <p class="small">pad0 is the published layout. pad1031 and pad2053 move every library by about 1 KB and 2 KB at the same alignment to the 32-byte line, and timed the same; pad1039 changes that alignment in seven of eight images.</p>
+    </div>
+    <div class="card"><h3>Controls and caveats</h3><ul class="b sm">
+      <li>A second pad0 run matched the published set: 0 of 558 rows moved. pad1039 moved 119 of 558.</li>
+      <li>No row crosses 1.0×: every verdict stays the same.</li>
+      <li>rind's SHA-256 64B cycles spread 26% over the three layouts. Whether the 16-byte fetch or the 32-byte line matters is not separated.</li>
+      <li>The 3-run interval in RESULTS.md covers run-to-run noise only. Read short-input ESP32-S3 ratios with this layout caveat.</li>
+      <li>The nRF52840 relinks moved no short-input ratio by more than 0.01.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">results/diag/esp32s3-relink-fixed-98568332/README.md (and relink-short.md, compare-pad1039.md, compare-pad0-control-mod16.md) · results/RESULTS.md · results/nrf52840/RESULTS.md (rind-results 95300f2)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 5. ICACHE ============ -->
+<section class="slide" data-section="32 KB icache">
+  <div class="kicker">Diagnostic, not the published setup</div>
+  <h2>With a 32 KB instruction cache, the XChaCha20-Poly1305 gap falls from 7.5× to 1.1×, so the gap is the cache</h2>
+  <div class="cols c64" style="margin-top:14px">
+    <div>
+      <div class="chart-title">rind over the fastest other library, 16 KB (published) vs 32 KB cache, both at 80 MHz flash</div>
+      <table class="t">
+        <tr><th>Row</th><th class="n">16 KB</th><th class="n">32 KB</th><th>vs</th></tr>
+        <tr class="hl"><td>XChaCha20-Poly1305 32B</td><td class="n">7.50×</td><td class="n">1.10×</td><td>RustCrypto</td></tr>
+        <tr><td>XChaCha20-Poly1305 1350B</td><td class="n">2.72×</td><td class="n">1.05×</td><td>RustCrypto</td></tr>
+        <tr><td>XChaCha20-Poly1305 16KB</td><td class="n">1.21×</td><td class="n">1.04×</td><td>RustCrypto</td></tr>
+        <tr><td>ChaCha20-Poly1305 32B / 1350B / 16KB</td><td class="n">1.45 / 1.27 / 1.26×</td><td class="n">unchanged</td><td>ring</td></tr>
+        <tr><td>X25519 ECDH</td><td class="n">1.00×</td><td class="n">1.00×</td><td>RustCrypto</td></tr>
+        <tr><td>P-256 ECDH</td><td class="n">0.59×</td><td class="n">0.70×</td><td>RustCrypto → ring</td></tr>
+      </table>
+      <p class="small">rind's XChaCha 32B seal: 288,632 → 42,247 cycles (1.20 ms → 176 µs).</p>
+    </div>
+    <div class="card"><h3>What it means</h3><ul class="b sm">
+      <li>ChaCha20-Poly1305 does not move: that gap is Poly1305 compute, which the patch on slide 3 addresses.</li>
+      <li>ring's and libcrux's X25519 and ring's P-256 speed up sharply (libcrux X25519 0.061×), so their published rows measure the 16 KB cache too.</li>
+      <li>Same findings as the earlier 40 MHz runs at rind 99b509a. No verdict flips.</li>
+      <li>32 KB is a build option for this check only; the published numbers use ESP-IDF's 16 KB default.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">results/diag/esp32s3-icache32-80mhz-98568332/README.md and ratios.md (rind-results 95300f2, commit 6b66950)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 6. FLASH + WATCHDOG ============ -->
+<section class="slide" data-section="Fixes">
+  <div class="kicker">Two harness fixes</div>
+  <h2>The ESP32-S3 flash ran at 40 MHz instead of 80, and a leftover watchdog reset the nRF52840's first image</h2>
+  <div class="cols" style="margin-top:18px">
+    <div class="card tall"><h3>Flash clock, ESP32-S3</h3><ul class="b sm">
+      <li>The build asked for 80 MHz, but espflash writes the clock into the image header, defaults to 40 MHz and does not read <code>sdkconfig</code>. Every published log said <code>Boot SPI Speed : 40MHz</code>.</li>
+      <li>Reflashing the same <code>sha2.elf</code> at 80 MHz: rows that stream code from flash ran in <b>0.520×</b> the cycles (SHA-512: 1.54 M → 0.80 M cycles a block). ring and the hardware rows did not move.</li>
+      <li>So cache-missing rows were up to <b>1.92×</b> too slow, and they were compared against cached rows at a bias.</li>
+      <li>Fix: flash with <code>--flash-freq 80mhz</code>, print the clock from the logs, fail a set that mixes clocks, rerun the set. The 40 MHz set is kept in <code>results/diag/esp32s3-40mhz-2026-11-11/</code>.</li>
+    </ul></div>
+    <div class="card tall"><h3>Watchdog, nRF52840 (T1000-E)</h3><ul class="b sm">
+      <li>The first image flashed after Meshtastic reset 89 s into its run, after 128 results.</li>
+      <li>A probe read <code>RUNSTATUS = 1</code> and <code>CRV = 2,949,120</code> (90 s), then reset 89 s after its last feed: Meshtastic's watchdog survives a software reset and the bootloader.</li>
+      <li>Fix: the firmware records the watchdog state at boot and feeds every enabled reload register between timed regions. The poly1305-32 run fed it in every start record.</li>
+      <li>No published number changes: all of them are from complete runs.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">results/diag/flash-80mhz/README.md (commit 9fecae7) · results/diag/nrf52840-watchdog-2026-11-12/README.md (commit 0a07749) · results/nrf52840/diag/poly1305-32/README.md</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. RP2040 + MOVE ============ -->
+<section class="slide" data-section="Port and repo">
+  <div class="kicker">RP2040 port · rind-bench → rind-hardware</div>
+  <h2>The RP2040 images build and the firmware is now public as rind-hardware; first-run numbers are not on main</h2>
+  <div class="cols" style="margin-top:18px">
+    <div class="card tall"><h3>RP2040 (Cortex-M0+, 125 MHz)</h3><ul class="b sm">
+      <li>All 12 bench images build for <code>thumbv6m-none-eabi</code> from rind 98568332 with patches 0001–0005: 0003 gives rind <code>no_std</code>, 0005 runs <code>ReuseCache</code> in a <code>Cell</code> where there is no compare-and-swap.</li>
+      <li>ring is left out (its Arm assembly does not assemble for ARMv6-M). <code>getrandom</code> is a seeded SplitMix64, not an entropy source.</li>
+      <li>Both main branches still say "not yet run on hardware". The SysTick wrap fix and patches 0006–0007 are on rind-hardware branches <code>rp2040/systick-wrap-fix</code> and <code>rp2040/armv6m-sha512-ghash</code>, not main, so their numbers are left off this deck.</li>
+    </ul></div>
+    <div class="card tall"><h3>The firmware repo move</h3><ul class="b sm">
+      <li><code>steelhead99x/rind-bench</code> is archived. Its history was squashed into the first commit of the public <code>steelhead99x/rind-hardware</code>, 8d9c1bb (12 Nov, 17:19 PST).</li>
+      <li>rind-results now points clone URLs, reproduce steps, the skill and the toolchain script at rind-hardware.</li>
+      <li>Provenance SHAs already published (for example rind-bench f656f95 for the RP2040 images) were left as recorded. They refer to the private history, which is not public.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">hosts/rp2040/NOTES.md and images.json · commits 2aa9e24, 0df7c03, 876586c (rind-results) · rind-hardware README.md, 8d9c1bb, branches rp2040/systick-wrap-fix (a9d057a) and rp2040/armv6m-sha512-ghash (6abf7fd)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 8. HOSTS ============ -->
+<section class="slide" data-section="Hosts">
+  <div class="kicker">Application processors</div>
+  <h2>The Orin and today's Pi 5 runs are in progress; the only Pi 5 results on main are from the earlier b6651423 run</h2>
+  <div class="cols" style="margin-top:22px">
+    <div class="card tall"><h3>Raspberry Pi 5</h3><ul class="b sm">
+      <li>On main: the host run of rind's own suite at rind b6651423 (<code>hosts/pi5/</code>, README host table), committed 12 Nov at 01:22 PST.</li>
+      <li>Today's Pi 5 work is on branches <code>results/pi5-lane-2026-11-12</code> and <code>results/m1pro-pi5-argon2-2026-11-12</code>. Neither is merged, so its numbers are not shown here.</li>
+    </ul></div>
+    <div class="card tall"><h3>NVIDIA Jetson Orin</h3><ul class="b sm">
+      <li>No Orin results are on rind-results main or on any pushed rind-results branch.</li>
+      <li>Shown as in progress until results land on main.</li>
+    </ul></div>
+  </div>
+  <div class="pendbar" style="margin-top:22px">In progress: Orin and the Pi 5 lane. They will be added when their results are on main.</div>
+  <div class="foot"><span class="src">README.md host table and hosts/pi5/ (rind-results main 95300f2) · branch list of steelhead99x/rind-results, checked 12 Nov 2026 evening PST</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 9. TIMELINE A ============ -->
+<section class="slide" data-section="Timeline">
+  <div class="kicker">Timeline from git history · 1 of 2 · PST</div>
+  <h2>Overnight to midday: first board results, then the flash-clock fix and a Rust tooling port</h2>
+  <table class="t" style="margin-top:14px;font-size:14px">
+    <tr><th style="width:15%">When (PST)</th><th style="width:14%">Repo</th><th style="width:10%">Commit</th><th>Milestone</th></tr>
+    <tr><td>Wed 11 Nov 23:44</td><td>rind-results</td><td><code>9cdb1f1</code></td><td>First commit: capture, report and setup tools for the ESP32-S3 runs</td></tr>
+    <tr><td>Thu 12 Nov 00:36</td><td>rind-results</td><td><code>4f83728</code></td><td>First ESP32-S3 results for rind's bench suite (later found to be at a 40 MHz flash clock)</td></tr>
+    <tr><td>01:14 – 01:22</td><td>rind-results</td><td><code>3118d5d</code> <code>1a24f82</code></td><td>RP2040 and EFR32MG24 notes; host results for xeon-vm, m1pro, pi5, pixel9pro (m1pro and pixel9pro marked noisy)</td></tr>
+    <tr><td>02:51 – 03:07</td><td>rind-results</td><td><code>2f31ec2</code> <code>39cc189</code></td><td>nRF52840 (T1000-E) results; its ML-KEM gap measured as compute, not the RNG</td></tr>
+    <tr><td>03:57</td><td>rind-results</td><td><code>325e3a7</code></td><td>ESP32-S3 ChaCha crash explained (ring and LLVM-Xtensa stack realignment)</td></tr>
+    <tr><td>09:36</td><td>rind-results</td><td><code>1e0d9b3</code></td><td>ESP32-S3 ChaCha20-Poly1305 and XChaCha20-Poly1305 hardware results</td></tr>
+    <tr><td>10:44</td><td>rind-results</td><td><code>2d8e00a</code></td><td>Independent verifier, image provenance, first diagnostics</td></tr>
+    <tr class="hl"><td>11:16</td><td>rind-results</td><td><code>9fecae7</code></td><td>Fix: ESP32-S3 set rerun at the configured 80 MHz flash clock</td></tr>
+    <tr><td>12:00 – 12:28</td><td>rind-results</td><td><code>d03d357</code> <code>1e9da19</code></td><td>Tooling ported to Rust (xtask, independent verify); <code>xtask relink</code> added</td></tr>
+  </table>
+  <div class="foot"><span class="src">git log of steelhead99x/rind-results main (95300f2), committer dates converted to America/Los_Angeles; 3118d5d and 1a24f82 were stamped in UTC</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 10. TIMELINE B ============ -->
+<section class="slide" data-section="Timeline">
+  <div class="kicker">Timeline from git history · 2 of 2 · PST</div>
+  <h2>Afternoon to evening: relinks, the watchdog, the RP2040 build, rind-hardware and the Poly1305 A/B</h2>
+  <table class="t" style="margin-top:14px;font-size:14px">
+    <tr><th style="width:15%">When (PST)</th><th style="width:14%">Repo</th><th style="width:10%">Commit</th><th>Milestone</th></tr>
+    <tr><td>13:01 – 13:13</td><td>rind-results</td><td><code>ac9f31f</code> <code>9b07a99</code></td><td>Both boards rerun at rind 98568332, with relinked builds and three-layout medians</td></tr>
+    <tr class="hl"><td>14:29</td><td>rind-results</td><td><code>0a07749</code></td><td>nRF52840: leftover 90 s watchdog confirmed; remaining pad1031 relinks</td></tr>
+    <tr><td>15:49 – 15:57</td><td>rind-results</td><td><code>06d1344</code> <code>7fe32d6</code></td><td>Relinks that really move the libraries, on both boards</td></tr>
+    <tr><td>16:36</td><td>rind-results</td><td><code>2aa9e24</code></td><td>RP2040: all 12 images build and are ready for hardware</td></tr>
+    <tr class="hl"><td>17:19</td><td>rind-hardware</td><td><code>8d9c1bb</code></td><td>rind-hardware published: the firmware, squashed from private rind-bench</td></tr>
+    <tr><td>17:55</td><td>rind-results</td><td><code>c3c50d5</code></td><td>ESP32-S3 relink at a third alignment (pad1039)</td></tr>
+    <tr><td>18:00 – 18:10</td><td>rind-hardware</td><td><code>7852fdb</code> … <code>7a14b38</code></td><td>Optional poly1305-32 patch set, tests, built images and their hashes</td></tr>
+    <tr><td>18:09 – 18:16</td><td>rind-results</td><td><code>0df7c03</code> <code>6b66950</code> <code>876586c</code></td><td>Docs point at rind-hardware; 32 KB icache diagnostics at 80 MHz</td></tr>
+    <tr class="hl"><td>18:32</td><td>rind-results</td><td><code>95300f2</code></td><td>Poly1305-32 hardware A/B on the ESP32-S3 and nRF52840</td></tr>
+  </table>
+  <div class="foot"><span class="src">git log of rind-results main (95300f2) and rind-hardware main (7a14b38), committer dates in America/Los_Angeles. rind-hardware branches a9d057a and 6abf7fd (18:01) are not on main.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 11. CAVEATS ============ -->
+<section class="slide" data-section="Caveats">
+  <div class="kicker">Honesty check</div>
+  <h2>What these numbers do not show: noise, layout, and work that is not yet on main</h2>
+  <div class="cols" style="margin-top:18px">
+    <div class="card tall"><h3>Noise and layout</h3><ul class="b sm">
+      <li>Board results are 3 fresh boots per image. The low–high run medians bound the median with 75% probability and cover run-to-run noise only.</li>
+      <li>ESP32-S3 short-input rows depend on code layout by up to 0.7 (slide 4). The poly1305-32 A/B moved libcrux by layout alone.</li>
+      <li>The m1pro and pixel9pro host runs are marked noisy in the README; xeon-vm is a shared cloud VM.</li>
+      <li>The 32 KB cache runs are a diagnostic build, not the published configuration.</li>
+    </ul></div>
+    <div class="card tall"><h3>Not shown, or pending</h3><ul class="b sm">
+      <li>RP2040 on-device numbers: on rind-hardware branches only.</li>
+      <li>Orin and today's Pi 5 lane: in progress.</li>
+      <li>poly1305-32 is not upstream: no PR or issue was opened.</li>
+      <li>Older provenance SHAs point into the private rind-bench history.</li>
+      <li>The RP2040 has no hardware RNG; its images use a seeded placeholder.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">results/RESULTS.md (run interval, layout caveat) · README.md (host table) · results/esp32s3/diag/poly1305-32/README.md · hosts/rp2040/NOTES.md · commit 876586c</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 12. SOURCES ============ -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Sources</div>
+  <h2>Every figure comes from these files on rind-results main (95300f2) and rind-hardware main (7a14b38)</h2>
+  <table class="t" style="margin-top:14px;font-size:13.5px">
+    <tr><th style="width:24%">Topic</th><th>Files</th></tr>
+    <tr><td>Poly1305-32 A/B</td><td><code>results/esp32s3/diag/poly1305-32/{README,compare}.md</code> · <code>results/nrf52840/diag/poly1305-32/{README,compare}.md</code></td></tr>
+    <tr><td>Relinks</td><td><code>results/diag/esp32s3-relink-fixed-98568332/README.md</code> · <code>results/nrf52840/RESULTS.md</code></td></tr>
+    <tr><td>32 KB icache</td><td><code>results/diag/esp32s3-icache32-80mhz-98568332/{README,ratios}.md</code></td></tr>
+    <tr><td>Flash clock</td><td><code>results/diag/flash-80mhz/README.md</code> · <code>results/RESULTS.md</code></td></tr>
+    <tr><td>Watchdog</td><td><code>results/diag/nrf52840-watchdog-2026-11-12/README.md</code></td></tr>
+    <tr><td>RP2040</td><td><code>hosts/rp2040/NOTES.md</code>, <code>images.json</code> · rind-hardware <code>README.md</code>, <code>rp2040/README.md</code></td></tr>
+    <tr><td>Repo move</td><td>rind-results commits 0df7c03, 876586c · rind-hardware 8d9c1bb</td></tr>
+    <tr><td>Hosts</td><td><code>README.md</code> host table · <code>hosts/pi5/</code></td></tr>
+    <tr><td>Timeline</td><td><code>git log</code> of both main branches, committer dates in America/Los_Angeles</td></tr>
+  </table>
+  <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind-hardware</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>
