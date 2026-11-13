@@ -94,50 +94,45 @@ pub fn run(a: Args) -> Result<(), String> {
         &[],
     );
     // rind refuses a host where other work keeps more than 10% of the CPUs
-    // busy; --busy-share relaxes that on a host with a resident load you may
-    // not stop, and bench-report still marks the run "noisy" if the load
-    // during it exceeds the relaxed limit.
-    let br = rind.join("admin/bench-report");
-    let original = std::fs::read_to_string(&br).map_err(|e| e.to_string())?;
+    // busy; --busy-share relaxes that in memory. The checkout's bench-report
+    // is not edited. The relaxation is recorded next to the JSON.
+    let relax = crate::upstream_run::Relax {
+        busy_share: a.busy_share.clone(),
+        ..crate::upstream_run::Relax::default()
+    };
     if let Some(share) = &a.busy_share {
-        let re = Regex::new(r"(?m)^BUSY_SHARE = .*$").unwrap();
-        std::fs::write(
-            &br,
-            re.replace(&original, format!("BUSY_SHARE = {share}").as_str())
-                .as_ref(),
-        )
-        .map_err(|e| e.to_string())?;
-        f.push(format!("BUSY_SHARE relaxed to {share} (rind: 0.1)"));
+        f.push(format!(
+            "BUSY_SHARE relaxed to {share} (rind: 0.1); file not edited"
+        ));
     }
     std::fs::write(&facts, f.join("\n") + "\n").map_err(|e| e.to_string())?;
+    let br = rind.join("admin/bench-report");
+    crate::upstream_run::write_relaxations(&out.with_extension("relaxations.json"), &br, &relax)?;
     let jobs = std::thread::available_parallelism()
         .map_or(1, |n| n.get())
         .to_string();
     let target = std::env::var("CARGO_TARGET_DIR").unwrap_or("target/bench-report".into());
-    let st = Command::new("taskset")
-        .args([
-            "-c",
-            &a.cpus,
-            "python3",
-            "admin/bench-report",
-            "run",
-            "--host",
-            &a.host,
-            "--commit",
-            &commit,
-        ])
-        .args(["--jobs", &jobs, "--target-dir", &target, "--out"])
-        .arg(&out)
-        .current_dir(&rind)
-        .env("IN_RIND_DEV_SHELL", "1")
-        .env("RUSTUP_TOOLCHAIN", &tc)
-        .status();
-    if a.busy_share.is_some() {
-        std::fs::write(&br, &original).map_err(|e| e.to_string())?;
-    }
-    match st {
-        Ok(s) if s.success() => Ok(()),
-        Ok(s) => Err(format!("bench-report run: {s}")),
-        Err(e) => Err(format!("taskset: {e}")),
-    }
+    let args = [
+        "run",
+        "--host",
+        &a.host,
+        "--commit",
+        &commit,
+        "--jobs",
+        &jobs,
+        "--target-dir",
+        &target,
+        "--out",
+        &out.display().to_string(),
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect::<Vec<_>>();
+    crate::upstream_run::run_bench_report(
+        &rind,
+        &args,
+        &relax,
+        &[("IN_RIND_DEV_SHELL", "1"), ("RUSTUP_TOOLCHAIN", &tc)],
+        Some(&a.cpus),
+    )
 }

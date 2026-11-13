@@ -73,6 +73,29 @@ fn wait(secs: u64, test: impl Fn() -> bool) -> bool {
     true
 }
 
+/// Flash `images` into `out` for `runs` runs. `port` is the ESP32-S3 serial device.
+pub fn run_with(
+    board: Board,
+    images: &Path,
+    out: &Path,
+    runs: u32,
+    port: Option<&str>,
+) -> Result<(), String> {
+    run(
+        board,
+        Args {
+            images: images.to_path_buf(),
+            benches: vec![],
+            port: port.map(str::to_string),
+            runs,
+            out: Some(out.to_path_buf()),
+            flash_freq: "80mhz".into(),
+            espflash: "espflash".into(),
+            drive: None,
+        },
+    )
+}
+
 pub fn run(board: Board, a: Args) -> Result<(), String> {
     let (ext, out) = match board {
         Board::Esp => (".elf", "results/raw"),

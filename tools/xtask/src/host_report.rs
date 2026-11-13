@@ -26,6 +26,10 @@ pub struct Args {
     dir: PathBuf,
 }
 
+pub fn run_dir(rind: PathBuf, dir: PathBuf) -> Result<(), String> {
+    run(Args { rind, dir })
+}
+
 /// rind's report columns, in order, with their headings.
 const COLUMNS: &[(&str, &str)] = &[
     ("rind", "rind"),
