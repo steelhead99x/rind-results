@@ -134,5 +134,6 @@ pub fn run(a: Args) -> Result<(), String> {
         &relax,
         &[("IN_RIND_DEV_SHELL", "1"), ("RUSTUP_TOOLCHAIN", &tc)],
         Some(&a.cpus),
+        None,
     )
 }

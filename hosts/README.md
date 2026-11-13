@@ -8,6 +8,20 @@ under `results/`. New publishes use
 [`results/<host>/<upstream-sha>/`](../results/README.md). The trees named
 below stay where they are; they are the historical sets.
 
+The on-board commands are `cargo xtask`, not the old shell wrappers:
+
+| Was | Command |
+|---|---|
+| `orin-setup.sh`, `orin-env.sh` | `cargo xtask orin-setup` |
+| `orin-run.sh`, `orin-faketime.sh` | `cargo xtask orin-run <n> [core]` (`FAKETIME_OFFSET` still selects libfaketime) |
+| `orin-runs.sh` | `cargo xtask orin-runs` |
+| `pixel-run.sh` | `cargo xtask pixel-run --serial <id>` |
+| `pixel-run2.sh` | `cargo xtask pixel-run2 --serial <id>` |
+| `mac-run.sh` | `cargo xtask mac-run` (default commit is the comparable pin `d6ca9a756d3d1e71489e61e44c04f33c3c893589`; the published `b6651423` numbers are `--commit b66514238d449fc211d75fd14554301bb690e421`) |
+| `pi-run.sh` | `cargo xtask pi-run` (same commit default as `mac-run`) |
+
+Each one calls rind's `admin/bench-report` and does not edit that file.
+
 ## `admin/bench-report` hosts (rind `b6651423`)
 
 Raw JSON, a trimmed log, and notes are in each folder. The top-level
