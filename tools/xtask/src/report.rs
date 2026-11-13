@@ -6,7 +6,7 @@
 //! time format (through [`crate::tables`]), so the IDs, library names and
 //! sections are the report's. It writes:
 //!
-//! - `<out>/<board>.json` (`esp32s3.json`, `nrf52840.json`): one host in
+//! - `<out>/<board>.json` (`esp32s3.json`, `nrf52840.json`, `efr32mg24.json`): one host in
 //!   `admin/bench-report`'s schema 1, with `results` for every report
 //!   operation. `ns` is the median over runs of each run's median; `ns_low`
 //!   and `ns_high` are the lowest and highest run medians, so they show
@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(clap::Args)]
 pub struct Args {
-    #[arg(long, default_value = "esp32s3", value_parser = ["esp32s3", "nrf52840"])]
+    #[arg(long, default_value = "esp32s3", value_parser = ["esp32s3", "nrf52840", "efr32mg24"])]
     board: String,
     #[arg(long, default_value = "results/raw")]
     raw: PathBuf,
@@ -136,6 +136,38 @@ const NRF52840: Board = Board {
     legend: "rind runs its portable Rust backend here (its 32-bit Arm assembly needs ARM state and NEON, \
              which an M-profile core lacks); ring keeps its Thumb-2 assembly for SHA-2, AES and GHASH. There is no \
              hardware baseline: the chip's CryptoCell CC310 needs Nordic's closed library.",
+};
+
+fn mg24_os(_: Option<&Value>) -> String {
+    "none (bare metal, no_std); output over SEGGER RTT through the board's CMSIS-DAP probe".into()
+}
+
+const EFR32MG24: Board = Board {
+    title: "rind on an EFR32MG24 (Seeed XIAO MG24)",
+    model: "Silicon Labs EFR32MG24B220 (Arm Cortex-M33F), 78 MHz",
+    arch: "arm",
+    os: mg24_os,
+    criterion: "rind-bench-criterion-esp (no_std): DWT_CYCCNT cycles, 0.2 s warm-up, 2 ms samples, \
+                11-51 samples per benchmark",
+    note: "An EFR32MG24 at 78 MHz (HFRCODPLL locked to the 39 MHz crystal) with its instruction cache on, timed \
+           with the DWT cycle counter; RTT output drained between benchmarks, no interrupts, no radio.",
+    libs: &["rind", "ring", "rustcrypto", "libcrux"],
+    intro: "rind-bench's own benches, run unchanged but for the aws-lc-rs rows, on the EFR32MG24 of a Seeed \
+            XIAO MG24 at 78 MHz, timed with the Cortex-M33's DWT cycle counter.",
+    layout: "No relinked build has run on this board yet; read short-input ratios with the README's layout caveat.",
+    repro: &[
+        "git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware",
+        "cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images mg24",
+        "probe-rs run --chip EFR32MG24B220F1536IM48 efr32mg24/images/<bench>.elf   # once per run; back up the \
+         board's flash first (efr32mg24/README.md)",
+        "cargo xtask report --board efr32mg24 --raw results/raw-efr32mg24 --rind ../rind-hardware/rind \
+         --firmware ../rind-hardware/efr32mg24 --gaps results/efr32mg24/gaps.toml --images results/efr32mg24/images.json \
+         --out results/efr32mg24",
+    ],
+    legend: "rind runs its portable Rust backend here (its 32-bit Arm assembly needs ARM state and NEON, \
+             which an M-profile core lacks); ring keeps its Thumb-2 assembly for SHA-2, AES and GHASH. There is no \
+             hardware baseline: the chip's AES and SHA engines sit behind the Secure Engine. getrandom is a seeded \
+             SplitMix64 (the TRNG is behind the Secure Engine too), the same for every library.",
 };
 
 /// The nRF52840's layout note; `--layout` replaces it once a relinked build has run there.
@@ -374,6 +406,7 @@ pub fn run(mut args: Args) -> Result<(), String> {
         .ok_or("report of a board needs --firmware")?;
     let board = match args.board.as_str() {
         "nrf52840" => &NRF52840,
+        "efr32mg24" => &EFR32MG24,
         _ => &ESP32S3,
     };
     let t = Tables::load(&args.rind)?;
@@ -962,6 +995,21 @@ impl Ctx<'_> {
         out
     }
 
+    /// Whether any image records a legacy rind-bench SHA; images built from
+    /// rind-hardware itself carry only `rind_hardware`.
+    fn has_legacy_images(&self) -> bool {
+        self.host["port"]
+            .get("images")
+            .and_then(|v| v.as_object())
+            .is_some_and(|m| {
+                m.values().any(|i| {
+                    i.get("legacy_rind_bench")
+                        .or_else(|| i.get("rind_bench"))
+                        .is_some()
+                })
+            })
+    }
+
     fn images_lines(&self) -> Vec<String> {
         let port = &self.host["port"];
         let Some(imgs) = port
@@ -1300,11 +1348,13 @@ impl Ctx<'_> {
         }
         w("```".into());
         w(String::new());
-        w(
+        if self.has_legacy_images() {
+            w(
             "The published images were built from `steelhead99x/rind-bench` (private, now archived).              The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware);              its first commit (`8d9c1bb`) is a squash of that history. Each image's `rind_hardware` field              is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or              `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier              in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`.              See `tools/legacy-rind-bench-map.json`. Build new images from rind-hardware."
                 .into(),
         );
-        w(String::new());
+            w(String::new());
+        }
         if let Some(notes) = self.meta.get("markdown_notes").filter(|v| truthy(v)) {
             w(py_str(notes));
             w(String::new());

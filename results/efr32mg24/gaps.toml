@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the efr32mg24 host (Cortex-M33F, 78 MHz): each
+# report operation where another Rust library beats rind by more than 10%, in
+# rind's benchmarks/gaps.toml format. `cargo xtask report` refuses a gap without an
+# entry and an entry that covers no gap. rind has no M-profile quest, so each
+# carries a reason.
+# Cycle counts are medians of 5 runs' medians (results/raw-efr32mg24).
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/*"]
+on = ["efr32mg24"]
+reason = "Assembly against portable Rust: ring links OpenSSL's Thumb-2 ChaCha20 (ChaCha20_ctr32_nohw, from chacha-armv4) here, while rind runs its portable backend because its 32-bit Arm assembly is ARM-state NEON that an M-profile core lacks. 16KB: rind 760 kc against ring's 489 kc; rind is level with RustCrypto (768 kc) and libcrux (799 kc). At 32B rind also pays about 3 kc more per call than RustCrypto (8.5 kc against 5.4 kc). Same gap as on the nRF52840; an M-profile ChaCha20 would close it."
+
+[[gap]]
+operations = ["xchacha20poly1305/{lib}/32B", "xchacha20poly1305/{lib}/1350B"]
+on = ["efr32mg24"]
+reason = "Portable against portable: ring has no XChaCha, and RustCrypto's soft ChaCha20 is faster here: 1350B 64.0 kc against rind's 72.2 kc, 32B 6.7 kc against 10.6 kc, where rind's per-call cost (HChaCha20 setup plus the fixed cost seen in chacha20poly1305/32B) dominates. rind beats libcrux at 1350B (75.0 kc) and is within 9% at 16KB (762 kc against RustCrypto's 701 kc). Not profiled."
+
+[[gap]]
+operations = ["aes256-gcm/{lib}/1350B", "aes256-gcm/{lib}/16KB", "aes256-gcm-open/{lib}/1350B", "aes256-gcm-open/{lib}/16KB"]
+on = ["efr32mg24"]
+reason = "Portable against portable: RustCrypto's soft AES-256-GCM runs 16KB in 3.86 M cycles against rind's 4.51 M (1.17x); rind beats ring (4.94 M) and libcrux (15.9 M). AES-128-GCM is within 10% of RustCrypto (16KB 3.65 M against 3.35 M), so the extra four rounds cost rind more than RustCrypto. Not profiled on this board."
+
+[[gap]]
+operations = ["sha256/{lib}/*", "hmac-sha256/{lib}/*", "hkdf-sha256/extract-expand/{lib}"]
+on = ["efr32mg24"]
+reason = "Assembly against portable Rust: ring links OpenSSL's sha256-armv4 (sha256_block_data_order_nohw, Thumb-2), 0.64x rind's cycles at 16KB (529 kc against 831 kc). rind's portable SHA-256 is libcrux-sha2's code and matches libcrux within 1% at 16KB (828 kc); RustCrypto's soft SHA-256 is 0.89x. HMAC and HKDF inherit it. Same gap as on the nRF52840; an M-profile SHA-256 block function would close it."
+
+[[gap]]
+operations = ["hkdf-sha256/expand/{lib}"]
+on = ["efr32mg24"]
+reason = "Fixed per-call cost on a short output: rind's expand takes 10.8 kc against RustCrypto's 7.6 kc and ring's 7.7 kc (libcrux 16.9 kc), the same pattern as on the nRF52840. Not investigated further."
+
+[[gap]]
+operations = ["sha512/{lib}/*"]
+on = ["efr32mg24"]
+reason = "Assembly against portable Rust: ring links OpenSSL's sha512-armv4 (sha512_block_data_order_nohw, Thumb-2), 0.56x rind's cycles at 16KB (1.24 M against 2.20 M). rind's portable SHA-512 (libcrux-sha2's code) matches libcrux within 0.1% at 16KB and is 0.96x RustCrypto's."
+
+[[gap]]
+operations = ["sha3-512/{lib}/64B"]
+on = ["efr32mg24"]
+reason = "Per-call overhead, not the permutation: rind takes 17.5 kc on every one-block SHA-3 call against libcrux's 15.7-16.3 kc, while at 16KB it is within 3% of libcrux (SHA3-512 3.68 M against 3.58 M). rind is 2.3x faster than RustCrypto on every SHA-3 row. Same pattern as on the nRF52840. Decision: accepted, small."
