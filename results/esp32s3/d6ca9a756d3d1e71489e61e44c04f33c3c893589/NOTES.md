@@ -16,8 +16,8 @@ A full 12-image, 3-run ESP32-S3 set on the comparable pin:
 ## Board and harness
 
 - Seeed XIAO ESP32-S3, rev v0.2, Xtensa LX7, 240 MHz, 8 MB flash
-- MAC `98:3d:ae:61:37:68`
-- Flashed only to `/dev/ttyACM1` (`usb-Espressif_USB_JTAG_serial_debug_unit_98:3D:AE:61:37:68-if00`)
+- MAC `<mac>`
+- Flashed only to `/dev/ttyACM1` (`usb-Espressif_USB_JTAG_serial_debug_unit_<usb-serial>-if00`)
 - The T1000-E on `/dev/ttyACM0` was never opened or flashed
 - No erase, no NVS erase, no efuse
 - `--flash-freq 80mhz`; all 36 boots printed `Boot SPI Speed : 80MHz`
