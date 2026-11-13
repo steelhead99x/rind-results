@@ -19,6 +19,8 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows, on the nRF52
   | x25519 | `a206f54be8941dd6…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
   | xchacha20poly1305 | `31a38e4c1b2dcd53…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
 
+  rind-bench commits recorded before 2026-11-13 are from the pre-public rind-bench history, published squashed as [rind-hardware](https://github.com/steelhead99x/rind-hardware); they are not in rind-hardware.
+
 - OS: none (bare metal, no_std); the board's UF2 bootloader and S140 SoftDevice stay in flash, unused
 - Runs: 33 of 33 completed, one firmware image per rind-bench bench file
   - aes_gcm run 1: ok, 167 results, 2026-11-12T10:14:30+00:00 to 2026-11-12T10:16:34+00:00 (UTC)
@@ -243,10 +245,10 @@ Each run is a fresh boot of the same image. With 3 runs the lowest and highest r
 ## Reproduce
 
 ```sh
-git clone --recursive https://github.com/steelhead99x/rind-bench && cd rind-bench
+git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware
 scripts/apply-patches.sh && scripts/vendor-ring.sh && (cd nrf52840 && ./build-images.sh)
-cd ../rind-results && tools/run-all-nrf.sh ../rind-bench/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
-python3 tools/report.py --board nrf52840 --raw results/raw-nrf52840 --firmware ../rind-bench/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
+cd ../rind-results && tools/run-all-nrf.sh ../rind-hardware/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
+python3 tools/report.py --board nrf52840 --raw results/raw-nrf52840 --firmware ../rind-hardware/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
 python3 tools/verify.py
 ```
 

@@ -20,6 +20,8 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core o
   | x25519 | `0d5dd95d542a3c7a…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
   | xchacha20poly1305 | `11af9bb8ea4824df…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
 
+  rind-bench commits recorded before 2026-11-13 are from the pre-public rind-bench history, published squashed as [rind-hardware](https://github.com/steelhead99x/rind-hardware); they are not in rind-hardware.
+
 - OS: ESP-IDF v5.5.1 (FreeRTOS), bare board
 - SPI flash clock, as the bootloader reported it each boot: 80 MHz
 - Toolchain: rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0); xtensa-esp-elf GCC 14.2.0 (esp-14.2.0_20241119)
@@ -287,13 +289,13 @@ Each run is a fresh boot of the same image. With 3 runs the lowest and highest r
 ## Reproduce
 
 ```sh
-git clone --recursive https://github.com/steelhead99x/rind-bench   # private; the port
+git clone --recursive https://github.com/steelhead99x/rind-hardware   # the firmware
 git clone https://github.com/steelhead99x/rind-results
-rind-results/tools/setup-toolchain.sh rind-bench   # espup, espflash, ldproxy, at these versions
-cd rind-bench && scripts/apply-patches.sh && scripts/vendor-ring.sh
+rind-results/tools/setup-toolchain.sh rind-hardware   # espup, espflash, ldproxy, at these versions
+cd rind-hardware && scripts/apply-patches.sh && scripts/vendor-ring.sh
 (cd esp32 && ./build-images.sh)   # images/<bench>.elf; check sha256 against images.sha256
-cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... tools/run-all.sh ../rind-bench/esp32/images
-python3 tools/report.py --raw results/raw --rind ../rind-bench/rind --firmware ../rind-bench/esp32 --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results
+cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... tools/run-all.sh ../rind-hardware/esp32/images
+python3 tools/report.py --raw results/raw --rind ../rind-hardware/rind --firmware ../rind-hardware/esp32 --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results
 python3 tools/verify.py   # recomputes every published number from raw
 ```
 

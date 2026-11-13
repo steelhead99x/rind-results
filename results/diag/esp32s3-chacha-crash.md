@@ -32,11 +32,11 @@ runs each (56 and 21 results a run) with no fault: [raw/chacha20poly1305](../raw
 
 ## Fix
 
-- rind-bench (private) carries `patches/ring-0.17.14-xtensa-poly1305-align.patch`.
+- rind-hardware carries `patches/ring-0.17.14-xtensa-poly1305-align.patch`.
   It keeps the state at 16 bytes on Xtensa, and nothing in ring's C code needs 64.
 - The patched images contain no realigning function. In QEMU they finish all 56
   ChaCha20-Poly1305 results.
-- The write-up and a 20-line repro are in rind-bench at `repro/xtensa-overalign/`.
+- The write-up and a 20-line repro are in rind-hardware at `repro/xtensa-overalign/`.
   The repro fails at every opt-level and with fat LTO, on the esp toolchain
   1.97.0.0.
 - This is a ring-side workaround for a compiler bug. ring's ChaCha20-Poly1305 numbers

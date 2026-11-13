@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
-//! `cargo xtask run-all` and `run-all-nrf`: flash each rind-bench image in
+//! `cargo xtask run-all` and `run-all-nrf`: flash each rind-hardware image in
 //! turn and capture `--runs` runs of it.
 //!
 //! ESP32-S3: espflash writes the SPI flash clock into the image header at

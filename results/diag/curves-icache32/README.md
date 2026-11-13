@@ -12,7 +12,7 @@ configuration): `x25519.elf` `45d878d2…`, `p256.elf` `4040aa42…`, from rind 
   (`p256-ecdh/ring` 332 M to 16 M). Their field arithmetic is big straight-line code that does not
   fit 16 KB and streams from flash on every call.
 - **Not the cache, for libcrux's P-256**: 0.96x (754 M to 723 M). It builds at opt-level `s`
-  (its field inversion overflows `l32r` at 3, see rind-bench's README), and stays ~50x rind.
+  (its field inversion overflows `l32r` at 3, see rind-hardware's README), and stays ~50x rind.
 - rind and dalek gain 6-21%: they fit already.
 
 So the published ESP32-S3 curve rows for ring and libcrux measure the cache, and the gap.toml

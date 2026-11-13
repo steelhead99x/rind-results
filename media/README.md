@@ -22,12 +22,12 @@ Rendered from the Markdown with `cargo xtask md2png` (headless Chrome):
 
 - [ESP32-S3 headline table](screenshots/esp32s3-headline.png)
 - [msi-001 summary (rind's `bench-report summary`)](screenshots/msi-001-summary.png)
-- [this repo's README](screenshots/rind-results-readme.png), [rind-bench's README](screenshots/rind-bench-readme.png)
+- [this repo's README](screenshots/rind-results-readme.png), [rind-hardware's README, captured as rind-bench](screenshots/rind-bench-readme.png)
 
 ## OLED pages
 
 The demo's SSD1306 128x64 pages (I2C0, SDA GPIO5, SCL GPIO6, address 0x3C), rendered on the host by
-rind-bench's `demo/oled-ui` (`cargo xtask oled-media ../rind-results/results/demo.tsv ../rind-results/media/oled` in rind-bench) from
+rind-hardware's `demo/oled-ui` (`cargo xtask oled-media ../rind-results/results/demo.tsv ../rind-results/media/oled` in rind-hardware) from
 `results/demo.tsv`: each page at the panel's native resolution (`@1x`) and 4x (`@4x`). They are
 the same drawing code the firmware runs, onto an in-memory frame instead of the panel.
 

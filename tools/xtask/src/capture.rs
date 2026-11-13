@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
-//! `cargo xtask capture` and `capture-nrf`: run the flashed rind-bench
+//! `cargo xtask capture` and `capture-nrf`: run the flashed rind-hardware
 //! firmware and record what it prints.
 //!
 //! Each run writes the console log and the `RB:` JSON lines to
 //! `<out>/run-<n>.log` and `<out>/run-<n>.jsonl`, and every run's outcome to
 //! `<out>/runs.json`. A run that reboots, panics or times out is recorded as
-//! failed, never retried silently. Flash the image first; see rind-bench's
+//! failed, never retried silently. Flash the image first; see rind-hardware's
 //! README.
 //!
 //! - ESP32-S3: each run resets the board through the USB Serial/JTAG port's
