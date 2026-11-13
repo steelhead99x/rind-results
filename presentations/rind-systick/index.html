@@ -467,6 +467,31 @@ ns = (x1 - x0) * 1e9 / x2</pre></div>
   <div class="foot"><span class="src">rind-bench team measurement plan, 2026-11-12 · results/RESULTS.md (ESP32-S3 harness checks) · results/nrf52840/RESULTS.md · tools/xtask/src/report.rs (2 ms samples, 11-51 per benchmark)</span><span class="num"></span></div>
 </section>
 
+<!-- 11b. TODAY'S HARNESS FIXES (added 2026-11-12 evening) -->
+<section class="slide" data-section="Harness fixes">
+  <div class="kicker">What the boards taught us on 12 November</div>
+  <h2>Three timing problems found today were in the harness, not the crypto: the flash clock, a leftover watchdog, and code layout</h2>
+  <div class="cols3" style="margin-top:16px">
+    <div class="card pit"><h3>Flash clock (ESP32-S3)</h3><ul class="b sm">
+      <li>espflash wrote 40 MHz into the image header, not the 80 MHz in <code>sdkconfig</code>.</li>
+      <li>At 80 MHz, rows that stream code from flash ran in 0.520&times; the cycles; cache-missing rows had been up to 1.92&times; slow.</li>
+      <li>Fixed: flash at 80 MHz, print the clock from the logs, reject a set with mixed clocks, rerun.</li>
+    </ul></div>
+    <div class="card pit"><h3>Leftover watchdog (nRF52840)</h3><ul class="b sm">
+      <li>Meshtastic's watchdog (<code>CRV</code> 2,949,120 = 90 s) survives a software reset and the bootloader.</li>
+      <li>The first image after Meshtastic reset 89 s into its run.</li>
+      <li>Fixed: the firmware records the watchdog at boot and feeds it between timed regions. No published number changes.</li>
+    </ul></div>
+    <div class="card pit"><h3>Code layout (ESP32-S3)</h3><ul class="b sm">
+      <li>The same code at three cache alignments: SHA-256 64B is 2.36&times;, 2.80&times; or 3.07&times; libcrux.</li>
+      <li>A 32 KB instruction cache takes XChaCha20-Poly1305 32B from 7.50&times; to 1.10&times; RustCrypto.</li>
+      <li>The 3-run interval covers run-to-run noise only, not layout. No verdict flips.</li>
+    </ul></div>
+  </div>
+  <p class="small" style="margin-top:14px">Lesson for every chip: record the clocks and the watchdog state in each run log, and treat short-input ratios on a cached-flash chip as layout-dependent.</p>
+  <div class="foot"><span class="src">rind-results main 95300f2: results/diag/flash-80mhz/README.md · results/diag/nrf52840-watchdog-2026-11-12/README.md · results/diag/esp32s3-relink-fixed-98568332/README.md · results/diag/esp32s3-icache32-80mhz-98568332/ratios.md · results/RESULTS.md</span><span class="num"></span></div>
+</section>
+
 <!-- 12. OPEN -->
 <section class="slide" data-section="Open">
   <div class="kicker">Not yet known</div>
