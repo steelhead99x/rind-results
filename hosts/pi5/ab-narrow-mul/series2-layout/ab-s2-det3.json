@@ -1,0 +1,1249 @@
+{
+ "host": "pi5",
+ "toolchain": "rustc 1.98.1, RUSTFLAGS=--cfg rind_cpu_disable, cargo bench profile",
+ "order": "spec order rotated each round; bench lock held per round",
+ "cpu": "Raspberry Pi 5 Model B Rev 1.0 (BCM2712, 4x Cortex-A76, cpufreq capped at 1.5 GHz by pw-thermal.service, no fan), Debian 13, Linux 6.18.60+rpt-rpi-2712",
+ "pinning": "taskset -c 3",
+ "thermal": "temperature, get_throttled and scaling_cur_freq logged before each variant and after each round; throttled bits 0-3 were set only at the first variant of round 1 (just after a build); medians with and without round 1 agree",
+ "rounds": 5,
+ "commits": {
+  "nist": "529a9d64 perf/pi5-narrow-nist (table +32 mod 64)",
+  "det2": "4a496bad perf/pi5-cpu-detect before the fix (table +32 in this build)",
+  "det3": "3d7dd094 perf/pi5-cpu-detect with the 64-byte table alignment (table +0)"
+ },
+ "modes": {
+  "all": "default detection"
+ },
+ "schema": "rind-results/ab-v1",
+ "criterion_args": [
+  "--warm-up-time",
+  "1",
+  "--measurement-time",
+  "3"
+ ],
+ "log": [
+  "r1 det2 15:59:44 load: 2.92 1.45 1.18 1/207 687669 temp=84.0'C throttled=0xe0008 cur=1500000",
+  "r1 det3 16:00:30 load: 1.95 1.41 1.18 1/209 687863 temp=80.7'C throttled=0xe0000 cur=1500000",
+  "r1 nist 16:01:16 load: 1.44 1.35 1.17 1/209 688053 temp=79.0'C throttled=0xe0000 cur=1500000",
+  "r1 done 16:02:03 load: 1.21 1.30 1.16 1/209 688246 temp=78.5'C throttled=0xe0000 cur=1500000",
+  "r2 det3 16:02:23 load: 0.86 1.21 1.14 1/206 688341 temp=76.3'C throttled=0xe0000 cur=1500000",
+  "r2 nist 16:03:09 load: 1.01 1.20 1.13 1/206 688531 temp=77.4'C throttled=0xe0000 cur=1500000",
+  "r2 det2 16:03:55 load: 1.00 1.16 1.12 1/206 688723 temp=78.5'C throttled=0xe0000 cur=1500000",
+  "r2 done 16:04:42 load: 1.00 1.14 1.12 1/203 688916 temp=77.4'C throttled=0xe0000 cur=1500000",
+  "r3 nist 16:05:02 load: 0.72 1.06 1.09 1/206 689002 temp=75.7'C throttled=0xe0000 cur=1500000",
+  "r3 det2 16:05:48 load: 0.92 1.07 1.09 1/202 689207 temp=76.8'C throttled=0xe0000 cur=1500000",
+  "r3 det3 16:06:34 load: 0.96 1.06 1.09 1/204 689401 temp=77.9'C throttled=0xe0000 cur=1500000",
+  "r3 done 16:07:21 load: 0.98 1.05 1.08 1/205 689605 temp=76.8'C throttled=0xe0000 cur=1500000",
+  "r4 det2 16:07:41 load: 0.77 0.99 1.06 1/206 689689 temp=75.7'C throttled=0xe0000 cur=1500000",
+  "r4 det3 16:08:27 load: 0.89 1.00 1.06 1/206 689881 temp=76.8'C throttled=0xe0000 cur=1500000",
+  "r4 nist 16:09:13 load: 1.01 1.01 1.06 1/206 690104 temp=77.9'C throttled=0xe0000 cur=1500000",
+  "r4 done 16:10:00 load: 1.07 1.03 1.06 1/205 690297 temp=76.3'C throttled=0xe0000 cur=1500000",
+  "r5 det3 16:10:20 load: 0.77 0.96 1.04 1/204 690390 temp=75.7'C throttled=0xe0000 cur=1500000",
+  "r5 nist 16:11:06 load: 0.97 0.99 1.04 1/204 690586 temp=76.3'C throttled=0xe0000 cur=1500000",
+  "r5 det2 16:11:52 load: 0.99 0.99 1.03 1/203 690778 temp=76.3'C throttled=0xe0000 cur=1500000",
+  "r5 done 16:12:39 load: 1.04 1.00 1.04 1/201 690969 temp=75.2'C throttled=0xe0000 cur=1500000",
+  "end Thu 12 Nov 16:12:59 PST 2026"
+ ],
+ "results": [
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det2",
+   "round": 1,
+   "ns": 213569.44350524605,
+   "ns_low": 213554.65660448244,
+   "ns_high": 213588.29952464212
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det2",
+   "round": 2,
+   "ns": 213972.11882173293,
+   "ns_low": 213704.29985224365,
+   "ns_high": 214564.80764202855
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det2",
+   "round": 3,
+   "ns": 213679.75756169646,
+   "ns_low": 213646.70262742578,
+   "ns_high": 213722.47244999305
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det2",
+   "round": 4,
+   "ns": 213680.00925373135,
+   "ns_low": 213645.90468765912,
+   "ns_high": 213733.04987677254
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det2",
+   "round": 5,
+   "ns": 213677.90606768138,
+   "ns_low": 213638.69393575494,
+   "ns_high": 213739.38758517485
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det3",
+   "round": 1,
+   "ns": 213600.59799517266,
+   "ns_low": 213555.68935675215,
+   "ns_high": 213660.64316817862
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det3",
+   "round": 2,
+   "ns": 213566.248825181,
+   "ns_low": 213544.21068647792,
+   "ns_high": 213596.85858826357
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det3",
+   "round": 3,
+   "ns": 213595.79148317818,
+   "ns_low": 213564.7220115959,
+   "ns_high": 213639.5375124254
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det3",
+   "round": 4,
+   "ns": 213600.8091630954,
+   "ns_low": 213566.976048502,
+   "ns_high": 213648.5281735248
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "det3",
+   "round": 5,
+   "ns": 213563.44402935816,
+   "ns_low": 213543.7945749546,
+   "ns_high": 213588.29014134384
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "nist",
+   "round": 1,
+   "ns": 213749.33556770603,
+   "ns_low": 213702.38756966742,
+   "ns_high": 213806.00697942407
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "nist",
+   "round": 2,
+   "ns": 213754.56379193143,
+   "ns_low": 213594.3137371522,
+   "ns_high": 214098.12121279922
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "nist",
+   "round": 3,
+   "ns": 213655.96518201072,
+   "ns_low": 213619.83280867388,
+   "ns_high": 213708.94829121194
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "nist",
+   "round": 4,
+   "ns": 213651.3277257278,
+   "ns_low": 213618.2663219973,
+   "ns_high": 213696.38086480895
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdh/aws-lc-rs",
+   "mode": "nist",
+   "round": 5,
+   "ns": 213829.99303975175,
+   "ns_low": 213789.1797785403,
+   "ns_high": 213883.2685782118
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det2",
+   "round": 1,
+   "ns": 199904.19456775527,
+   "ns_low": 199865.1555884137,
+   "ns_high": 199968.02451014705
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det2",
+   "round": 2,
+   "ns": 199929.809405448,
+   "ns_low": 199913.4900301224,
+   "ns_high": 199949.41742908844
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det2",
+   "round": 3,
+   "ns": 199887.5882724989,
+   "ns_low": 199860.32081553544,
+   "ns_high": 199922.76714197372
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det2",
+   "round": 4,
+   "ns": 199885.09798532093,
+   "ns_low": 199855.9211982554,
+   "ns_high": 199922.81489670667
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det2",
+   "round": 5,
+   "ns": 199903.36890202452,
+   "ns_low": 199866.99964492416,
+   "ns_high": 199967.4461122722
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det3",
+   "round": 1,
+   "ns": 199957.88925373135,
+   "ns_low": 199944.10039410475,
+   "ns_high": 199974.13559846382
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det3",
+   "round": 2,
+   "ns": 199874.5497029703,
+   "ns_low": 199854.58294925684,
+   "ns_high": 199901.71986567133
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det3",
+   "round": 3,
+   "ns": 199911.07688980838,
+   "ns_low": 199888.06144005837,
+   "ns_high": 199941.05114744694
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det3",
+   "round": 4,
+   "ns": 199934.78879464066,
+   "ns_low": 199908.88091950348,
+   "ns_high": 199966.73227287232
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "det3",
+   "round": 5,
+   "ns": 199890.44956898675,
+   "ns_low": 199879.20777740958,
+   "ns_high": 199903.74503774123
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "nist",
+   "round": 1,
+   "ns": 200015.3655721393,
+   "ns_low": 200004.087681602,
+   "ns_high": 200027.71045809842
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "nist",
+   "round": 2,
+   "ns": 200025.69878626667,
+   "ns_low": 200005.96170929488,
+   "ns_high": 200050.7252527432
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "nist",
+   "round": 3,
+   "ns": 200022.00667553322,
+   "ns_low": 199996.6296429096,
+   "ns_high": 200057.4582513472
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "nist",
+   "round": 4,
+   "ns": 200031.78776907542,
+   "ns_low": 200002.1135252401,
+   "ns_high": 200071.67993238513
+  },
+  {
+   "operation": "p256-ecdh/{lib}",
+   "library": "rind",
+   "id": "p256-ecdh/rind",
+   "mode": "nist",
+   "round": 5,
+   "ns": 199975.19711935372,
+   "ns_low": 199963.66211763513,
+   "ns_high": 199988.3685894384
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det2",
+   "round": 1,
+   "ns": 75939.89320008867,
+   "ns_low": 75922.84834563016,
+   "ns_high": 75966.1075768471
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det2",
+   "round": 2,
+   "ns": 75999.9913240727,
+   "ns_low": 75979.94035861544,
+   "ns_high": 76026.30510526815
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det2",
+   "round": 3,
+   "ns": 75999.98897184868,
+   "ns_low": 75988.9884094982,
+   "ns_high": 76014.05568381035
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det2",
+   "round": 4,
+   "ns": 76033.15082754544,
+   "ns_low": 76019.29551497832,
+   "ns_high": 76052.70005160749
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det2",
+   "round": 5,
+   "ns": 75951.41454632777,
+   "ns_low": 75935.77236646008,
+   "ns_high": 75974.54915310176
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det3",
+   "round": 1,
+   "ns": 75927.51210285208,
+   "ns_low": 75910.7874178948,
+   "ns_high": 75949.10105369745
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det3",
+   "round": 2,
+   "ns": 75932.80421198464,
+   "ns_low": 75925.35695816581,
+   "ns_high": 75941.60884531523
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det3",
+   "round": 3,
+   "ns": 75914.3650435939,
+   "ns_low": 75905.96366198223,
+   "ns_high": 75924.10066034271
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det3",
+   "round": 4,
+   "ns": 76002.61231897444,
+   "ns_low": 75989.10807447787,
+   "ns_high": 76019.99268993159
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "det3",
+   "round": 5,
+   "ns": 75907.52763373725,
+   "ns_low": 75891.25704109228,
+   "ns_high": 75931.58258089026
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "nist",
+   "round": 1,
+   "ns": 75995.77639352741,
+   "ns_low": 75978.4681748559,
+   "ns_high": 76018.36150074493
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "nist",
+   "round": 2,
+   "ns": 75924.5531439338,
+   "ns_low": 75914.79813585109,
+   "ns_high": 75934.87523808327
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "nist",
+   "round": 3,
+   "ns": 76021.65898256244,
+   "ns_low": 75935.03567879974,
+   "ns_high": 76189.98171673708
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "nist",
+   "round": 4,
+   "ns": 76004.61864526378,
+   "ns_low": 75985.91944121885,
+   "ns_high": 76035.40793033187
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-sign/aws-lc-rs",
+   "mode": "nist",
+   "round": 5,
+   "ns": 76148.4812213684,
+   "ns_low": 76129.48381488616,
+   "ns_high": 76174.10593217595
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det2",
+   "round": 1,
+   "ns": 45283.38980768013,
+   "ns_low": 45231.84107510712,
+   "ns_high": 45386.88829606052
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det2",
+   "round": 2,
+   "ns": 45273.963411091645,
+   "ns_low": 45271.05782601023,
+   "ns_high": 45277.23314904216
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det2",
+   "round": 3,
+   "ns": 45238.71454664443,
+   "ns_low": 45232.739589153636,
+   "ns_high": 45246.76320346717
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det2",
+   "round": 4,
+   "ns": 45253.74054466001,
+   "ns_low": 45247.09563736357,
+   "ns_high": 45262.4141949985
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det2",
+   "round": 5,
+   "ns": 45237.32145390445,
+   "ns_low": 45230.76919893965,
+   "ns_high": 45247.52944394495
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det3",
+   "round": 1,
+   "ns": 45252.053706643586,
+   "ns_low": 45245.615814264216,
+   "ns_high": 45261.15374042686
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det3",
+   "round": 2,
+   "ns": 45245.54144567122,
+   "ns_low": 45241.71962912893,
+   "ns_high": 45250.053400903475
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det3",
+   "round": 3,
+   "ns": 45275.815653697566,
+   "ns_low": 45231.83431872799,
+   "ns_high": 45370.267899356004
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det3",
+   "round": 4,
+   "ns": 45246.89808503452,
+   "ns_low": 45241.04893220001,
+   "ns_high": 45254.1212839226
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "det3",
+   "round": 5,
+   "ns": 45245.3118138445,
+   "ns_low": 45239.991469533,
+   "ns_high": 45251.76359614131
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "nist",
+   "round": 1,
+   "ns": 45226.71162616902,
+   "ns_low": 45220.19886173359,
+   "ns_high": 45235.0116472323
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "nist",
+   "round": 2,
+   "ns": 45234.89863919441,
+   "ns_low": 45230.91060742526,
+   "ns_high": 45239.658129120566
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "nist",
+   "round": 3,
+   "ns": 45225.96615655809,
+   "ns_low": 45220.29794305498,
+   "ns_high": 45232.682404931234
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "nist",
+   "round": 4,
+   "ns": 45226.026541831154,
+   "ns_low": 45221.1879248503,
+   "ns_high": 45232.084548414125
+  },
+  {
+   "operation": "p256-ecdsa-sign/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-sign/rind",
+   "mode": "nist",
+   "round": 5,
+   "ns": 45257.846754628554,
+   "ns_low": 45251.06315024183,
+   "ns_high": 45266.93783695302
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det2",
+   "round": 1,
+   "ns": 256609.31962070835,
+   "ns_low": 256578.13781072988,
+   "ns_high": 256646.1983758102
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det2",
+   "round": 2,
+   "ns": 256705.40772277227,
+   "ns_low": 256670.4931266473,
+   "ns_high": 256743.80576007653
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det2",
+   "round": 3,
+   "ns": 256553.6531875277,
+   "ns_low": 256522.79696101169,
+   "ns_high": 256584.21364647205
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det2",
+   "round": 4,
+   "ns": 256937.1848569036,
+   "ns_low": 256635.45095839736,
+   "ns_high": 257595.67776046635
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det2",
+   "round": 5,
+   "ns": 256640.8589507906,
+   "ns_low": 256601.80444798025,
+   "ns_high": 256679.7046856008
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det3",
+   "round": 1,
+   "ns": 256511.47057780405,
+   "ns_low": 256477.84953996935,
+   "ns_high": 256545.15899705156
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det3",
+   "round": 2,
+   "ns": 256582.36801438354,
+   "ns_low": 256550.59986286718,
+   "ns_high": 256614.6462039446
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det3",
+   "round": 3,
+   "ns": 256628.84312989507,
+   "ns_low": 256605.34339598927,
+   "ns_high": 256652.7770541008
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det3",
+   "round": 4,
+   "ns": 256684.59848578888,
+   "ns_low": 256649.29169802932,
+   "ns_high": 256719.14249972114
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "det3",
+   "round": 5,
+   "ns": 256631.5436865179,
+   "ns_low": 256599.5104350484,
+   "ns_high": 256664.199500084
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "nist",
+   "round": 1,
+   "ns": 256659.84137136102,
+   "ns_low": 256633.87114896826,
+   "ns_high": 256688.5280811789
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "nist",
+   "round": 2,
+   "ns": 256600.3253957933,
+   "ns_low": 256569.13693211816,
+   "ns_high": 256633.32819439366
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "nist",
+   "round": 3,
+   "ns": 256680.39071375795,
+   "ns_low": 256659.0271230392,
+   "ns_high": 256703.2954016321
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "nist",
+   "round": 4,
+   "ns": 256713.4831249692,
+   "ns_low": 256691.39468438044,
+   "ns_high": 256738.30374089125
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-ecdsa-verify/aws-lc-rs",
+   "mode": "nist",
+   "round": 5,
+   "ns": 256824.92470223142,
+   "ns_low": 256799.9119615714,
+   "ns_high": 256851.64692831473
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det2",
+   "round": 1,
+   "ns": 192557.46178956702,
+   "ns_low": 192532.47926437185,
+   "ns_high": 192587.76657862854
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det2",
+   "round": 2,
+   "ns": 192827.63147554308,
+   "ns_low": 192805.26115238696,
+   "ns_high": 192850.66097452727
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det2",
+   "round": 3,
+   "ns": 192839.9899298064,
+   "ns_low": 192814.66854875843,
+   "ns_high": 192869.19706353234
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det2",
+   "round": 4,
+   "ns": 192792.60422565392,
+   "ns_low": 192773.551418863,
+   "ns_high": 192814.48191525374
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det2",
+   "round": 5,
+   "ns": 192816.98849859613,
+   "ns_low": 192795.43404320863,
+   "ns_high": 192839.52570547425
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det3",
+   "round": 1,
+   "ns": 192790.1008297621,
+   "ns_low": 192769.20003953902,
+   "ns_high": 192812.1831348965
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det3",
+   "round": 2,
+   "ns": 192819.3430042855,
+   "ns_low": 192790.86352743837,
+   "ns_high": 192852.51666017526
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det3",
+   "round": 3,
+   "ns": 192782.56729569973,
+   "ns_low": 192760.80244890277,
+   "ns_high": 192805.5938545281
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det3",
+   "round": 4,
+   "ns": 192797.1778203044,
+   "ns_low": 192778.80851573576,
+   "ns_high": 192817.17561464172
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "det3",
+   "round": 5,
+   "ns": 192815.49388576916,
+   "ns_low": 192793.80938976354,
+   "ns_high": 192837.60295254414
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "nist",
+   "round": 1,
+   "ns": 192539.87082976208,
+   "ns_low": 192519.14638266002,
+   "ns_high": 192562.0380935682
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "nist",
+   "round": 2,
+   "ns": 192653.05279296587,
+   "ns_low": 192607.063098062,
+   "ns_high": 192703.691676993
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "nist",
+   "round": 3,
+   "ns": 192563.7412989508,
+   "ns_low": 192546.00810491084,
+   "ns_high": 192583.22504241532
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "nist",
+   "round": 4,
+   "ns": 192676.82247524752,
+   "ns_low": 192519.4425555237,
+   "ns_high": 193011.8192849673
+  },
+  {
+   "operation": "p256-ecdsa-verify/{lib}",
+   "library": "rind",
+   "id": "p256-ecdsa-verify/rind",
+   "mode": "nist",
+   "round": 5,
+   "ns": 192541.16832939265,
+   "ns_low": 192518.7644595625,
+   "ns_high": 192570.1084928894
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det2",
+   "round": 1,
+   "ns": 43272.925991049,
+   "ns_low": 43172.690542821794,
+   "ns_high": 43494.83040714041
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det2",
+   "round": 2,
+   "ns": 43224.704127594,
+   "ns_low": 43217.104170897575,
+   "ns_high": 43234.17832168384
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det2",
+   "round": 3,
+   "ns": 43209.045163292445,
+   "ns_low": 43199.80444275861,
+   "ns_high": 43221.40769142973
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det2",
+   "round": 4,
+   "ns": 43185.73219975089,
+   "ns_low": 43181.56785009302,
+   "ns_high": 43190.396765116195
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det2",
+   "round": 5,
+   "ns": 43209.98307458464,
+   "ns_low": 43205.435027857704,
+   "ns_high": 43215.37156336137
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det3",
+   "round": 1,
+   "ns": 43155.487512085965,
+   "ns_low": 43149.09618723935,
+   "ns_high": 43163.922399790106
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det3",
+   "round": 2,
+   "ns": 43160.114267347846,
+   "ns_low": 43150.0813764775,
+   "ns_high": 43171.707661748376
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det3",
+   "round": 3,
+   "ns": 43145.205729485526,
+   "ns_low": 43136.622249180386,
+   "ns_high": 43158.54307768389
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det3",
+   "round": 4,
+   "ns": 43135.71997107813,
+   "ns_low": 43131.925716386024,
+   "ns_high": 43139.99732401069
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "det3",
+   "round": 5,
+   "ns": 43201.836116658575,
+   "ns_low": 43153.630742835514,
+   "ns_high": 43307.13894164712
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "nist",
+   "round": 1,
+   "ns": 43125.60562266461,
+   "ns_low": 43119.788007535724,
+   "ns_high": 43133.38716388125
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "nist",
+   "round": 2,
+   "ns": 43135.585806117924,
+   "ns_low": 43129.035413555706,
+   "ns_high": 43145.27540435714
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "nist",
+   "round": 3,
+   "ns": 43132.969040933946,
+   "ns_low": 43123.839516974025,
+   "ns_high": 43145.907863286266
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "nist",
+   "round": 4,
+   "ns": 43123.20723110051,
+   "ns_low": 43113.626641106,
+   "ns_high": 43136.97882123534
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "aws-lc-rs",
+   "id": "p256-keygen/aws-lc-rs",
+   "mode": "nist",
+   "round": 5,
+   "ns": 43216.09039371741,
+   "ns_low": 43209.835753432264,
+   "ns_high": 43223.91273889669
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det2",
+   "round": 1,
+   "ns": 36496.72531558863,
+   "ns_low": 36489.629569061755,
+   "ns_high": 36506.327912521236
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det2",
+   "round": 2,
+   "ns": 36487.84695711889,
+   "ns_low": 36483.584776748576,
+   "ns_high": 36493.54020375717
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det2",
+   "round": 3,
+   "ns": 36486.78261354845,
+   "ns_low": 36484.198018293384,
+   "ns_high": 36489.6970217689
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det2",
+   "round": 4,
+   "ns": 36491.04461165344,
+   "ns_low": 36486.66471237853,
+   "ns_high": 36496.96524626199
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det2",
+   "round": 5,
+   "ns": 36529.592158137675,
+   "ns_low": 36483.679074264124,
+   "ns_high": 36627.142874472214
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det3",
+   "round": 1,
+   "ns": 36532.9938490425,
+   "ns_low": 36529.16776695914,
+   "ns_high": 36537.532757756075
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det3",
+   "round": 2,
+   "ns": 36507.97524352611,
+   "ns_low": 36503.420301793216,
+   "ns_high": 36513.571559088705
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det3",
+   "round": 3,
+   "ns": 36514.83783377811,
+   "ns_low": 36509.66992374138,
+   "ns_high": 36522.17768340289
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det3",
+   "round": 4,
+   "ns": 36522.56056919827,
+   "ns_low": 36513.9831606355,
+   "ns_high": 36533.4690538277
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "det3",
+   "round": 5,
+   "ns": 36500.07274246125,
+   "ns_low": 36495.09896227787,
+   "ns_high": 36505.92055121126
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "nist",
+   "round": 1,
+   "ns": 36599.89724545589,
+   "ns_low": 36535.89488850115,
+   "ns_high": 36739.680825136325
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "nist",
+   "round": 2,
+   "ns": 36545.64432305566,
+   "ns_low": 36540.833864825116,
+   "ns_high": 36551.476475218566
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "nist",
+   "round": 3,
+   "ns": 36534.62571806083,
+   "ns_low": 36531.69646918365,
+   "ns_high": 36538.02426295309
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "nist",
+   "round": 4,
+   "ns": 36544.75927589774,
+   "ns_low": 36541.7592798039,
+   "ns_high": 36548.08845450806
+  },
+  {
+   "operation": "p256-keygen/{lib}",
+   "library": "rind",
+   "id": "p256-keygen/rind",
+   "mode": "nist",
+   "round": 5,
+   "ns": 36541.29299385426,
+   "ns_low": 36536.893056929795,
+   "ns_high": 36546.468018440406
+  }
+ ]
+}

@@ -17,6 +17,8 @@ Linux 6.18.60+rpt-rpi-2712, rustc 1.98.1 from rustup), for the stack on top of
 
 ## Clock: 1.5 GHz cap
 
+The cap comes from `pw-thermal.service` (no fan; see `../NOTES.md`). No 2.4 GHz data exists: lifting the cap needs `sudo`, which asks for a password on this board, and the cap was left in place on purpose.
+
 `/sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq` read 1500000 on 2026-11-12 (`cpuinfo_max_freq` 2400000,
 governor `ondemand`). The file's mtime is the boot time (2026-11-08 12:21), and `stats/time_in_state` shows the
 cores at 1.5 GHz for all but a few seconds since boot, so **every run here was at 1.5 GHz, not 2.4 GHz**.
@@ -93,7 +95,7 @@ rows exercise, so the rows apply unchanged. mont-uninit was measured on its own 
 
 Spreads ≤ 0.1%. Round 1 started at load ~3.3; rounds 2-3 at 0.7-1.3 agree with it. The cached check is one relaxed
 load, and x25519, RSA and P-256 verify are flat. Still, P-256 sign and ECDH are about 1.1 µs slower in every round.
-The cause is unexplained (likely code layout), so `perf/pi5-cpu-detect` is kept off the RSA and uninit perf stack.
+**Resolved:** the delta came from the P-256 generator table's cache-line offset, which series 2 only moved. `perf/pi5-cpu-detect` now aligns the table to 64 bytes (3d7dd094), which removes the delta. See [`series2-layout/`](series2-layout/README.md). The branch is still kept off the RSA and uninit perf stack.
 
 ### `ab-p384-w7.*`: P-384 verify, width-7 generator NAF (5 rounds)
 
