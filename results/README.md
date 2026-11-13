@@ -34,6 +34,7 @@ These stay in the layout they were published in. They are not the new per-commit
 | [`jetson-orin-nano/`](jetson-orin-nano/RESULTS.md) | Jetson Orin Nano at rind `98568332`. A commit-suffixed directory such as `results/jetson-orin-nano-<sha>` is this older shape, not `results/jetson-orin-nano/<sha>/`. |
 | [`host/`](host/README.md) | msi-001 at rind `99b509a`. The machine was noisy (bench-report `noisy: true`); do not read a gap off it without a quiet rerun. |
 | [`diag/`](diag/) | Diagnostics and relinks. Each directory says what it varied. |
+| [`uno-r3/`](uno-r3/README.md) | Arduino Uno R3 (ATmega328P at 16 MHz). A `no_std` port of rind's generic primitives from `c08c91ea`, not the full crate and not the comparable set. |
 
 `cargo verify` with no arguments still checks the published ESP32-S3 set, the nRF52840 set, msi-001's summary, and `results/jetson-orin-nano/`. `cargo verify --dir <tree>` checks any other directory, including one of these.
 
@@ -49,3 +50,4 @@ These are not that set:
 
 - msi-001 at rind `99b509a` ([`host/`](host/README.md)) was noisy (`noisy: true`). Do not read a gap off it without a quiet rerun.
 - The ESP32-S3 set at 40 MHz ([`diag/esp32s3-40mhz-2026-11-11/`](diag/esp32s3-40mhz-2026-11-11/README.md)) is not comparable with the 80 MHz set. Cache-missing rows slow down with the flash clock.
+- The Arduino Uno R3 tree ([`uno-r3/`](uno-r3/README.md)) is a `no_std` port of rind's generic primitives from `c08c91ea`, not the full crate and not the comparable set at `d6ca9a75`.
