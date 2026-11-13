@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # ESP32-S3: X25519 and P-256 with a 32 KB instruction cache
 
+> **Rerun at 80 MHz (2026-11-12).** [`../esp32s3-icache32-80mhz-98568332/`](../esp32s3-icache32-80mhz-98568332/) repeats this at the published pin (98568332) and flash clock (80 MHz), three runs each, with the same findings (`x25519-ecdh/ring` 0.105x, `x25519-ecdh/libcrux` 0.061x, ring's P-256 0.085x-0.132x, libcrux's P-256 0.96x).
+
 Why do ring's and libcrux's curve operations take 30-150x more cycles on the ESP32-S3 than on the
 nRF52840 (ring `x25519-ecdh` 167 M cycles here, 3.06 M there)? Rebuilt with
 `sdkconfig.icache32` (32 KB instruction cache, 32 B lines; a diagnostic, not the published
