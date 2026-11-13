@@ -17,6 +17,7 @@ mod legacy_map;
 mod md2png;
 mod py;
 mod relink;
+mod render_ours;
 mod report;
 mod run_all;
 mod script2cast;
@@ -172,6 +173,8 @@ enum Cmd {
         note: Vec<String>,
         json: Vec<PathBuf>,
     },
+    /// The side report for xeon-vm, m1pro, pi5 and pixel9pro (STATS.md, SVGs, summary.json)
+    RenderOurs(render_ours::Args),
     /// Stage a results tree from host JSON. Remaining arguments are stage-repo's.
     Stage {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
@@ -268,6 +271,7 @@ fn main() -> ExitCode {
             let home = home.unwrap_or(boards::home_dir()?.join("rind-bench-run"));
             boards::pi_run(&home, &commit)
         })(),
+        Cmd::RenderOurs(a) => render_ours::run(a),
         Cmd::Verify { dir, board } => run_verify(&dir, &board),
         Cmd::AndroidConvert {
             rind,
