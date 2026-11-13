@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs on the desktop in ~/rind-bench-run/pixel. Waits for the desktop's own bench run
+# Runs on the desktop in rind-bench-run/pixel. Waits for the desktop's own bench run
 # to finish, then runs the cross-compiled benches on the phone over adb.
 export PATH="/opt/homebrew/bin:$PATH"
 S=<phone-serial>; P=/data/local/tmp/rind

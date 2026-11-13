@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # ESP32-S3: the 32 KB instruction-cache diagnostics at 80 MHz, rind 98568332
 
-The earlier 32 KB-cache runs (`../curves-icache32/`, `../xchacha20poly1305-icache32/`, `../chacha20poly1305-icache32/`) ran at rind 99b509a with a 40 MHz flash clock. These are the same four benches at the published pin and clock: rind 98568332 with rind-bench's patches 0001-0004, built from rind-bench 2f0c5e8 with `ESP_IDF_SDKCONFIG_DEFAULTS='sdkconfig.defaults;sdkconfig.icache32'` (32 KB instruction cache, 32 B lines; a diagnostic, not the published configuration), flashed with `--flash-freq 80mhz`, three runs each, 2026-11-12 17:56-18:03 PST. Hashes in [images.sha256](images.sha256). Compared against the published set (`results/raw/`, 16 KB cache, 80 MHz).
+The earlier 32 KB-cache runs (`../curves-icache32/`, `../xchacha20poly1305-icache32/`, `../chacha20poly1305-icache32/`) ran at rind 99b509a with a 40 MHz flash clock. These are the same four benches at the published pin and clock: rind 98568332 with rind-bench's patches 0001-0004, built from legacy rind-bench 2f0c5e8 (later squashed into rind-hardware `8d9c1bb`) with `ESP_IDF_SDKCONFIG_DEFAULTS='sdkconfig.defaults;sdkconfig.icache32'` (32 KB instruction cache, 32 B lines; a diagnostic, not the published configuration), flashed with `--flash-freq 80mhz`, three runs each, 2026-11-12 17:56-18:03 PST. Hashes in [images.sha256](images.sha256). Compared against the published set (`results/raw/`, 16 KB cache, 80 MHz).
 
 - [ratios.md](ratios.md): rind over the fastest other library in each configuration.
 - `compare-<bench>.md`: every row, published against 32 KB (cycles, B/A).

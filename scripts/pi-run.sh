@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs on the Pi inside ~/rind-bench-run only. No sudo, no system changes:
+# Runs on the Pi inside rind-bench-run only. No sudo, no system changes:
 # if libssl-dev is missing, its .deb is downloaded and unpacked into ./sysroot.
 D="$HOME/rind-bench-run"; cd "$D" || exit 1
 rm -f status

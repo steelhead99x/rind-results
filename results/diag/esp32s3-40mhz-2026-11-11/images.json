@@ -1,78 +1,100 @@
 {
- "note": "Where each published image came from. Builds are not bit-reproducible (ESP-IDF stamps the build time into the app descriptor), so the sha256 identifies the image that ran; the commits are the source it was built from, from the build times and the repository history.",
- "patches": [
-  "0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch",
-  "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch",
-  "0003-feat-build-for-bare-metal-targets-without-std.patch",
-  "ring-0.17.14-xtensa-poly1305-align.patch"
- ],
- "file_ext": ".elf",
- "images": {
-  "aes_gcm": {
-   "sha256": "d3ab22144b2d0f0f6aa25e7927ccef0713cab838a48f114403c3ab1d32731e15",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
-  },
-  "chacha20poly1305": {
-   "sha256": "b5a7e512525c213f829a8c688584a30ee57e50b8981e18d14ee977e88a204503",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
-   "built": "2026-11-12 03:56 PST"
-  },
-  "cipher": {
-   "sha256": "101bc29ea9e98c974ffc019a972840bfa0e0d41bc37b922a05868cc5d38d6619",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
-  },
-  "ed25519": {
-   "sha256": "ed53714f07fe30247498d7696955a26bc9594f431cb73681e6c5fd35013e29b0",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
-  },
-  "hkdf": {
-   "sha256": "2ad77c9d444da6ba1238efac13337fbd1df500675ced75a75b5f682c499fa9cc",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
-  },
-  "hmac": {
-   "sha256": "8e8f6d7c709d6123bbb1efc2ee8b35772d14cd9e69bc4fccefe3e96c1465d53e",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
-  },
-  "mlkem768": {
-   "sha256": "75069a7bc0a506ce7c8111b677d703101d7fa6350e8f85064f2de3be52000231",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the tree after 669571c with the 160 KB stack (committed in 9b9ebcb, 2026-11-12 01:14 PST)",
-   "built": "2026-11-11 23:51 PST"
-  },
-  "p256": {
-   "sha256": "60e0068fc2c642ade8b8f3d5b7d35a64891884475a0e4474ad2645f58cac56d4",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
-  },
-  "sha2": {
-   "sha256": "c153499481a3989c91aa7bd041927400549353ca5d6e160008441b1d8bc91219",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11 23:15-23:19 PST"
-  },
-  "x25519": {
-   "sha256": "f806b1bd0f73479476a51774cc54cbca4db1b94bd9d609a7a301c26f3b78927a",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
-   "built": "2026-11-11, before 23:32 PST (the first run began 00:12 PST)"
-  },
-  "xchacha20poly1305": {
-   "sha256": "9e07e2b51bedad6014810bfd19ac251fe65cadbff3e8937df8f6ace4247f2ce2",
-   "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
-   "rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
-   "built": "2026-11-12 03:56 PST"
+  "note": "Where each published image came from. Builds are not bit-reproducible (ESP-IDF stamps the build time into the app descriptor), so the sha256 identifies the image that ran; the commits are the source it was built from, from the build times and the repository history. The public repo is [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware); its root `8d9c1bb` is a squash of that history. Each image now has `rind_hardware` (the public SHA when the trees match, otherwise `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`) and `legacy_rind_bench` (the SHA recorded at build time). `tools/legacy-rind-bench-map.json` is the map `cargo verify` and `cargo xtask` use.",
+  "patches": [
+    "0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch",
+    "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch",
+    "0003-feat-build-for-bare-metal-targets-without-std.patch",
+    "ring-0.17.14-xtensa-poly1305-align.patch"
+  ],
+  "file_ext": ".elf",
+  "images": {
+    "aes_gcm": {
+      "sha256": "d3ab22144b2d0f0f6aa25e7927ccef0713cab838a48f114403c3ab1d32731e15",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11 23:15-23:19 PST"
+    },
+    "chacha20poly1305": {
+      "sha256": "b5a7e512525c213f829a8c688584a30ee57e50b8981e18d14ee977e88a204503",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
+      "rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
+      "built": "2026-11-12 03:56 PST"
+    },
+    "cipher": {
+      "sha256": "101bc29ea9e98c974ffc019a972840bfa0e0d41bc37b922a05868cc5d38d6619",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11 23:15-23:19 PST"
+    },
+    "ed25519": {
+      "sha256": "ed53714f07fe30247498d7696955a26bc9594f431cb73681e6c5fd35013e29b0",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11 23:15-23:19 PST"
+    },
+    "hkdf": {
+      "sha256": "2ad77c9d444da6ba1238efac13337fbd1df500675ced75a75b5f682c499fa9cc",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11 23:15-23:19 PST"
+    },
+    "hmac": {
+      "sha256": "8e8f6d7c709d6123bbb1efc2ee8b35772d14cd9e69bc4fccefe3e96c1465d53e",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11 23:15-23:19 PST"
+    },
+    "mlkem768": {
+      "sha256": "75069a7bc0a506ce7c8111b677d703101d7fa6350e8f85064f2de3be52000231",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the tree after 669571c with the 160 KB stack (committed in 9b9ebcb, 2026-11-12 01:14 PST)",
+      "rind_bench": "the tree after 669571c with the 160 KB stack (committed in 9b9ebcb, 2026-11-12 01:14 PST)",
+      "built": "2026-11-11 23:51 PST"
+    },
+    "p256": {
+      "sha256": "60e0068fc2c642ade8b8f3d5b7d35a64891884475a0e4474ad2645f58cac56d4",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11 23:15-23:19 PST"
+    },
+    "sha2": {
+      "sha256": "c153499481a3989c91aa7bd041927400549353ca5d6e160008441b1d8bc91219",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11 23:15-23:19 PST"
+    },
+    "x25519": {
+      "sha256": "f806b1bd0f73479476a51774cc54cbca4db1b94bd9d609a7a301c26f3b78927a",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "rind_bench": "the uncommitted tree that became 669571c (2026-11-11 23:32 PST)",
+      "built": "2026-11-11, before 23:32 PST (the first run began 00:12 PST)"
+    },
+    "xchacha20poly1305": {
+      "sha256": "9e07e2b51bedad6014810bfd19ac251fe65cadbff3e8937df8f6ace4247f2ce2",
+      "rind": "99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
+      "rind_bench": "44a8830 (2026-11-12 03:52 PST), with the ring Xtensa patch",
+      "built": "2026-11-12 03:56 PST"
+    }
   }
- }
 }
