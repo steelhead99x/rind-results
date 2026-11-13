@@ -4,8 +4,7 @@
 backend) and `patches/0005` (`ReuseCache` without CAS, a `Cell` path on
 `cfg(not(target_has_atomic = "ptr"))`, no new dependency),
 `cargo xtask build-images rp2040` produces UF2 images for every bench
-file. ring 0.17.14 is still left out (its Arm assembly uses NEON). The
-images have not been run on hardware. The original compile-only notes at
+file. ring 0.17.14 is still left out (its Arm assembly uses NEON). Known-answer checks later passed on a Pico (2026-11-12); published timing results are not in this repository yet. The original compile-only notes at
 rind a4759c48 follow.
 
 ---
