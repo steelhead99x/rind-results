@@ -53,6 +53,8 @@ table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px s
 table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
 table.t td.n,table.t th.n{text-align:right}
 table.t tr.hl td{background:var(--good-bg);font-weight:600}
+table.t.compact th,table.t.compact td{padding:4px 8px}
+
 .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
 .tag.win{background:var(--good-bg);color:var(--accent)}
 .tag.tooling{background:#e8f0fa;color:var(--accent2)}
@@ -157,17 +159,17 @@ table.sv td:first-child{white-space:nowrap}
   <div class="inner">
     <div class="kicker">rind · microcontroller benchmarks</div>
     <h1>rind on the boards: what changed on 12 November 2026, and when</h1>
-    <div class="sub">The Poly1305 patch A/B on the ESP32-S3 and nRF52840, three-alignment relinks, the 32 KB cache check, the flash-clock and watchdog fixes, the RP2040 port, and the move to rind-hardware, with a timeline from git history.</div>
+    <div class="sub">The Poly1305 patch A/B on the ESP32-S3 and nRF52840, three-alignment relinks, the 32 KB cache check, the flash-clock and watchdog fixes, the RP2040 port, and the move to rind-hardware; and, late on the 12th, an unpublished ESP32-S3 run that closed the I-cache gaps in SHA-512, HMAC/HKDF, ChaCha20-Poly1305 and XChaCha.</div>
   </div>
   <div class="meta">steelhead99x/rind-results · steelhead99x/rind-hardware<br>Times are America/Los_Angeles (PST)</div>
-  <div class="foot"><span class="src">Every number is from a file on rind-results main (95300f2) or rind-hardware main (7a14b38). The file is named on each slide; the full list is on the last slide.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Published figures are from rind-results main (95300f2) or rind-hardware main (7a14b38). The evening I-cache figures are an unpublished ESP32-S3 run at steelhead99x/rind 6aba8055 plus five patches, labelled on those slides. The file is named on each slide; the full list is on the last slide.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 2. SUMMARY ============ -->
 <section class="slide" data-section="Summary">
   <div class="kicker">Today in one table</div>
   <h2>The 12 November board work and the Jetson Orin Nano results are on main; today's Pi 5 lane is not yet</h2>
-  <table class="t" style="margin-top:18px;font-size:14.5px">
+  <table class="t compact" style="margin-top:8px;font-size:12.5px">
     <tr><th style="width:22%">Change</th><th>What it showed</th><th style="width:12%">Status</th><th style="width:27%">File on main</th></tr>
     <tr><td>Poly1305 32-bit patch A/B</td><td>rind's ChaCha20-Poly1305 16 KB seal takes 0.735× the cycles on the ESP32-S3 and 0.698× on the nRF52840; faster at every size on both boards</td><td><span class="tag ok">published</span></td><td><code>results/{esp32s3,nrf52840}/diag/poly1305-32/</code></td></tr>
     <tr><td>Relinks at three alignments</td><td>ESP32-S3 SHA-256 64B is 2.36×, 2.80× or 3.07× libcrux depending on code alignment; no verdict flips</td><td><span class="tag ok">published</span></td><td><code>results/diag/esp32s3-relink-fixed-98568332/</code></td></tr>
@@ -178,6 +180,7 @@ table.sv td:first-child{white-space:nowrap}
     <tr><td>RP2040 port</td><td>All 12 images build; known-answer checks passed on a Pico. Published timing results are not on main yet</td><td><span class="tag pending">partial</span></td><td><code>hosts/rp2040/NOTES.md</code></td></tr>
     <tr><td>Jetson Orin Nano</td><td>rind 98568332 against six libraries, three pinned runs; rind fastest on 65 of 68 shared operations, no gap over 10%</td><td><span class="tag ok">on main</span></td><td><a href="https://github.com/steelhead99x/rind-results/tree/main/results/jetson-orin-nano">results/jetson-orin-nano</a></td></tr>
     <tr><td>Today's Pi 5 lane</td><td>Still on <code>results/pi5-lane-2026-11-12</code> and related branches; not merged</td><td><span class="tag pending">in progress</span></td><td>none on main</td></tr>
+      <tr class="hl"><td>I-cache gap closes, ESP32-S3</td><td>SHA-512 16 KB 32.95× → 1.08× ring; HMAC-SHA256 64B 3.24× → 1.19×; HKDF expand 5.64× → 1.16×; ChaCha 16 KB 1.26× → 0.92× ring; XChaCha 32B 6.43× → 1.02× RustCrypto; SHA-256 64B spread 25.7% → 0.0%</td><td><span class="tag pending">unpublished</span></td><td>steelhead99x/rind <code>6aba8055</code> plus five patches; not on rind-results main</td></tr>
   </table>
   <div class="foot"><span class="src">rind-results main 95300f2: the files in the right column · rind-hardware main 7a14b38: README.md (board status table)</span><span class="num"></span></div>
 </section>
@@ -346,7 +349,7 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 10. TIMELINE B ============ -->
 <section class="slide" data-section="Timeline">
-  <div class="kicker">Timeline from git history · 2 of 2 · PST</div>
+  <div class="kicker">Timeline from git history · 2 of 3 · PST</div>
   <h2>Afternoon to evening: relinks, the watchdog, the RP2040 build, rind-hardware and the Poly1305 A/B</h2>
   <table class="t" style="margin-top:14px;font-size:14px">
     <tr><th style="width:15%">When (PST)</th><th style="width:14%">Repo</th><th style="width:10%">Commit</th><th>Milestone</th></tr>
@@ -363,6 +366,139 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src">git log of rind-results main (95300f2) and rind-hardware main (7a14b38), committer dates in America/Los_Angeles. rind-hardware branches a9d057a and 6abf7fd (18:01) are not on main.</span><span class="num"></span></div>
 </section>
 
+
+<!-- ============ EVENING GAPS: ROOT CAUSE ============ -->
+<section class="slide" data-section="I-cache gaps">
+  <div class="kicker">Unpublished · ESP32-S3 · late 12 November</div>
+  <h2>The remaining ESP32-S3 gaps were I-cache thrash from unrolled HACL* code, not a 64-bit arithmetic bug</h2>
+  <div class="lede">An unpublished perf-branch run on the Seeed XIAO ESP32-S3 (fork <code>6aba8055</code> plus five patches), 80 MHz flash, 240 MHz, three runs, known-answer checks 0 failures. 64-bit portable paths are unchanged. These figures are not on rind-results main.</div>
+  <div class="cols c64" style="margin-top:6px">
+    <div>
+      <div class="chart-title">Xtensa function size, bytes, from <code>nm -S</code> on the firmware</div>
+      <table class="t">
+        <tr><th>Function</th><th class="n">Before</th><th class="n">After</th><th>Change</th></tr>
+        <tr class="hl"><td>HACL* <code>sha512_update</code></td><td class="n">48,179</td><td class="n">1,290</td><td>rolled 80-round loop, 32-bit only</td></tr>
+        <tr><td>HACL* <code>sha256_update</code> (short path)</td><td class="n">12,611</td><td class="n">477</td><td>rolled loop at ≤256 B; HACL* kept for long calls</td></tr>
+        <tr><td>HACL* Poly1305 (u64 limbs)</td><td class="n">4,004</td><td class="n">1,208</td><td>five u32 26-bit limbs; 32-bit multiplies</td></tr>
+        <tr><td>HACL* <code>hchacha20</code></td><td class="n">5,157</td><td class="n">284 + 545</td><td>10-iteration loop; <code>inline(never)</code> so LLVM cannot unroll it</td></tr>
+      </table>
+    </div>
+    <div>
+      <ul class="b sm">
+        <li>The ESP32-S3 instruction cache is 16 KiB. Unrolled HACL* SHA-512 alone is 47 KiB: every block streams from flash.</li>
+        <li>u64 rotates already lower to <code>ssl</code>+<code>src</code>. The SHA-512 gap was code size, not a missing unroll or a bad rotate.</li>
+        <li>Ring's SHA-512 compact loop is 3,067 bytes. After the roll, rind is 1.08× ring at 16 KB.</li>
+        <li>Five commits on <code>perf/esp32s3-rolled-sha512</code> (<code>61570282</code> … <code>fa0ab77c</code>). Hardware patches 0001–0005 were on the tree for the images, uncommitted.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span class="src">Unpublished ESP32-S3 run, America/Los_Angeles (PST), 12 Nov 2026 evening. steelhead99x/rind 6aba8055 plus 61570282, 9dbb1ed2, e54b7894, a60ee4b8, fa0ab77c. Sizes from xtensa-esp32s3-elf-nm -S on the measured images. Raw jsonl, 3 runs, Boot SPI Speed 80MHz, KATs 0 failures.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ SHA-512 ============ -->
+<section class="slide" data-section="SHA-512">
+  <div class="kicker">Unpublished · ESP32-S3 · SHA-512</div>
+  <h2>Rolled SHA-512 takes 0.033× the time and moves rind from 33× ring to 1.08×</h2>
+  <div class="lede">Median of three run medians, wall time as the harness printed it. Libcrux's SHA-512 is unchanged: it still runs the 47 KiB HACL* path.</div>
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr);margin-top:8px">
+    <div class="kpi"><div class="v">32.95× → 1.08×</div><div class="l">SHA-512 16 KB vs ring</div><div class="d">409.17 ms → 13.46 ms (0.0329×). Ring 12.42 ms, unchanged.</div></div>
+    <div class="kpi"><div class="v">32.58× → 1.08×</div><div class="l">SHA-512 64 B vs ring</div><div class="d">3.34 ms → 111.15 µs (0.0332×). Ring 102.66 µs.</div></div>
+    <div class="kpi"><div class="v">32.95× → 1.08×</div><div class="l">SHA-512/256 16 KB vs ring</div><div class="d">409.19 ms → 13.46 ms. Same compression as SHA-512.</div></div>
+  </div>
+  <table class="t" style="margin-top:10px">
+    <tr><th>Row</th><th class="n">Before</th><th class="n">After</th><th class="n">After/before</th><th class="n">vs ring, before</th><th class="n">vs ring, after</th></tr>
+    <tr><td><code>sha512/rind/32B</code></td><td class="n">3.34 ms</td><td class="n">111.00 µs</td><td class="n">0.0332</td><td class="n">32.58×</td><td class="n">1.08×</td></tr>
+    <tr class="hl"><td><code>sha512/rind/64B</code></td><td class="n">3.34 ms</td><td class="n">111.15 µs</td><td class="n">0.0332</td><td class="n">32.58×</td><td class="n">1.08×</td></tr>
+    <tr class="hl"><td><code>sha512/rind/16KB</code></td><td class="n">409.17 ms</td><td class="n">13.46 ms</td><td class="n">0.0329</td><td class="n">32.95×</td><td class="n">1.08×</td></tr>
+    <tr><td><code>sha512-256/rind/64B</code></td><td class="n">3.37 ms</td><td class="n">112.08 µs</td><td class="n">0.0333</td><td class="n">32.79×</td><td class="n">1.09×</td></tr>
+    <tr><td><code>sha512-256/rind/16KB</code></td><td class="n">409.19 ms</td><td class="n">13.46 ms</td><td class="n">0.0329</td><td class="n">32.95×</td><td class="n">1.08×</td></tr>
+  </table>
+  <div class="foot"><span class="src">Unpublished ESP32-S3 run at steelhead99x/rind 6aba8055 plus five patches, 12 Nov 2026 evening PST. Medians over 3 run medians from raw jsonl. SHA-2 image: 13 known-answer checks, 0 failures, each of 3 runs. Boot SPI Speed 80MHz. 64-bit portable still uses HACL*.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ HMAC HKDF SHA-256 SPREAD ============ -->
+<section class="slide" data-section="HMAC and HKDF">
+  <div class="kicker">Unpublished · ESP32-S3 · HMAC, HKDF, SHA-256 spread</div>
+  <h2>A 477-byte rolled SHA-256 for short calls cuts HMAC and HKDF from 3–6× ring down to about 1.2×, and removes the 25.7% 64 B spread</h2>
+  <div class="lede">Short HMAC and HKDF paid a 12,611-byte HACL* I-cache miss on every compress. Calls of 256 bytes or less use the rolled loop; longer calls keep HACL*, so 16 KB SHA-256 and HMAC stay at baseline (an always-rolled path had made 16 KB SHA-256 1.47× slower).</div>
+  <div class="cols" style="margin-top:8px">
+    <div>
+      <table class="t">
+        <tr><th>Row</th><th class="n">Before</th><th class="n">After</th><th class="n">After/before</th><th class="n">vs ring, before → after</th></tr>
+        <tr class="hl"><td><code>hmac-sha256/32B</code></td><td class="n">433.99 µs</td><td class="n">136.23 µs</td><td class="n">0.3139</td><td class="n">3.74× → 1.17×</td></tr>
+        <tr class="hl"><td><code>hmac-sha256/64B</code></td><td class="n">454.63 µs</td><td class="n">167.26 µs</td><td class="n">0.3679</td><td class="n">3.24× → 1.19×</td></tr>
+        <tr><td><code>hmac-sha256/16KB</code></td><td class="n">5.77 ms</td><td class="n">5.77 ms</td><td class="n">1.0001</td><td class="n">0.90× → 0.90×</td></tr>
+        <tr class="hl"><td><code>hkdf-sha256/expand</code></td><td class="n">341.85 µs</td><td class="n">70.53 µs</td><td class="n">0.2063</td><td class="n">5.64× → 1.16×</td></tr>
+        <tr><td><code>hkdf-sha256/extract-expand</code></td><td class="n">978.30 µs</td><td class="n">275.37 µs</td><td class="n">0.2815</td><td class="n">4.23× → 1.19×</td></tr>
+        <tr><td><code>sha256/rind/64B</code></td><td class="n">67.35 µs</td><td class="n">66.44 µs</td><td class="n">0.9865</td><td class="n">spread 25.7% → 0.0%</td></tr>
+      </table>
+    </div>
+    <div>
+      <ul class="b sm">
+        <li>The 64 B SHA-256 spread was the 12.6 KiB function sometimes in cache and sometimes from flash. Baseline run medians: 67.35, 67.35 and 84.66 µs. After: all three 66.44 µs.</li>
+        <li>SHA-256 32 B also improved: 45.94 → 35.33 µs (0.7691), 1.55× → 1.19× ring.</li>
+        <li>16 KB SHA-256 is 5.43 → 5.53 ms (1.0168×), still 0.88× ring.</li>
+        <li>Leftover: incremental <code>sha256-updates</code> at 1 B and 16 B are 1.21× and 1.37×, because each 64-byte flush takes the rolled path.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span class="src">Unpublished ESP32-S3 run at steelhead99x/rind 6aba8055 plus five patches, 12 Nov 2026 evening PST. Hybrid SHA-256 dispatch (e54b7894) is the kept form. HMAC 4 checks and HKDF 4 checks, 0 failures, each of 3 runs. Boot SPI Speed 80MHz.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ CHACHA XCHACHA ============ -->
+<section class="slide" data-section="ChaCha and XChaCha">
+  <div class="kicker">Unpublished · ESP32-S3 · ChaCha20-Poly1305 and XChaCha</div>
+  <h2>32-bit-limb Poly1305 plus a rolled HChaCha make ChaCha 0.92× ring at 16 KB and close XChaCha 32 B from 6.43× RustCrypto to 1.02×</h2>
+  <div class="lede">HACL* Poly1305 keeps 26-bit limbs in u64s; 58% of a prior ChaCha profile was there. After the limb patch, XChaCha 32 B was still 4.27× RustCrypto, with a constant ~700 µs above ChaCha20-Poly1305: unrolled HChaCha was 5,157 bytes.</div>
+  <div class="cols" style="margin-top:8px">
+    <div>
+      <div class="chart-title">ChaCha20-Poly1305 seal, vs ring</div>
+      <table class="t">
+        <tr><th>Row</th><th class="n">Before</th><th class="n">After</th><th class="n">After/before</th><th class="n">vs ring, before → after</th></tr>
+        <tr><td><code>…/rind/32B</code></td><td class="n">53.62 µs</td><td class="n">37.39 µs</td><td class="n">0.6972</td><td class="n">1.45× → 1.01×</td></tr>
+        <tr class="hl"><td><code>…/rind/16KB</code></td><td class="n">6.71 ms</td><td class="n">4.93 ms</td><td class="n">0.7354</td><td class="n">1.26× → 0.92×</td></tr>
+      </table>
+      <div class="chart-title" style="margin-top:12px">XChaCha20-Poly1305, vs RustCrypto (both patches)</div>
+      <table class="t">
+        <tr><th>Row</th><th class="n">Base</th><th class="n">+Poly1305-32</th><th class="n">+rolled HChaCha</th><th class="n">vs RC, base → final</th></tr>
+        <tr class="hl"><td><code>…/32B</code></td><td class="n">1.03 ms</td><td class="n">685.04 µs</td><td class="n">164.07 µs</td><td class="n">6.43× → 1.02×</td></tr>
+        <tr><td><code>…/quic-128B</code></td><td class="n">1.15 ms</td><td class="n">794.05 µs</td><td class="n">202.69 µs</td><td class="n">5.97× → 1.05×</td></tr>
+        <tr><td><code>…/16KB</code></td><td class="n">7.83 ms</td><td class="n">5.67 ms</td><td class="n">5.09 ms</td><td class="n">1.19× → 0.77×</td></tr>
+      </table>
+    </div>
+    <div>
+      <ul class="b sm">
+        <li>poly1305-32 is the rind-hardware optional set, applied on this tree: five u32 limbs, each product one 32×32→64 multiply. 64-bit portable still uses Graviola.</li>
+        <li>Open rows match seal: 16 KB open 6.75 → 4.98 ms, 1.26× → 0.93× ring.</li>
+        <li>Rolled HChaCha is 284 bytes plus a 545-byte double-round. The unrolled <code>rounds</code> used by the ChaCha20 cipher and by <code>proofs/</code> is unchanged.</li>
+        <li>This is a later run than the published poly1305-32 A/B on slide 3 (that set is at rind 98568332, cycles, already on main). These times are wall-clock at fork <code>6aba8055</code>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span class="src">Unpublished ESP32-S3 run at steelhead99x/rind 6aba8055 plus five patches, 12 Nov 2026 evening PST. ChaCha and XChaCha images: 7 known-answer checks, 0 failures, each of 3 runs. Boot SPI Speed 80MHz. Final XChaCha column is poly1305-32 and rolled HChaCha together (fa0ab77c).</span><span class="num"></span></div>
+</section>
+
+
+<!-- ============ TIMELINE 3 ============ -->
+<section class="slide" data-section="Timeline">
+  <div class="kicker">Timeline from git history · 3 of 3 · PST</div>
+  <h2>Late evening: the I-cache gap closes on a steelhead99x/rind branch, measured on the ESP32-S3</h2>
+  <div class="lede">These commits are on <code>perf/esp32s3-rolled-sha512</code> at fork <code>6aba8055</code>, not on rind-results main. Commit times are git committer dates; compare-file times are the files' mtimes, all America/Los_Angeles (PST) on 12 November 2026.</div>
+  <table class="t compact" style="margin-top:8px;font-size:13px">
+    <tr><th style="width:15%">When (PST)</th><th style="width:14%">Repo</th><th style="width:14%">Commit</th><th>Milestone</th></tr>
+    <tr><td>23:17:50</td><td>steelhead99x/rind</td><td><code>61570282</code></td><td>Rolled SHA-512 on 32-bit portable: 47 KiB HACL* compress → 1,290-byte loop</td></tr>
+    <tr><td>23:23:13</td><td>steelhead99x/rind</td><td><code>9dbb1ed2</code></td><td>Rolled SHA-256 on 32-bit portable for short HMAC/HKDF</td></tr>
+    <tr><td>23:24</td><td>ESP32-S3</td><td><code>compare-sha512-rolled.txt</code></td><td>3-run compare written: SHA-512 16 KB 409.17 ms → 13.46 ms, 32.95× → 1.08× ring. KATs 0 failures</td></tr>
+    <tr class="hl"><td>23:34:35</td><td>steelhead99x/rind</td><td><code>e54b7894</code></td><td>Hybrid dispatch: rolled SHA-256 at ≤256 B, HACL* for long inputs (kept form)</td></tr>
+    <tr><td>23:43</td><td>ESP32-S3</td><td><code>compare-sha256-hybrid.txt</code></td><td>3-run compare written: HMAC-SHA256 64B 3.24× → 1.19× ring; HKDF expand 5.64× → 1.16×; 64 B SHA-256 spread 25.7% → 0.0%</td></tr>
+    <tr><td>23:44:35</td><td>steelhead99x/rind</td><td><code>a60ee4b8</code></td><td>Poly1305 in 26-bit u32 limbs on 32-bit targets (the rind-hardware optional set)</td></tr>
+    <tr><td>23:47</td><td>ESP32-S3</td><td><code>compare-poly1305-32.txt</code></td><td>3-run compare written: ChaCha20-Poly1305 16 KB 6.71 → 4.93 ms, 1.26× → 0.92× ring. KATs 0 failures</td></tr>
+    <tr class="hl"><td>23:49:11</td><td>steelhead99x/rind</td><td><code>fa0ab77c</code></td><td>Rolled HChaCha20 committed (author 23:48:34)</td></tr>
+    <tr><td>23:50</td><td>ESP32-S3</td><td><code>compare-hchacha-rolled.txt</code></td><td>3-run compare written: XChaCha 32 B 1.03 ms → 164.07 µs, 6.43× → 1.02× RustCrypto</td></tr>
+  </table>
+  <div class="foot"><span class="src">git log --format committer dates of steelhead99x/rind perf/esp32s3-rolled-sha512 (fa0ab77c); mtimes of the compare-*.txt files under /home/kyledouglas/rind-bench/run-fork-6aba8055-out/ on msi-001. Not on rind-results main. Flash only /dev/ttyACM1, 80 MHz, no erase.</span><span class="num"></span></div>
+</section>
+
 <!-- ============ 11. CAVEATS ============ -->
 <section class="slide" data-section="Caveats">
   <div class="kicker">Honesty check</div>
@@ -377,7 +513,8 @@ table.sv td:first-child{white-space:nowrap}
     <div class="card tall"><h3>Not shown, or pending</h3><ul class="b sm">
       <li>RP2040 on-device numbers: on rind-hardware branches only.</li>
       <li>Today's Pi 5 lane: still on results branches, not on main.</li>
-      <li>poly1305-32 is not upstream: no PR or issue was opened.</li>
+      <li>The late-evening I-cache figures (slides after the published Poly1305 A/B) are an unpublished perf-branch run on ESP32-S3 at fork <code>6aba8055</code> plus five patches, not on rind-results main. 64-bit portable paths were not changed.</li>
+      <li>poly1305-32 is in <a href="https://github.com/steelhead99x/rind/pull/69">steelhead99x/rind#69</a> (<code>perf/esp32s3-rolled-sha512</code>), a PR into steelhead99x/rind main. It is not a moq-dev/rind PR.</li>
       <li>Older provenance SHAs point into the private rind-bench history.</li>
       <li>The RP2040 has no hardware RNG; its images use a seeded placeholder.</li>
     </ul></div>
@@ -388,7 +525,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 12. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Every figure comes from these files on rind-results main (95300f2) and rind-hardware main (7a14b38)</h2>
+  <h2>Published figures come from rind-results main (95300f2) and rind-hardware main (7a14b38); the evening I-cache figures do not</h2>
   <table class="t" style="margin-top:14px;font-size:13.5px">
     <tr><th style="width:24%">Topic</th><th>Files</th></tr>
     <tr><td>Poly1305-32 A/B</td><td><code>results/esp32s3/diag/poly1305-32/{README,compare}.md</code> · <code>results/nrf52840/diag/poly1305-32/{README,compare}.md</code></td></tr>
@@ -399,7 +536,8 @@ table.sv td:first-child{white-space:nowrap}
     <tr><td>RP2040</td><td><code>hosts/rp2040/NOTES.md</code>, <code>images.json</code> · rind-hardware <code>README.md</code>, <code>rp2040/README.md</code></td></tr>
     <tr><td>Repo move</td><td>rind-results commits 0df7c03, 876586c · rind-hardware 8d9c1bb</td></tr>
     <tr><td>Hosts</td><td><code>README.md</code> host table · <code>hosts/pi5/</code></td></tr>
-    <tr><td>Timeline</td><td><code>git log</code> of both main branches, committer dates in America/Los_Angeles</td></tr>
+    <tr><td>Timeline, slides 9–10</td><td><code>git log</code> of both main branches, committer dates in America/Los_Angeles</td></tr>
+    <tr class="hl"><td>Evening I-cache gaps</td><td>Unpublished ESP32-S3 raw jsonl, 3 runs at 80 MHz, on msi-001 under <code>/home/kyledouglas/rind-bench/run-fork-6aba8055-out/</code> (compare-sha512-rolled.txt, compare-sha256-hybrid.txt, compare-poly1305-32.txt, compare-hchacha-rolled.txt). steelhead99x/rind <code>6aba8055</code> plus <code>61570282</code>, <code>9dbb1ed2</code>, <code>e54b7894</code>, <code>a60ee4b8</code>, <code>fa0ab77c</code>. Not on this repo's main.</td></tr>
   </table>
   <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind-hardware</span><span class="num"></span></div>
 </section>
