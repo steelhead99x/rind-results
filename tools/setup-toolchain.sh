@@ -1,13 +1,13 @@
 #!/bin/sh
 # SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
-# Installs, without root, what building and flashing rind-bench's ESP32-S3
+# Installs, without root, what building and flashing rind-hardware's ESP32-S3
 # images needs, at the versions the published results used:
 #   rustup (stable), espup 0.19.0 -> Rust "esp" 1.97.0.0 + Xtensa GCC
 #   esp-14.2.0_20241119, ldproxy 0.3.5, espflash 4.7.0.
-# Usage: tools/setup-toolchain.sh RIND_BENCH_DIR
+# Usage: tools/setup-toolchain.sh RIND_HARDWARE_DIR
 # It stays shell because it installs rustup itself; everything after it is
-# `cargo xtask` (rind-bench and rind-results).
-# Tools land in RIND_BENCH_DIR/.tools; ESP-IDF v5.5.1 itself is fetched by
+# `cargo xtask` (rind-hardware and rind-results).
+# Tools land in RIND_HARDWARE_DIR/.tools; ESP-IDF v5.5.1 itself is fetched by
 # the first firmware build into esp32/.embuild.
 set -eu
 bench=$(cd "$1" && pwd)

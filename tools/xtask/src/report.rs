@@ -43,8 +43,8 @@ pub struct Args {
     gaps: PathBuf,
     #[arg(long, default_value = "results")]
     out: PathBuf,
-    /// each image's provenance (sha256, rind and rind-bench commits, build
-    /// time), JSON; without it the rind and rind-bench checkouts' HEADs are
+    /// each image's provenance (sha256, rind and firmware-repo commits, build
+    /// time), JSON; without it the rind and rind-hardware checkouts' HEADs are
     /// reported
     #[arg(long)]
     images: Option<PathBuf>,
@@ -91,13 +91,13 @@ const ESP32S3: Board = Board {
              `diag/layout-relink-2026-11-12/` and, at this pin, the three-layout table in \
              `diag/esp32s3-relink-fixed-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.",
     repro: &[
-        "git clone --recursive https://github.com/steelhead99x/rind-bench   # private; the port",
+        "git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware",
         "git clone https://github.com/steelhead99x/rind-results",
-        "rind-results/tools/setup-toolchain.sh rind-bench   # espup, espflash, ldproxy, at these versions",
-        "cd rind-bench && cargo xtask apply-patches && cargo xtask vendor-ring",
+        "rind-results/tools/setup-toolchain.sh rind-hardware   # espup, espflash, ldproxy, at these versions",
+        "cargo xtask apply-patches && cargo xtask vendor-ring",
         "cargo xtask build-images esp   # esp32/images/<bench>.elf; check sha256 against images.sha256",
-        "cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... cargo xtask run-all ../rind-bench/esp32/images",
-        "cargo xtask report --raw results/raw --rind ../rind-bench/rind --firmware ../rind-bench/esp32 \
+        "cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... cargo xtask run-all ../rind-hardware/esp32/images",
+        "cargo xtask report --raw results/raw --rind ../rind-hardware/rind --firmware ../rind-hardware/esp32 \
          --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results",
         "cargo verify   # recomputes every published number from raw",
     ],
@@ -119,12 +119,12 @@ const NRF52840: Board = Board {
             T1000-E at 64 MHz, timed with the Cortex-M4's DWT cycle counter.",
     layout: LAYOUT_NRF,
     repro: &[
-        "git clone --recursive https://github.com/steelhead99x/rind-bench && cd rind-bench",
+        "git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware",
         "cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images nrf",
-        "cd ../rind-results && cargo xtask run-all-nrf ../rind-bench/nrf52840/images   # double-tap reset for the \
+        "cd ../rind-results && cargo xtask run-all-nrf ../rind-hardware/nrf52840/images   # double-tap reset for the \
          UF2 drive; back up the board's firmware first",
-        "cargo xtask report --board nrf52840 --raw results/raw-nrf52840 --rind ../rind-bench/rind \
-         --firmware ../rind-bench/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json \
+        "cargo xtask report --board nrf52840 --raw results/raw-nrf52840 --rind ../rind-hardware/rind \
+         --firmware ../rind-hardware/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json \
          --out results/nrf52840",
         "cargo verify",
     ],
@@ -135,7 +135,7 @@ const NRF52840: Board = Board {
 
 /// The nRF52840's layout note; `--layout` replaces it once a relinked build has run there.
 const LAYOUT_NRF: &str = "Relinked builds that move every library by about 1 KB and about 2 KB \
-     (rind-bench's `--pad 1031` and `--pad 2053`, padding ahead of the libraries since 2026-11-12, checked with `nm -n`) \
+     (rind-hardware's `--pad 1031` and `--pad 2053`, padding ahead of the libraries since 2026-11-12, checked with `nm -n`) \
      moved no short-input ratio by more than 0.01 (`diag/nrf52840-relink-fixed-98568332/relink-short.md`: chacha20poly1305, \
      hkdf, hmac and sha2). An earlier relink of all twelve benches (`diag/nrf52840-relink-98568332/`) moved the Rust code \
      only 8 bytes, so it did not test layout. Unlike the ESP32-S3's, these rows hardly depend on layout (why is not tested).";
@@ -231,7 +231,9 @@ fn read_runs(raw: &Path) -> Result<Vec<Run>, String> {
     Ok(out)
 }
 
-/// The rind-bench commit the images came from and the patches applied.
+/// The firmware-repo commit the images came from and the patches applied.
+/// The JSON field is still `rind_bench` (and published files keep historical SHAs from
+/// the private steelhead99x/rind-bench history; the public repo is rind-hardware).
 fn port_of(firmware: &Path) -> Result<Map<String, Value>, String> {
     let root = std::fs::canonicalize(firmware).map_err(|e| e.to_string())?;
     let root = root.parent().unwrap_or(&root);
@@ -244,7 +246,7 @@ fn port_of(firmware: &Path) -> Result<Map<String, Value>, String> {
     let mut m = Map::new();
     m.insert(
         "repo".into(),
-        json!("https://github.com/steelhead99x/rind-bench"),
+        json!("https://github.com/steelhead99x/rind-hardware"),
     );
     m.insert("commit".into(), json!(git(root, &["rev-parse", "HEAD"])?));
     m.insert("patches".into(), json!(patches));
@@ -868,7 +870,7 @@ impl Ctx<'_> {
             .filter(|m| !m.is_empty())
         else {
             return vec![format!(
-                "- Firmware: [rind-bench]({}) `{}`",
+                "- Firmware: [rind-hardware]({}) `{}`",
                 py_str(&port["repo"]),
                 py_str(&port["commit"])
             )];
