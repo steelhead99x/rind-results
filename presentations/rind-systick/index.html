@@ -23,7 +23,7 @@ const DATA = {
 
   /* Hardware rind is benched on, from steelhead99x/rind-results */
   hosts: [
-    { name: "RP2040", core: "Cortex-M0+ (ARMv6-M)", clock: "125 MHz", os: "none", timer: "SysTick, extended to 32 bits (images built, not yet run)", src: "repo-rp2040" },
+    { name: "RP2040", core: "Cortex-M0+ (ARMv6-M)", clock: "125 MHz", os: "none", timer: "SysTick, extended to 32 bits (first run 2026-11-12; COUNTFLAG wrap bug fixed)", src: "repo-rp2040" },
     { name: "EFR32MG24", core: "Cortex-M33F (Armv8-M)", clock: "78 MHz", os: "none", timer: "none yet: nothing rind-related flashed", src: "repo-mg24" },
     { name: "nRF52840", core: "Cortex-M4F (Armv7-M)", clock: "64 MHz", os: "none", timer: "DWT cycle counter", src: "repo-nrf" },
     { name: "ESP32-S3", core: "Xtensa LX7", clock: "240 MHz", os: "ESP-IDF (FreeRTOS)", timer: "CCOUNT cycle counter", src: "repo-esp" },
@@ -78,7 +78,7 @@ const DATA = {
 
   /* Recommendations (labelled as such on the slides) */
   recs: [
-    { chip: "RP2040", short: "SysTick, CLKSOURCE = 1, report cycles", long: "software-extended SysTick (32 bits, 34.4 s) or TIMERAW in µs", also: "Cross-check SysTick against the 1 µs TIMER at boot, as the built images do. State whether hot code runs from XIP flash or SRAM." },
+    { chip: "RP2040", short: "SysTick, CLKSOURCE = 1, report cycles", long: "software-extended SysTick (32 bits, 34.4 s) or TIMERAW in µs", also: "Cross-check SysTick against the 1 µs TIMER at boot, for at least two wraps. On a Pico the check ran 300 ms: 37,500,815 cycles against 300,021 µs (125.0 MHz). State whether hot code runs from XIP flash or SRAM." },
     { chip: "EFR32MG24", short: "DWT CYCCNT, after checking DWT_CTRL.NOCYCCNT = 0", long: "CYCCNT (32 bits) with a wrap count, or extended SysTick", also: "Confirm SYSCLK is 78 MHz before converting: it resets to the 20 MHz FSRCO. Keep SYSTICEXTCLKEN = 0 if SysTick must count core cycles." },
     { chip: "nRF52840, ESP32-S3", short: "Keep the current cycle counters", long: "Keep 2 ms samples, far below the 32-bit wrap", also: "Keep the boot-time check of the counter against an independent clock, as the ESP32-S3 harness does." },
     { chip: "Raspberry Pi 5", short: "Batches of many calls timed with the generic timer", long: "Same; report ns plus the CPU clock", also: "Record the clock cap and governor. Report cycles only from the PMU, and only if it is enabled; ns do not convert to cycles while the clock can change." },
@@ -93,7 +93,7 @@ const DATA = {
     ["Statistic", "Median of 5 or more samples, with the min/max spread."],
     ["Order", "Interleave the variants being compared in one firmware image or one process."],
     ["Correctness", "Run known-answer tests on the device before timing."],
-    ["Counter check", "Check the cycle counter against an independent clock at boot (ESP32-S3: 240.0000 to 240.0007 MHz over 36 boots)."],
+    ["Counter check", "Check the cycle counter against an independent clock at boot (ESP32-S3: 240.0000 to 240.0007 MHz over 36 boots; RP2040 after the wrap fix: 37,500,815 cycles against 300,021 µs, 125.0 MHz)."],
     ["Scope", "Compare libraries on one chip at one clock. Do not compare across chip classes: cycles on an M0+ and wall time on an A76 measure different things."]
   ],
 
@@ -118,7 +118,7 @@ const DATA = {
     "esp-idf": ["ESP-IDF v5.5.1 esp_cpu.h: esp_cpu_cycle_count_t is uint32_t", "https://github.com/espressif/esp-idf/blob/v5.5.1/components/esp_hw_support/include/esp_cpu.h"],
     "paper-m1": ["Hetterich and Schwarz, Branch Different: Spectre Attacks on Apple Silicon, DIMVA 2022 (CNTFRQ_EL0 24 MHz on M1; user-mode PMCCNTR faults)", "https://misc0110.net/files/applespectre_dimva22.pdf"],
     "rust-instant": ["Rust std::time::Instant: clock_gettime(CLOCK_MONOTONIC) on Unix, CLOCK_UPTIME_RAW on Darwin; criterion's WallTime uses Instant", "https://doc.rust-lang.org/std/time/struct.Instant.html"],
-    "repo-rp2040": ["rind-results main: hosts/rp2040/NOTES.md (commit 2cb88c3), baremetal/rp2040/builds/README.md", "https://github.com/steelhead99x/rind-results/blob/main/hosts/rp2040/NOTES.md"],
+    "repo-rp2040": ["rind-results main: hosts/rp2040/NOTES.md (commit 2cb88c3), baremetal/rp2040/builds/README.md; first-run SysTick fix: steelhead99x/rind-hardware rp2040/systick-wrap-fix (a9d057a)", "https://github.com/steelhead99x/rind-hardware/commit/a9d057a550a58150a3cf228e02b1532076db29e0"],
     "repo-mg24": ["rind-results main: baremetal/mg24/README.md, baremetal/rp2040/TARGET-SURVEY.md", "https://github.com/steelhead99x/rind-results/blob/main/baremetal/mg24/README.md"],
     "repo-nrf": ["rind-results main: results/nrf52840/RESULTS.md, tools/xtask/src/report.rs", "https://github.com/steelhead99x/rind-results/blob/main/results/nrf52840/RESULTS.md"],
     "repo-esp": ["rind-results main: results/RESULTS.md (ESP32-S3, harness checks), tools/xtask/src/report.rs", "https://github.com/steelhead99x/rind-results/blob/main/results/RESULTS.md"],
@@ -347,7 +347,7 @@ table.src td{font-size:14px;padding:7px 8px}
   <h2>Counting wraps in software stretches SysTick to 32 or 64 bits, which is what the RP2040 images do</h2>
   <div class="cols" style="margin-top:16px">
     <div>
-      <div class="callout">The built RP2040 images run SysTick at the processor clock (1 count = 1 cycle) and extend the 24-bit counter in software to 32 bits, which wraps every 34.4 s at 125 MHz. The 1 MHz TIMER is used only as a cross-check at boot. (hosts/rp2040/NOTES.md, commit 2cb88c3)</div>
+      <div class="callout">The RP2040 images run SysTick at the processor clock (1 count = 1 cycle) and extend it in software to 32 bits (wraps every 34.4 s at 125 MHz). The first Pico run showed a COUNTFLAG double-count: the handler never read SYST_CSR, so the next cycles() call added a second 2<sup>24</sup> cycles (134 ms) whenever a sample crossed a wrap. The handler now reads CSR. The 1 MHz TIMER cross-check lasts 300 ms, at least two wraps: 37,500,815 cycles against 300,021 µs (125.0 MHz). (rind-hardware a9d057a; wrap time from NOTES.md at 2cb88c3)</div>
       <div class="chart-title" style="margin-top:16px">Recommendation: one way to extend it</div>
       <ol class="b sm">
         <li>Set RELOAD = 0xFFFFFF, CLKSOURCE = 1, TICKINT = 1, ENABLE = 1.</li>
@@ -358,14 +358,14 @@ table.src td{font-size:14px;padding:7px 8px}
     </div>
     <div>
       <div class="card"><h3>Things to watch</h3><ul class="b sm">
-        <li>Reading SYST_CSR clears COUNTFLAG. Code that polls COUNTFLAG and an interrupt handler that relies on it will steal the flag from each other; pick one.</li>
+        <li>Reading SYST_CSR clears COUNTFLAG. Code that polls COUNTFLAG and an interrupt handler that relies on it will steal the flag from each other; pick one. That is what happened on the first Pico run, before the handler was changed to read CSR.</li>
         <li>Writing SYST_CVR clears the count and COUNTFLAG. Do not write it while timing.</li>
         <li>The wrap interrupt runs inside timed regions. Its cost lands in the samples; long samples make it a small share.</li>
-        <li>hosts/rp2040/NOTES.md does not say which method the images use.</li>
+        <li>When a wrap lands while cycles() has interrupts masked, the harness counts it, clears the pending SysTick (ICSR.PENDSTCLR), and re-reads CVR so the handler does not count it again. (rind-hardware a9d057a)</li>
       </ul></div>
     </div>
   </div>
-  <div class="foot"><span class="src">hosts/rp2040/NOTES.md (2cb88c3) · RP2040 datasheet Tables 88-91 · ARMv7-M ARM B3.3 · method: recommendation</span><span class="num"></span></div>
+  <div class="foot"><span class="src">hosts/rp2040/NOTES.md (2cb88c3) · rind-hardware a9d057a · RP2040 datasheet Tables 88-91 · ARMv7-M ARM B3.3 · extension steps: recommendation</span><span class="num"></span></div>
 </section>
 
 <!-- 6. PITFALLS -->

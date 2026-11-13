@@ -6,7 +6,7 @@
 2. The eight targets rind is benched on and what times each one's published runs
 3. How SysTick works: the 24-bit down counter, SYST_CSR / RVR / CVR / CALIB, CLKSOURCE, COUNTFLAG
 4. Wrap time: 2^bits ÷ clock (134.2 ms at 125 MHz), with a log-scale chart for each counter
-5. Extending SysTick to 32 or 64 bits in software, as the built RP2040 images do (commit 2cb88c3)
+5. Extending SysTick to 32 or 64 bits in software, as the RP2040 images do, and the COUNTFLAG wrap-count bug found on the first Pico run (rind-hardware a9d057a)
 6. Pitfalls: torn reads, interrupts, flash stalls, clock changes
 7. Counters on the microcontrollers (RP2040, EFR32MG24, nRF52840, ESP32-S3)
 8. Counters on the application processors (Raspberry Pi 5, Apple M1, Pixel 9 Pro, Xeon VM)
@@ -35,8 +35,8 @@ The CSS and navigation script are reused from `presentations/rind-rp2040`.
 ## What is a recommendation
 
 Slides 5 (the extension method), 9 (read sequences), 10 and 11 are recommendations, labelled as such. Everything else
-states what a source says. The methodology on slide 11 follows the rind-bench team's measurement plan of 2026-11-12
-and the harness checks in the published ESP32-S3 and nRF52840 results.
+states what a source says. The methodology on slide 11 follows the measurement plan of 2026-11-12
+and the harness checks in the published ESP32-S3 and nRF52840 results, plus the RP2040 boot cross-check after the wrap-count fix.
 
 ## Sources
 
@@ -51,3 +51,4 @@ and the harness checks in the published ESP32-S3 and nRF52840 results.
   `baremetal/rp2040/TARGET-SURVEY.md`, `baremetal/mg24/README.md`, `results/RESULTS.md`, `results/nrf52840/RESULTS.md`,
   `tools/xtask/src/report.rs`, `hosts/{pi5,m1pro,pixel9pro,xeon-vm}/NOTES.md` (main), and
   `hosts/pi5/ab-narrow-mul/README.md` (branch `results/pi5-lane-2026-11-12`)
+- steelhead99x/rind-hardware `rp2040/systick-wrap-fix` (a9d057a): COUNTFLAG double-count on the first Pico run, the fix, and the 300 ms boot cross-check (37,500,815 cycles against 300,021 µs, 125.0 MHz)
