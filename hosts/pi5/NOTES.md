@@ -15,7 +15,7 @@
 ## Notes
 
 - Raspberry Pi 5 Model B (BCM2712, 4× Cortex-A76 at 2.4 GHz, 8 GB), Raspberry Pi OS (Debian 13), reached over ssh through the desktop. Idle during the run (0.0 other busy CPUs).
-- rustc 1.98.1 from rustup, the same release the flake pins (not the Nix build of it). Run through `cargo xtask pi-run`, which calls `admin/bench-report` and records a busy host or a non-pinned rustc instead of refusing them.
+- rustc 1.98.1 from rustup, the same release the flake pins (not the Nix build of it). Run through `cargo xtask pi-run --commit b66514238d449fc211d75fd14554301bb690e421`, which calls `admin/bench-report` and records a busy host or a non-pinned rustc instead of refusing them. That commit is the published host set. The command's default commit is the later comparable pin `d6ca9a756d3d1e71489e61e44c04f33c3c893589`.
 - The board has `libssl3` but no `libssl-dev`, and nothing was installed on it: `cargo xtask pi-run` unpacked `libssl-dev` (3.5.9 headers) with `apt-get download` + `dpkg -x` into the work dir, linking against the system's libssl 3.5.7 at runtime. The OpenSSL column is the system's OpenSSL 3.5.7.
 - rind-cpuid reports aes, pmull, sha2, neon, and no sha3 (the SHA-512/SHA-3 extension) or DIT on this Cortex-A76.
 - Build cost measured by the harness's own `admin/build-cost` after the benchmarks, 4 jobs.
