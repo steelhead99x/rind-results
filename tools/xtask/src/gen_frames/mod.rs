@@ -15,12 +15,13 @@ mod svg;
 mod tests;
 mod text;
 
+use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(clap::Args)]
 pub struct Args {
-    /// The demo directory: SVGs are fetched into its assets/, and
+    /// The demo directory: the favicon is checked into its assets/, and
     /// oled_demo/frames.h and preview*.png are written there
     #[arg(long)]
     dir: Option<PathBuf>,
@@ -338,17 +339,36 @@ pub fn encode_png(img: &Rgb) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
-/// Where `gen_frames.py` fetched its SVGs from (see SOURCES.md).
-pub const SOURCES: [(&str, &str); 2] = [
-    (
-        "moqdev-layout_favicon.svg",
-        "https://moq.dev/layout/favicon.svg",
-    ),
-    (
-        "wordmark-light.svg",
-        "https://raw.githubusercontent.com/moq-dev/rind/main/admin/wordmark-light.svg",
-    ),
-];
+/// Pinned SHA-256 of https://moq.dev/layout/favicon.svg. The file is not
+/// redistributable (see SOURCES.md); a download is kept only when it matches.
+const FAVICON_SHA256: &str = "241bd5a8c3291315d7a617a4ac0c869c9cc5e4a34f6342ff91ae999c3d3dc8f1";
+const FAVICON_URL: &str = "https://moq.dev/layout/favicon.svg";
+const FAVICON_NAME: &str = "moqdev-layout_favicon.svg";
+
+/// Vendored rind wordmark (Apache-2.0 OR ISC OR MIT-0). Same bytes as
+/// https://raw.githubusercontent.com/moq-dev/rind/main/admin/wordmark-light.svg
+const WORDMARK_SHA256: &str = "8a16e64f1e13df5e03b2312315cfa6270443dc130e9ebcb973cb72f8afc96111";
+const WORDMARK: &[u8] =
+    include_bytes!("../../../../baremetal/mg24/oled-demo/vendor/wordmark-light.svg");
+
+fn sha256_hex(data: &[u8]) -> String {
+    Sha256::digest(data)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+fn check_digest(name: &str, bytes: &[u8], digest: &str) -> Result<(), String> {
+    if sha256_hex(bytes) != digest {
+        return Err(format!("{name}: sha256 mismatch"));
+    }
+    Ok(())
+}
+
+fn wordmark_bytes() -> Result<&'static [u8], String> {
+    check_digest("wordmark-light.svg", WORDMARK, WORDMARK_SHA256)?;
+    Ok(WORDMARK)
+}
 
 fn read(p: &Path) -> Result<Vec<u8>, String> {
     std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()))
@@ -358,28 +378,44 @@ fn write(p: &Path, data: &[u8]) -> Result<(), String> {
     std::fs::write(p, data).map_err(|e| format!("{}: {e}", p.display()))
 }
 
-/// Fetch whichever source SVGs are missing from `assets`, unmodified.
-fn fetch_assets(assets: &Path) -> Result<(), String> {
+/// Download the favicon into `assets` only when its SHA-256 matches the pin.
+/// An existing file is checked too, and deleted if it does not match.
+fn fetch_favicon(assets: &Path) -> Result<(), String> {
     std::fs::create_dir_all(assets).map_err(|e| format!("{}: {e}", assets.display()))?;
-    for (name, url) in SOURCES {
-        let dest = assets.join(name);
-        if dest.is_file() {
-            continue;
+    let dest = assets.join(FAVICON_NAME);
+    if dest.is_file() {
+        let bytes = read(&dest)?;
+        if check_digest(FAVICON_NAME, &bytes, FAVICON_SHA256).is_err() {
+            let _ = std::fs::remove_file(&dest);
+            return Err(format!("{FAVICON_NAME}: sha256 mismatch"));
         }
-        let part = assets.join(format!("{name}.part"));
-        let st = Command::new("curl")
-            .args(["-fsSL", "--retry", "2", "-o"])
-            .arg(&part)
-            .arg(url)
-            .status()
-            .map_err(|e| format!("curl: {e}"))?;
-        if !st.success() {
-            let _ = std::fs::remove_file(&part);
-            return Err(format!("curl {url}: {st}"));
-        }
-        std::fs::rename(&part, &dest).map_err(|e| format!("{}: {e}", dest.display()))?;
+        return Ok(());
     }
-    Ok(())
+    let part = assets.join(format!("{FAVICON_NAME}.part"));
+    let st = Command::new("curl")
+        .args([
+            "--proto",
+            "=https",
+            "--tlsv1.2",
+            "-fsSL",
+            "--retry",
+            "2",
+            "-o",
+        ])
+        .arg(&part)
+        .arg(FAVICON_URL)
+        .status()
+        .map_err(|e| format!("curl: {e}"))?;
+    if !st.success() {
+        let _ = std::fs::remove_file(&part);
+        return Err(format!("curl {FAVICON_URL}: {st}"));
+    }
+    let bytes = read(&part)?;
+    if check_digest(FAVICON_NAME, &bytes, FAVICON_SHA256).is_err() {
+        let _ = std::fs::remove_file(&part);
+        return Err(format!("{FAVICON_NAME}: sha256 mismatch"));
+    }
+    std::fs::rename(&part, &dest).map_err(|e| format!("{}: {e}", dest.display()))
 }
 
 pub fn run(args: Args) -> Result<(), String> {
@@ -390,17 +426,14 @@ pub fn run(args: Args) -> Result<(), String> {
         .fonts
         .unwrap_or_else(|| crate::root().join("tools/xtask/fonts"));
     let assets = dir.join("assets");
-    fetch_assets(&assets)?;
+    fetch_favicon(&assets)?;
     let fonts = Fonts::load(&fonts_dir)?;
     let frames = vec![
         (
             "moq",
-            frame_moq(&read(&assets.join(SOURCES[0].0))?, &fonts)?,
+            frame_moq(&read(&assets.join(FAVICON_NAME))?, &fonts)?,
         ),
-        (
-            "rind",
-            frame_rind(&read(&assets.join(SOURCES[1].0))?, &fonts)?,
-        ),
+        ("rind", frame_rind(wordmark_bytes()?, &fonts)?),
         ("bench", frame_bench(&fonts)?),
     ];
     let header = dir.join("oled_demo");

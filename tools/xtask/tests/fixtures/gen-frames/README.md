@@ -14,7 +14,8 @@ fonts in `tools/xtask/fonts`.
   `fontmode = "1"` on a 700x40 "L" image: both fonts, sizes 7 to 23, five strings, x = 0, 3
   and 2.5. Each line has `textlength * 64` and the SHA-256 of the image bytes.
 - `wordmark-light.svg`: the rind wordmark, unmodified from moq-dev/rind
-  `admin/wordmark-light.svg` (Apache-2.0, ISC, or MIT-0, like rind).
+  `admin/wordmark-light.svg` (Apache-2.0, ISC, or MIT-0, like rind). The same
+  bytes are vendored at `baremetal/mg24/oled-demo/vendor/wordmark-light.svg`.
 
 The text matches Pillow exactly. The two logos are drawn with resvg rather than cairo, and
 cairo anti-aliases edges differently. After the script's threshold, box downsample and

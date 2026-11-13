@@ -169,6 +169,19 @@ fn text_matches_pillow() {
 }
 
 #[test]
+fn vendored_wordmark_matches_pin() {
+    assert_eq!(sha256_hex(WORDMARK), WORDMARK_SHA256);
+    let fixture = read(&fixtures().join("wordmark-light.svg")).expect("svg");
+    assert_eq!(sha256_hex(&fixture), WORDMARK_SHA256);
+}
+
+#[test]
+fn favicon_digest_check_fails_closed() {
+    assert!(check_digest(FAVICON_NAME, b"not-the-svg", FAVICON_SHA256).is_err());
+    assert!(check_digest(FAVICON_NAME, WORDMARK, FAVICON_SHA256).is_err());
+}
+
+#[test]
 fn frames_h_names_the_command() {
     let f = Gray::new(W, H);
     let h = frames_h(&[("a", f.clone()), ("b", f)]);
