@@ -198,7 +198,7 @@ fn host_runs(a: &Args, out: &Path, head: &str, relax: &Relax) -> Result<(), Stri
         .map(str::to_string)
         .collect::<Vec<_>>();
         let mut line = format!("run {n} cpus={cpus}\n");
-        match upstream_run::run_bench_report(&a.rind, &args, relax, &env_ref, Some(&cpus)) {
+        match upstream_run::run_bench_report(&a.rind, &args, relax, &env_ref, Some(&cpus), None) {
             Ok(()) => line.push_str("ok\n"),
             Err(e) => {
                 line.push_str(&e);
@@ -225,9 +225,9 @@ fn append(path: &Path, text: &str) -> Result<(), String> {
 fn android(a: &Args, out: &Path, head: &str) -> Result<(), String> {
     let Some(capture) = &a.capture else {
         return Err(
-            "pixel9pro needs --capture <dir> (getprop.txt, stat-before, stat-after, criterion/). \
-             The adb push and pull stay in scripts/pixel-run.sh; this command parses the capture \
-             the way admin/bench-report run() does."
+            "pixel9pro needs --capture <dir> of an adb pull (getprop.txt, stat-before, \
+             stat-after, criterion/), or `cargo xtask pixel-run --serial <id>` to collect one. \
+             Parsing matches admin/bench-report run()."
                 .into(),
         );
     };

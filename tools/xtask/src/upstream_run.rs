@@ -55,7 +55,7 @@ if os.environ.get("RIND_RECORD_BUSY") == "1":
         busy = br.busy_cpus()
         n = br.cpu_count() if hasattr(br, "cpu_count") else 1
         limit = br.busy_limit() if hasattr(br, "busy_limit") else 0.0
-        print(f"bench: {busy:.1f} of {n} CPUs busy {when} (harness limit {limit:.1f}); continuing", file=sys.stderr, flush=True)
+        print(f"host-run: {busy:.1f} of {n} CPUs busy {when} (harness limit {limit:.1f}); continuing", file=sys.stderr, flush=True)
         return round(float(busy), 2)
     br.check_idle = check_idle
 orig = getattr(br, "build_cost", None)
@@ -63,7 +63,7 @@ def build_cost(env, jobs, refused):
     if os.environ.get("RIND_FREE_TARGET") == "1":
         shutil.rmtree(env["CARGO_TARGET_DIR"], ignore_errors=True)
     if os.environ.get("RIND_SKIP_BUILD_COST") == "1":
-        return {"status": "failed", "started": "", "reason": "skipped by xtask bench (build-cost not run)"}
+        return {"status": "failed", "started": "", "reason": "skipped by host-run (HOSTRUN_SKIP_BUILD_COST)"}
     return orig(env, jobs, refused)
 if orig is not None and (os.environ.get("RIND_SKIP_BUILD_COST") == "1" or os.environ.get("RIND_FREE_TARGET") == "1"):
     br.build_cost = build_cost
@@ -132,6 +132,7 @@ pub fn run_bench_report(
     relax: &Relax,
     env: &[(&str, &str)],
     cpus: Option<&str>,
+    log: Option<&Path>,
 ) -> Result<(), String> {
     let script = rind.join("admin/bench-report");
     if !script.is_file() {
@@ -170,6 +171,16 @@ pub fn run_bench_report(
     cmd.current_dir(rind);
     for (k, v) in env {
         cmd.env(k, v);
+    }
+    if let Some(log) = log {
+        if let Some(parent) = log.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
+        }
+        let file = std::fs::File::create(log).map_err(|e| format!("{}: {e}", log.display()))?;
+        cmd.stdout(std::process::Stdio::from(
+            file.try_clone().map_err(|e| e.to_string())?,
+        ));
+        cmd.stderr(std::process::Stdio::from(file));
     }
     let status = cmd.status().map_err(|e| format!("python3: {e}"))?;
     let after = std::fs::read(&script).map_err(|e| format!("{}: {e}", script.display()))?;
@@ -358,7 +369,10 @@ def main():
         assert!(status.status.success(), "{stderr}{stdout}");
         assert!(stdout.contains("busy=0.25"), "{stdout}");
         assert!(stdout.contains("idle=1.25"), "{stdout}");
-        assert!(stdout.contains("skipped by xtask bench"), "{stdout}");
+        assert!(
+            stdout.contains("skipped by host-run (HOSTRUN_SKIP_BUILD_COST)"),
+            "{stdout}"
+        );
         assert_eq!(std::fs::read(&path).unwrap(), before);
         let _ = std::fs::remove_dir_all(&dir);
     }
