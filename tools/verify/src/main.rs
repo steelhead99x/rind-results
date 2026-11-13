@@ -5,7 +5,7 @@
 //! summary.md show. It flags any cell, ratio, fastest library, unit or
 //! cycles/time mismatch, and prints the cycle-counter cross-checks.
 //!
-//! Usage: cargo verify [--board esp32s3|nrf52840|msi-001 ...]
+//! Usage: cargo verify [--board esp32s3|nrf52840|efr32mg24|msi-001 ...]
 //! Exit status 1 if anything mismatched.
 //!
 //! `cargo verify --dir <tree>` checks that directory instead of the published
@@ -64,6 +64,13 @@ fn board_files(b: &str) -> Option<BoardFiles> {
             svg: "media/charts/nrf52840-rind-vs-fastest.svg",
             tsv: None,
             hz: 64_000_000.0,
+        }),
+        "efr32mg24" => Some(BoardFiles {
+            raw: "results/raw-efr32mg24",
+            md: "results/efr32mg24/RESULTS.md",
+            svg: "media/charts/efr32mg24-rind-vs-fastest.svg",
+            tsv: None,
+            hz: 78_000_000.0,
         }),
         _ => None,
     }
@@ -1545,7 +1552,7 @@ fn main() -> ExitCode {
             s if s.starts_with("--dir=") => dirs.push(s["--dir=".len()..].to_string()),
             "-h" | "--help" => {
                 println!(
-                    "usage: cargo verify [--board esp32s3|nrf52840|msi-001|<host under results/> ...]"
+                    "usage: cargo verify [--board esp32s3|nrf52840|efr32mg24|msi-001|<host under results/> ...]"
                 );
                 println!("       cargo verify --dir <output tree> [--dir <output tree> ...]");
                 return ExitCode::SUCCESS;
@@ -1558,7 +1565,12 @@ fn main() -> ExitCode {
     }
     let asked_board = !boards.is_empty();
     if boards.is_empty() {
-        boards = vec!["esp32s3".into(), "nrf52840".into(), "msi-001".into()];
+        boards = vec![
+            "esp32s3".into(),
+            "nrf52840".into(),
+            "efr32mg24".into(),
+            "msi-001".into(),
+        ];
         for h in HOSTS {
             if root().join("results").join(h).join("raw").is_dir() {
                 boards.push((*h).into());
