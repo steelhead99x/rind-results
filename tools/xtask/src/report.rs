@@ -345,6 +345,18 @@ fn has_host_runs(dir: &Path) -> bool {
 
 pub fn run(mut args: Args) -> Result<(), String> {
     if let Some(dir) = args.dir.clone() {
+        if let Some(pick) = crate::layout::table_dir(&dir) {
+            for h in &pick.history {
+                eprintln!(
+                    "history: {} (previous comparable set; not in {} tables)",
+                    h.display(),
+                    crate::layout::COMPARABLE_PIN
+                );
+            }
+            args.dir = Some(pick.dir);
+        }
+    }
+    if let Some(dir) = args.dir.clone() {
         if has_host_runs(&dir) {
             return crate::host_report::run_dir(args.rind, dir);
         }

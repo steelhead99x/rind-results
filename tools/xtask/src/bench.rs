@@ -19,8 +19,8 @@ pub struct Args {
     /// rind checkout that was measured. It must be clean and at `--commit`.
     #[arg(long)]
     rind: PathBuf,
-    /// upstream rind SHA (full or a unique prefix)
-    #[arg(long)]
+    /// upstream rind SHA (full or a unique prefix). Default: the comparable-set pin.
+    #[arg(long, default_value = crate::layout::COMPARABLE_PIN)]
     commit: String,
     /// results directory. Default: `results/<board>/<commit>/`
     #[arg(long)]
@@ -97,6 +97,7 @@ pub fn run(a: Args) -> Result<(), String> {
         Some(p) => p.clone(),
         None => layout::publish_dir(&crate::root(), &a.board, &head, a.label.as_deref())?,
     };
+    layout::refuse_history_out(&out)?;
     std::fs::create_dir_all(out.join("raw")).map_err(|e| e.to_string())?;
     let relax = relax_for(&a);
     upstream_run::write_relaxations(
