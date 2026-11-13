@@ -14,6 +14,7 @@ Linux 6.18.60+rpt-rpi-2712, rustc 1.98.1 from rustup), for the stack on top of
 | `perf/pi5-p384-verify-w7` | P-384 ECDSA verify: generator terms from a width-7 NAF over G..63G (on `perf/pi5-narrow-nist`) |
 | `perf/pi5-p521-verify-w7` | the same for P-521 (on `perf/pi5-p384-verify-w7`) |
 | `perf/pi5-rsa-bench-sizes` | `rsa_sizes` bench: RSA-2048/3072/4096 sign + verify, rind vs aws-lc-rs |
+| `fix/p256-table-align` | P-256 generator table aligned to 64 bytes (on `perf/pi5-narrow-nist`) |
 
 ## Clock: 1.5 GHz cap
 
@@ -119,6 +120,20 @@ Spreads ≤ 0.1%.
 | p384-ecdsa-verify (control) | 582.0 | 582.1 | 1.000 | 792.1 |
 
 Spreads ≤ 0.4%. The scout's llvm-mca estimate for P-521 was −4.0%; the measured result is −4.4%.
+
+
+### `table-align/`: P-256 generator table alignment, standalone (5 rounds)
+
+`fix/p256-table-align` (8e6f1670) on `perf/pi5-narrow-nist` (529a9d64). See [`table-align/`](table-align/README.md).
+
+| operation | narrow-nist µs | + align µs | ratio | aws-lc-rs µs |
+|---|---|---|---|---|
+| p256-keygen | 36.5 | 36.5 | 1.000 | 43.1 |
+| p256-ecdsa-sign | 45.2 | 45.2 | 1.000 | 75.9 |
+| p256-ecdh | 200.0 | 199.9 | 1.000 | 213.6 |
+| p256-ecdsa-verify | 192.6 | 192.6 | 1.000 | 256.7 |
+
+Spreads 0.0%. Round 1 started at 77.9 °C after a cool-down; readings 74.1-79.6 °C, `get_throttled=0xe0000`, clock 1.5 GHz. The base's table already sat at +32, so the result is neutral. The +8 case and the same fix's recovery are in [`series2-layout/`](series2-layout/README.md).
 
 ### `../../m1pro/ab-narrow-mul/`: Apple M1 Pro (noisy)
 
