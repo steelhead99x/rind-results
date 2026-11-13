@@ -1,8 +1,38 @@
-# `rp2040`: not runnable
+# `rp2040`: builds and is ready for hardware
 
-> **Correction (2026-11-12):** the `no_std` blocker below is addressed by rind-bench `patches/0003` (rind `no_std` on `target_os = "none"`, M-profile portable backend; used for the nRF52840 results). With it, `cargo build -p rind --target thumbv6m-none-eabi` (getrandom custom backend) fails with only 3 errors in `rind/src/low/generic/reuse_cache.rs`: `AtomicU8::compare_exchange` and `fetch_max` don't exist on ARMv6-M (no CAS). A critical-section or `portable-atomic` fallback there would be the remaining step; not done.
+> **Update (2026-11-12):** rind-bench now builds every bench image for
+> `thumbv6m-none-eabi`. `patches/0003` gives rind `no_std` on `target_os =
+> "none"` with the M-profile portable backend. `patches/0005` makes
+> `ReuseCache` work without CAS: on targets that do not set
+> `target_has_atomic = "ptr"`, the same state machine runs in a `Cell`,
+> with no new dependency, matching rind's existing "one execution context
+> on bare metal" assumption. A critical-section or portable-atomic crate
+> would have added a dependency without changing that assumption, so it
+> was not used. The images have not been run on a board (none is
+> attached); known-answer checks are in the firmware and will run on the
+> first flash.
 
-- Board: RP2040 (B2, 2 MB flash), Cortex-M0+ (thumbv6m-none-eabi), 264 KB RAM.
-- Status: **not benchmarked. rind lacks `no_std`**, so the library doesn't build for thumbv6m-none-eabi: 1672 errors, the first `can't find crate for std`. Every dependency of rind's portable backend does build there; FEASIBILITY.md has the details.
-- The board's firmware was backed up in full before any experiment and left untouched. The backup image, USB serial numbers, and flash IDs are left out of this repo.
-- QUEST-DRAFT.md is a drafted (not filed) rind quest for a `no_std` + `alloc` build and an embedded bench runner.
+- Board needed: a Raspberry Pi Pico, Pico W, or another RP2040 board with
+  a 12 MHz crystal (the official Pico default) and W25Q080 or compatible
+  QSPI flash (embassy-rp `boot2-w25q080`). Hold BOOTSEL, plug in over USB,
+  copy `rp2040/images/<bench>.uf2`, open the CDC-ACM port, and send
+  `rind-bench:go\n`. See [rind-bench/rp2040/README.md](https://github.com/steelhead99x/rind-bench/blob/main/rp2040/README.md)
+  (private repo).
+- Chip: RP2040, Cortex-M0+ (`thumbv6m-none-eabi`), 125 MHz, 264 KB RAM
+  (256 KB main SRAM), 2 MiB XIP flash.
+- Timing: SysTick at the processor clock, 1 count = 1 cycle. The hardware
+  counter is 24 bits (wraps every 134.2 ms at 125 MHz); a software
+  extension gives a 32-bit count wrapping every 34.4 s. The 1 MHz TIMER is
+  an independent boot cross-check only (1 µs is too coarse for short rows).
+  Cortex-M0+ has no DWT cycle counter.
+- Libraries in the images: rind, RustCrypto, dalek, libcrux. **ring 0.17.14
+  is left out**: its Arm assembly uses NEON (`vpush`) and does not assemble
+  for ARMv6-M. aws-lc-rs needs an OS.
+- RNG: the RP2040 has no TRNG. `getrandom` is a seeded SplitMix64, not a
+  source of entropy.
+- Image hashes and source: [images.json](images.json) and
+  [images.sha256](images.sha256) next to this note. Built from rind-bench
+  `f656f95` (2026-11-12 16:35 PST), rind `98568332`, patches 0001–0005.
+  The images have not been flashed or run.
+- There is no official QEMU machine for the RP2040 with enough RAM to run
+  these images, so only a build is published.
