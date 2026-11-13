@@ -5,6 +5,7 @@
 //! separate crate that shares no code with this one, re-checks them.
 
 mod bench;
+mod boards;
 mod capture;
 mod charts;
 mod compare;
@@ -74,6 +75,60 @@ enum Cmd {
     },
     /// Measure one board: host, Android capture, or bare-metal images.
     Bench(bench::Args),
+    /// `scripts/orin-setup.sh`: unpack the staged toolchain under ~/rind-bench-orin.
+    OrinSetup {
+        #[arg(long)]
+        home: Option<PathBuf>,
+    },
+    /// `scripts/orin-run.sh <n> [core]`.
+    OrinRun {
+        n: u32,
+        core: Option<u32>,
+        #[arg(long)]
+        home: Option<PathBuf>,
+    },
+    /// `scripts/orin-runs.sh`: three runs, reusing run 1's core.
+    OrinRuns {
+        #[arg(long)]
+        core: Option<u32>,
+        #[arg(long)]
+        home: Option<PathBuf>,
+    },
+    /// `scripts/pixel-run.sh`: adb the benches, then pull the capture.
+    PixelRun {
+        #[arg(long)]
+        serial: String,
+        #[arg(long)]
+        home: Option<PathBuf>,
+        /// do not wait for ~/rind-bench-run/status
+        #[arg(long)]
+        no_wait: bool,
+    },
+    /// `scripts/pixel-run2.sh`: the rustls second pass.
+    PixelRun2 {
+        #[arg(long)]
+        serial: String,
+        #[arg(long)]
+        home: Option<PathBuf>,
+    },
+    /// `scripts/mac-run.sh`: M1 Pro run with the free-space watchdog.
+    /// `--commit` defaults to the comparable-set pin. The published b6651423
+    /// numbers used `boards::HOST_COMMIT`.
+    MacRun {
+        #[arg(long)]
+        home: Option<PathBuf>,
+        #[arg(long, default_value = layout::COMPARABLE_PIN)]
+        commit: String,
+    },
+    /// `scripts/pi-run.sh`: Pi 5 run, unpacking libssl-dev locally if needed.
+    /// `--commit` defaults to the comparable-set pin. The published b6651423
+    /// numbers used `boards::HOST_COMMIT`.
+    PiRun {
+        #[arg(long)]
+        home: Option<PathBuf>,
+        #[arg(long, default_value = layout::COMPARABLE_PIN)]
+        commit: String,
+    },
     /// Re-check a result tree. With no flags, the published set.
     Verify {
         #[arg(long)]
@@ -152,6 +207,67 @@ fn main() -> ExitCode {
         Cmd::Check => check(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
         Cmd::Bench(a) => bench::run(a),
+        Cmd::OrinSetup { home } => (|| {
+            let home = match home {
+                Some(h) => h,
+                None => boards::orin_home()?,
+            };
+            boards::orin_setup(&home)
+        })(),
+        Cmd::OrinRun { n, core, home } => (|| {
+            let home = match home {
+                Some(h) => h,
+                None => boards::orin_home()?,
+            };
+            boards::orin_run(&home, n, core).map(|_| ())
+        })(),
+        Cmd::OrinRuns { core, home } => (|| {
+            let home = match home {
+                Some(h) => h,
+                None => boards::orin_home()?,
+            };
+            boards::orin_runs(&home, core)
+        })(),
+        Cmd::PixelRun {
+            serial,
+            home,
+            no_wait,
+        } => (|| {
+            let base = boards::home_dir()?.join("rind-bench-run");
+            let work = home.unwrap_or_else(|| base.join("pixel"));
+            boards::pixel_run(boards::PixelOpts {
+                serial,
+                pkg_tar: work.join("../pixel-pkg.tar.gz"),
+                remote: "/data/local/tmp/rind".into(),
+                second_pass: false,
+                wait_for: if no_wait {
+                    None
+                } else {
+                    Some(base.join("status"))
+                },
+                work,
+            })
+        })(),
+        Cmd::PixelRun2 { serial, home } => (|| {
+            let base = boards::home_dir()?.join("rind-bench-run");
+            let work = home.unwrap_or_else(|| base.join("pixel2"));
+            boards::pixel_run(boards::PixelOpts {
+                serial,
+                pkg_tar: work.join("../pixel-pkg2.tar.gz"),
+                remote: "/data/local/tmp/rind".into(),
+                second_pass: true,
+                wait_for: None,
+                work,
+            })
+        })(),
+        Cmd::MacRun { home, commit } => (|| {
+            let home = home.unwrap_or(boards::home_dir()?.join("rind-bench-run"));
+            boards::mac_run(&home, &commit)
+        })(),
+        Cmd::PiRun { home, commit } => (|| {
+            let home = home.unwrap_or(boards::home_dir()?.join("rind-bench-run"));
+            boards::pi_run(&home, &commit)
+        })(),
         Cmd::Verify { dir, board } => run_verify(&dir, &board),
         Cmd::AndroidConvert {
             rind,
