@@ -6,4 +6,8 @@ publish = false
 
 [dependencies]
 ring = { version = "=0.17.14", default-features = false }
+# Named so the no_std build pulls getrandom's custom backend. No Rust code calls it.
 getrandom02 = { package = "getrandom", version = "0.2", features = ["custom"] }
+
+[package.metadata.cargo-machete]
+ignored = ["getrandom02"]
