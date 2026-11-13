@@ -15,6 +15,6 @@
 ## Notes
 
 - Cloud VM, 8 vCPUs shared with other agents. CPU family 6 model 207 (a 5th-gen Xeon class part) exposing AVX-512 (F/DQ/BW/VL/IFMA/VBMI/VBMI2), VAES, VPCLMULQDQ, ADX, and SHA-NI.
-- Built and run in the repo's Nix dev shell with the pinned rustc 1.98.1, through `scripts/host-run.py`, which records instead of refusing the harness's idle check (2.3 of 8 CPUs were busy at the first attempt, which the unmodified harness refused).
+- Built and run in the repo's Nix dev shell with the pinned rustc 1.98.1, through `cargo xtask host-run`, which records instead of refusing the harness's idle check (2.3 of 8 CPUs were busy at the first attempt, which the unmodified harness refused).
 - `admin/build-cost` refused right after the benchmarks ("host is busy (7.9 of 8 CPUs busy)"), so it was rerun on its own in the dev shell with `CARGO_BUILD_JOBS=8` and merged into the JSON as `build_cost`; the first attempt is kept as `build_cost_first_attempt`.
 - The ChaCha20-Poly1305 gap (16 KB and 1 MB transfer) is against OpenSSL, which has an AVX-512 ChaCha20 path; rind, aws-lc-rs, and ring all ran within 2% of each other there.

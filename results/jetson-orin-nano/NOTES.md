@@ -10,7 +10,7 @@ was stopped, restarted or reconfigured, nvpmodel and clocks were left as found (
 - The board has no internet (its only link is USB device mode) and its clock reads 1970. The Rust
   1.98.1 aarch64 toolchain, `cargo vendor` output for rind `98568332`, and the `libssl-dev` headers
   matching the installed OpenSSL 3.0.13 were staged from a PC and unpacked under one directory
-  (`scripts/orin-setup.sh`, `tar -m` so mtimes don't confuse cargo).
+  (`cargo xtask orin-setup`, `tar -m` so mtimes don't confuse cargo).
 - Built natively on the board (`-j2`, `nice -n 19`), so the services kept their CPU.
 - `build_cost` was skipped (`HOSTRUN_SKIP_BUILD_COST=1`): it would have run repeated cold builds
   on the live box. The JSON has no `build_cost`.
