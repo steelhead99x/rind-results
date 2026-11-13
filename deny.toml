@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# cargo-deny for the rind-results workspace. Vendored upstream/rind is not a member.
+
+[graph]
+all-features = false
+
+[advisories]
+version = 2
+yanked = "warn"
+
+[licenses]
+version = 2
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "ISC",
+    "BSD-2-Clause",
+    "Unicode-3.0",
+    "Zlib",
+    # serialport, used to flash and capture the ESP32-S3.
+    "MPL-2.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

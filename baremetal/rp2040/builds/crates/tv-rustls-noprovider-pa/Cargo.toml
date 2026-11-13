@@ -8,3 +8,7 @@ publish = false
 rustls = { version = "=0.23.46", default-features = false }
 once_cell = { version = "1.21", default-features = false, features = ["race", "portable-atomic"] }
 portable-atomic = { version = "1", default-features = false, features = ["critical-section"] }
+
+[package.metadata.cargo-machete]
+# Pulled so the RP2040 build uses the portable-atomic once_cell. The lib only re-exports rustls.
+ignored = ["once_cell", "portable-atomic"]

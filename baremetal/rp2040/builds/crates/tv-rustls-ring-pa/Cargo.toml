@@ -9,3 +9,7 @@ rustls = { version = "=0.23.46", default-features = false, features = ["ring"] }
 once_cell = { version = "1.21", default-features = false, features = ["race", "portable-atomic"] }
 portable-atomic = { version = "1", default-features = false, features = ["critical-section"] }
 getrandom02 = { package = "getrandom", version = "0.2", features = ["custom"] }
+
+[package.metadata.cargo-machete]
+# Pulled so the RP2040 build uses portable-atomic and getrandom's custom backend.
+ignored = ["once_cell", "portable-atomic", "getrandom02"]

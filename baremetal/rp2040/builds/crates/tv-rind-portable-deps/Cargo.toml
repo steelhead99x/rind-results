@@ -13,3 +13,7 @@ libcrux-macros = "0.0.4"
 libcrux-poly1305 = { version = "0.0.7", features = ["expose-hacl"] }
 libcrux-sha2 = { version = "0.0.9", features = ["expose-hacl"] }
 getrandom = "0.4"
+
+[package.metadata.cargo-machete]
+# Present so the no_std build compiles these crates. The lib does not call them.
+ignored = ["getrandom", "libcrux-macros"]
