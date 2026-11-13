@@ -9,6 +9,12 @@
 //! per-library summary of B/A split by input size (short: under 1 KB or no
 //! size; long: 1 KB and up), and every row whose B/A falls outside max(1%,
 //! either side's run spread).
+//!
+//! With `--host`, A and B are Linux-host raw directories instead: each holds
+//! `run-*.json` as rind's `admin/bench-report run` writes them, a row's value
+//! is the median over runs of criterion's nanoseconds, the library comes from
+//! the JSON, and the sections are the operations (the id's first segment),
+//! all of them unless benches are named, after one section over every row.
 
 use crate::py::{self, Num};
 use regex::Regex;
@@ -20,8 +26,11 @@ use std::path::{Path, PathBuf};
 pub struct Args {
     a: PathBuf,
     b: PathBuf,
-    #[arg(required = true)]
+    #[arg(required_unless_present = "host")]
     benches: Vec<String>,
+    /// A and B hold a Linux host's bench-report `run-*.json`, timed in ns
+    #[arg(long)]
+    host: bool,
     #[arg(long, default_value = "A")]
     label_a: String,
     #[arg(long, default_value = "B")]
@@ -62,8 +71,44 @@ fn load(raw: &Path, bench: &str) -> (Rows, Vec<bool>) {
             }
         }
     }
-    let out = rows
+    (summarize(rows), checks)
+}
+
+/// A host's `run-*.json` files: id -> (median ns, run spread %, runs), and
+/// id -> library.
+fn load_host(raw: &Path) -> (Rows, BTreeMap<String, String>) {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(raw)
         .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| {
+            let n = p.file_name().unwrap().to_string_lossy();
+            n.starts_with("run-") && n.ends_with(".json")
+        })
+        .collect();
+    files.sort();
+    let mut rows: BTreeMap<String, Vec<Num>> = BTreeMap::new();
+    let mut libs = BTreeMap::new();
+    for f in files {
+        let text = String::from_utf8_lossy(&std::fs::read(&f).unwrap_or_default()).into_owned();
+        let Ok(doc) = serde_json::from_str::<Value>(&text) else {
+            continue;
+        };
+        for r in doc["results"].as_array().into_iter().flatten() {
+            let (Some(id), Some(ns)) = (r["id"].as_str(), Num::of(&r["ns"])) else {
+                continue;
+            };
+            rows.entry(id.into()).or_default().push(ns);
+            if let Some(l) = r["library"].as_str() {
+                libs.insert(id.to_string(), l.to_string());
+            }
+        }
+    }
+    (summarize(rows), libs)
+}
+
+fn summarize(rows: BTreeMap<String, Vec<Num>>) -> Rows {
+    rows.into_iter()
         .map(|(k, v)| {
             let m = py::median(&v).f();
             let spread = if m != 0.0 {
@@ -73,8 +118,7 @@ fn load(raw: &Path, bench: &str) -> (Rows, Vec<bool>) {
             };
             (k, (m, spread, v.len()))
         })
-        .collect();
-    (out, checks)
+        .collect()
 }
 
 fn size_of(id: &str, re: &Regex) -> Option<f64> {
@@ -87,27 +131,70 @@ fn size_of(id: &str, re: &Regex) -> Option<f64> {
 pub fn run(args: Args) -> Result<(), String> {
     let re = Regex::new(r"(\d+)(KB|B)$").unwrap();
     let (la, lb) = (&args.label_a, &args.label_b);
+    let unit = if args.host { "ns" } else { "cycles" };
     let mut l = vec![
-        format!("Cycles, {lb} over {la} (below 1 is faster in {lb})."),
+        format!(
+            "{}, {lb} over {la} (below 1 is faster in {lb}).",
+            if args.host { "Nanoseconds" } else { "Cycles" }
+        ),
         String::new(),
     ];
-    for bench in &args.benches {
-        let (a, ca) = load(&args.a, bench);
-        let (b, cb) = load(&args.b, bench);
+    let host = args.host.then(|| (load_host(&args.a), load_host(&args.b)));
+    let benches: Vec<String> = match &host {
+        Some(((a, _), (b, _))) if args.benches.is_empty() => a
+            .keys()
+            .chain(b.keys())
+            .map(|k| k.split('/').next().unwrap_or(k).to_string())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .fold(vec!["*".to_string()], |mut v, b| {
+                v.push(b);
+                v
+            }),
+        _ => args.benches.clone(),
+    };
+    for bench in &benches {
+        let ((a, ca), (b, cb), libs) = match &host {
+            Some(((ha, la_), (hb, lb_))) => {
+                let pick = |m: &Rows| -> Rows {
+                    m.iter()
+                        .filter(|(k, _)| {
+                            bench == "*" || k.split('/').next() == Some(bench.as_str())
+                        })
+                        .map(|(k, v)| (k.clone(), *v))
+                        .collect()
+                };
+                let mut libs = la_.clone();
+                libs.extend(lb_.clone());
+                ((pick(ha), vec![]), (pick(hb), vec![]), libs)
+            }
+            None => (load(&args.a, bench), load(&args.b, bench), BTreeMap::new()),
+        };
         let common: Vec<&String> = a
             .keys()
             .filter(|k| b.contains_key(*k) && !k.starts_with("harness/"))
             .collect();
         let only_b: BTreeSet<&String> = b.keys().filter(|k| !a.contains_key(*k)).collect();
         let runs = |m: &Rows| common.iter().map(|k| m[*k].2).max().unwrap_or(0);
-        l.push(format!("## {bench}"));
+        l.push(if bench == "*" {
+            "## All operations".to_string()
+        } else {
+            format!("## {bench}")
+        });
         l.push(String::new());
+        let kats = if host.is_some() {
+            String::new()
+        } else {
+            format!(
+                "Known-answer checks: {la} {}/{}, {lb} {}/{}. ",
+                ca.iter().filter(|x| **x).count(),
+                ca.len(),
+                cb.iter().filter(|x| **x).count(),
+                cb.len()
+            )
+        };
         l.push(format!(
-            "Known-answer checks: {la} {}/{}, {lb} {}/{}. Runs: {} and {}. Rows: {} in both{}.",
-            ca.iter().filter(|x| **x).count(),
-            ca.len(),
-            cb.iter().filter(|x| **x).count(),
-            cb.len(),
+            "{kats}Runs: {} and {}. Rows: {} in both{}.",
             runs(&a),
             runs(&b),
             common.len(),
@@ -121,7 +208,11 @@ pub fn run(args: Args) -> Result<(), String> {
         let mut groups: BTreeMap<(String, &str), Vec<Num>> = BTreeMap::new();
         for k in &common {
             let p: Vec<&str> = k.split('/').collect();
-            let lib = if p.len() > 2 { p[1] } else { p[p.len() - 1] };
+            let lib = match libs.get(*k) {
+                Some(l) => l.as_str(),
+                None if p.len() > 2 => p[1],
+                None => p[p.len() - 1],
+            };
             let kind = match size_of(k, &re) {
                 None => "per op",
                 Some(s) if s >= 1024.0 => "long",
@@ -157,14 +248,14 @@ pub fn run(args: Args) -> Result<(), String> {
         ));
         l.push(String::new());
         if !moved.is_empty() {
-            l.push(format!("| Row | {la} cycles | {lb} cycles | B/A |"));
+            l.push(format!("| Row | {la} {unit} | {lb} {unit} | B/A |"));
             l.push("|---|---:|---:|---:|".into());
             moved.sort_by(|x, y| (y.0 - 1.0).abs().partial_cmp(&(x.0 - 1.0).abs()).unwrap());
             for (r, k) in moved {
                 l.push(format!(
                     "| `{k}` | {} | {} | {} |",
-                    py::fixed_commas(a[k].0, 0),
-                    py::fixed_commas(b[k].0, 0),
+                    py::fixed_commas(a[k].0, if args.host { 1 } else { 0 }),
+                    py::fixed_commas(b[k].0, if args.host { 1 } else { 0 }),
                     py::fixed(r, 3)
                 ));
             }
@@ -173,7 +264,11 @@ pub fn run(args: Args) -> Result<(), String> {
         if !only_b.is_empty() {
             l.push(format!("Rows only in {lb}:"));
             l.push(String::new());
-            l.push("| Row | cycles | spread | c/B |".into());
+            l.push(if args.host {
+                "| Row | ns | spread | ns/B |".to_string()
+            } else {
+                "| Row | cycles | spread | c/B |".to_string()
+            });
             l.push("|---|---:|---:|---:|".into());
             for k in only_b {
                 let (c, s, _) = b[k];
