@@ -1,6 +1,6 @@
 # rind on RP2040 (thumbv6m-none-eabi): builds (2026-11-12)
 
-**Update:** with rind-bench `patches/0003` (no_std, M-profile portable
+**Update:** with rind-hardware `patches/0003` (no_std, M-profile portable
 backend) and `patches/0005` (`ReuseCache` without CAS, a `Cell` path on
 `cfg(not(target_has_atomic = "ptr"))`, no new dependency),
 `cargo xtask build-images rp2040` produces UF2 images for every bench
