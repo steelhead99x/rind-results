@@ -2,7 +2,7 @@
 # ESP32-S3: relinking the same benches (layout sensitivity, 2026-11-12)
 
 The `aes_gcm`, `sha2` and `chacha20poly1305` images rebuilt from the same rind (99b509a6 plus
-patches) and the same bench files, with only the harness changed (rind-bench 0463305's wall-clock
+patches) and the same bench files, with only the harness changed (legacy rind-bench 0463305 (later squashed into rind-hardware `8d9c1bb`)'s wall-clock
 and empty-call checks), so every function lands at a different address. Images:
 `aes_gcm.elf` `74c9929f…`, `sha2.elf` `cc89876f…`, `chacha20poly1305.elf` `578699f6…`, one run each,
 2026-11-12 10:09-10:13 PST, 40 MHz flash clock like the published set.

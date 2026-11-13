@@ -1,85 +1,109 @@
 {
- "note": "Where each published image came from: all twelve built in one pass by `cargo xtask build-images esp` from a clean rind-bench tree at the commit given, the rind submodule at its pin with patches/0001-0004 applied and ring vendored with ring-0.17.14-xtensa-poly1305-align.patch. Builds are not bit-reproducible (ESP-IDF stamps the build time into the app descriptor), so the sha256 identifies the image that ran. Flashed with --flash-freq 80mhz. The `rind_bench` commit IDs name the private steelhead99x/rind-bench history; that repo was archived and published as steelhead99x/rind-hardware (squash root 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3) and those IDs are not in the public history.",
- "patches": [
-  "0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch",
-  "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch",
-  "0003-feat-build-for-bare-metal-targets-without-std.patch",
-  "0004-feat-bench-leave-aws-lc-rs-rows-out-of-sha3-on-Xtensa.patch",
-  "ring-0.17.14-xtensa-poly1305-align.patch"
- ],
- "file_ext": ".elf",
- "images": {
-  "aes_gcm": {
-   "sha256": "1771b27e2a4a75d06778ae7177bd21091c31da1b55abbca82ae2f84cce1c4f32",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:45 PST"
-  },
-  "chacha20poly1305": {
-   "sha256": "1331c65f878b3dcacb2faa1a9519032c71a2c6e45fba254a6cbbf728bc3db0ae",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:45 PST"
-  },
-  "cipher": {
-   "sha256": "e00623454a2c1261f1731937cfc10427e96fa09f8c4ef9f3459068147dce75a3",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:46 PST"
-  },
-  "ed25519": {
-   "sha256": "1aeb17c0979a346b8171678951907096482f78012cc17eca85804a6ef3027659",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:47 PST"
-  },
-  "hkdf": {
-   "sha256": "673e2a41db3e73e18232eafe5b637799ea771c4ea44f89a05c3609e53ccb7696",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:48 PST"
-  },
-  "hmac": {
-   "sha256": "00a8fcc2cfbdec507b32a900a4a62c967296eabe14e710986ad9f42a59a2aeec",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:47 PST"
-  },
-  "mlkem768": {
-   "sha256": "3047ddbe6a0bb25cbf61639730fca1b96cf7b6e6d88212b22357bda606f42b9d",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:48 PST"
-  },
-  "p256": {
-   "sha256": "148ecb56e10bca0635aa01323738e3a88c7dc97775f27b31ea6ef71e539d3453",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:47 PST"
-  },
-  "sha2": {
-   "sha256": "71f44e761c67c486267b6ce127f8bdfd65c09b4576688a49524426c7952132b2",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:47 PST"
-  },
-  "sha3": {
-   "sha256": "99e9d1506224a2d315ed28cd0e3fbc0598c1d2b3a7f74cfcb11ba3a059f45168",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:47 PST"
-  },
-  "x25519": {
-   "sha256": "cff9f01e8f94eb4077f48a0a00239deb45cd18b1ffed798ca4101eaa38d0ba3d",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:46 PST"
-  },
-  "xchacha20poly1305": {
-   "sha256": "d10fe0547dc40eef9b7639d97d21c1e3c8322bc8bae893831ce22009b2a231d0",
-   "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
-   "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
-   "built": "2026-11-12 11:45 PST"
+  "note": "Where each published image came from: all twelve built in one pass by `cargo xtask build-images esp` from a clean rind-bench tree at the commit given, the rind submodule at its pin with patches/0001-0004 applied and ring vendored with ring-0.17.14-xtensa-poly1305-align.patch. Builds are not bit-reproducible (ESP-IDF stamps the build time into the app descriptor), so the sha256 identifies the image that ran. Flashed with --flash-freq 80mhz. The public repo is [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware); its root `8d9c1bb` is a squash of that history. Each image now has `rind_hardware` (the public SHA when the trees match, otherwise `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`) and `legacy_rind_bench` (the SHA recorded at build time). `tools/legacy-rind-bench-map.json` is the map `cargo verify` and `cargo xtask` use.",
+  "patches": [
+    "0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch",
+    "0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch",
+    "0003-feat-build-for-bare-metal-targets-without-std.patch",
+    "0004-feat-bench-leave-aws-lc-rs-rows-out-of-sha3-on-Xtensa.patch",
+    "ring-0.17.14-xtensa-poly1305-align.patch"
+  ],
+  "file_ext": ".elf",
+  "images": {
+    "aes_gcm": {
+      "sha256": "1771b27e2a4a75d06778ae7177bd21091c31da1b55abbca82ae2f84cce1c4f32",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:45 PST"
+    },
+    "chacha20poly1305": {
+      "sha256": "1331c65f878b3dcacb2faa1a9519032c71a2c6e45fba254a6cbbf728bc3db0ae",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:45 PST"
+    },
+    "cipher": {
+      "sha256": "e00623454a2c1261f1731937cfc10427e96fa09f8c4ef9f3459068147dce75a3",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:46 PST"
+    },
+    "ed25519": {
+      "sha256": "1aeb17c0979a346b8171678951907096482f78012cc17eca85804a6ef3027659",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:47 PST"
+    },
+    "hkdf": {
+      "sha256": "673e2a41db3e73e18232eafe5b637799ea771c4ea44f89a05c3609e53ccb7696",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:48 PST"
+    },
+    "hmac": {
+      "sha256": "00a8fcc2cfbdec507b32a900a4a62c967296eabe14e710986ad9f42a59a2aeec",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:47 PST"
+    },
+    "mlkem768": {
+      "sha256": "3047ddbe6a0bb25cbf61639730fca1b96cf7b6e6d88212b22357bda606f42b9d",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:48 PST"
+    },
+    "p256": {
+      "sha256": "148ecb56e10bca0635aa01323738e3a88c7dc97775f27b31ea6ef71e539d3453",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:47 PST"
+    },
+    "sha2": {
+      "sha256": "71f44e761c67c486267b6ce127f8bdfd65c09b4576688a49524426c7952132b2",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:47 PST"
+    },
+    "sha3": {
+      "sha256": "99e9d1506224a2d315ed28cd0e3fbc0598c1d2b3a7f74cfcb11ba3a059f45168",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:47 PST"
+    },
+    "x25519": {
+      "sha256": "cff9f01e8f94eb4077f48a0a00239deb45cd18b1ffed798ca4101eaa38d0ba3d",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:46 PST"
+    },
+    "xchacha20poly1305": {
+      "sha256": "d10fe0547dc40eef9b7639d97d21c1e3c8322bc8bae893831ce22009b2a231d0",
+      "rind": "985683329fb98aebfaae6c493f205f20070a8fca",
+      "rind_hardware": "ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3",
+      "legacy_rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "rind_bench": "911ebd2 (2026-11-12 11:44 PST), clean tree",
+      "built": "2026-11-12 11:45 PST"
+    }
   }
- }
 }

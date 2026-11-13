@@ -1,4 +1,4 @@
-Built in a separate worktree (rind-bench 2f0c5e8, rind 98568332 with patches 0001-0004 only), so v0 crate hashes differ from the published images; functions are matched by unique demangled name.
+Built in a separate worktree (legacy rind-bench 2f0c5e8 (later squashed into rind-hardware `8d9c1bb`), rind 98568332 with patches 0001-0004 only), so v0 crate hashes differ from the published images; functions are matched by unique demangled name.
 
 | bench | library | functions | shift to pad1031 (B) | shift to pad2053 (B) |
 |---|---|---:|---:|---:|

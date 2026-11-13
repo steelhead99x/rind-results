@@ -9,6 +9,7 @@ mod charts;
 mod compare;
 mod demo_tsv;
 mod host_run;
+mod legacy_map;
 mod md2png;
 mod py;
 mod relink;

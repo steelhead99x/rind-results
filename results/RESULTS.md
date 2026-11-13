@@ -5,20 +5,20 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core o
 - rind: upstream `985683329fb98aebfaae6c493f205f20070a8fca`, plus the port's patches: `0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch`, `0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch`, `0003-feat-build-for-bare-metal-targets-without-std.patch`, `0004-feat-bench-leave-aws-lc-rs-rows-out-of-sha3-on-Xtensa.patch`, `ring-0.17.14-xtensa-poly1305-align.patch`
 - Firmware images (one per bench file; `images.sha256` beside this file):
 
-  | Image | sha256 | rind | rind-bench | Built |
-  |---|---|---|---|---|
-  | aes_gcm | `1771b27e2a4a75d0…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:45 PST |
-  | chacha20poly1305 | `1331c65f878b3dca…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:45 PST |
-  | cipher | `e00623454a2c1261…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:46 PST |
-  | ed25519 | `1aeb17c0979a346b…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
-  | hkdf | `673e2a41db3e73e1…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:48 PST |
-  | hmac | `00a8fcc2cfbdec50…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
-  | mlkem768 | `3047ddbe6a0bb25c…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:48 PST |
-  | p256 | `148ecb56e10bca06…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
-  | sha2 | `71f44e761c67c486…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
-  | sha3 | `99e9d1506224a2d3…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
-  | x25519 | `cff9f01e8f94eb40…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:46 PST |
-  | xchacha20poly1305 | `d10fe0547dc40eef…` | `98568332` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:45 PST |
+  | Image | sha256 | rind | rind-hardware | legacy rind-bench | Built |
+  |---|---|---|---|---|---|
+  | aes_gcm | `1771b27e2a4a75d0…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:45 PST |
+  | chacha20poly1305 | `1331c65f878b3dca…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:45 PST |
+  | cipher | `e00623454a2c1261…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:46 PST |
+  | ed25519 | `1aeb17c0979a346b…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
+  | hkdf | `673e2a41db3e73e1…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:48 PST |
+  | hmac | `00a8fcc2cfbdec50…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
+  | mlkem768 | `3047ddbe6a0bb25c…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:48 PST |
+  | p256 | `148ecb56e10bca06…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
+  | sha2 | `71f44e761c67c486…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
+  | sha3 | `99e9d1506224a2d3…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:47 PST |
+  | x25519 | `cff9f01e8f94eb40…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:46 PST |
+  | xchacha20poly1305 | `d10fe0547dc40eef…` | `98568332` | ancestor of `8d9c1bb` | 911ebd2 (2026-11-12 11:44 PST), clean tree | 2026-11-12 11:45 PST |
 
 - OS: ESP-IDF v5.5.1 (FreeRTOS), bare board
 - SPI flash clock, as the bootloader reported it each boot: 80 MHz
@@ -296,7 +296,7 @@ Bytes of code and read-only data, summed over symbols across every image, each c
 
 Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `esp32s3.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. Relinking an image moves its short-input rows far more than that: see `diag/layout-relink-2026-11-12/` and, at this pin, the three-layout table in `diag/esp32s3-relink-fixed-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.
 
-The `rind-bench` column and the recorded `rind_bench` commit IDs are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Those commit IDs are not in the public history and are left as recorded. Clone `rind-hardware` to rebuild.
+The `legacy rind-bench` column and the `legacy_rind_bench` field are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Each image's `rind_hardware` field is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`. See `tools/legacy-rind-bench-map.json`. Clone `rind-hardware` to rebuild.
 
 ## Reproduce
 
@@ -311,7 +311,7 @@ cargo xtask report --raw results/raw --rind ../rind-hardware/rind --firmware ../
 cargo verify   # recomputes every published number from raw
 ```
 
-The published images were built from `steelhead99x/rind-bench` (private, now archived). The `rind-bench` commit IDs in `images.json` and the provenance table refer to that history. The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware); its first commit (`8d9c1bb`) is a squash of that history. Build new images from rind-hardware.
+The published images were built from `steelhead99x/rind-bench` (private, now archived). The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware); its first commit (`8d9c1bb`) is a squash of that history. Each image's `rind_hardware` field is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`. See `tools/legacy-rind-bench-map.json`. Build new images from rind-hardware.
 
 ## SHA-3
 

@@ -873,6 +873,207 @@ fn check_msi(rep: &mut Report) {
     println!("msi-001: summary.md {n} rows checked, noisy={noisy}");
 }
 
+/// Maps recorded private rind-bench SHAs to public rind-hardware commits.
+/// Duplicated from xtask: the two crates share no code.
+const PROVENANCE_MAP: &str = "tools/legacy-rind-bench-map.json";
+const SQUASH: &str = "8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3";
+const IMAGE_JSON: &[&str] = &[
+    "results/images.json",
+    "results/nrf52840/images.json",
+    "results/diag/esp32s3-40mhz-2026-11-11/images.json",
+    "results/diag/esp32s3-99b509a-80mhz-2026-11-12/images.json",
+    "results/diag/nrf52840-99b509a-2026-11-12/images.json",
+    "hosts/rp2040/images.json",
+];
+const RESULTS_MD: &[&str] = &[
+    "results/RESULTS.md",
+    "results/nrf52840/RESULTS.md",
+    "results/diag/esp32s3-40mhz-2026-11-11/RESULTS.md",
+    "results/diag/esp32s3-99b509a-80mhz-2026-11-12/RESULTS.md",
+    "results/diag/nrf52840-99b509a-2026-11-12/RESULTS.md",
+];
+
+fn recorded_sha(s: &str) -> Option<String> {
+    let mut last = None;
+    let mut i = 0;
+    let bytes = s.as_bytes();
+    while i < bytes.len() {
+        if bytes[i].is_ascii_hexdigit() && !bytes[i].is_ascii_uppercase() {
+            let start = i;
+            while i < bytes.len() && bytes[i].is_ascii_hexdigit() && !bytes[i].is_ascii_uppercase()
+            {
+                i += 1;
+            }
+            if (7..41).contains(&(i - start)) {
+                last = Some(s[start..i].to_string());
+            }
+        } else {
+            i += 1;
+        }
+    }
+    last
+}
+
+struct HwMap(BTreeMap<String, Option<String>>);
+
+fn load_hw_map() -> HwMap {
+    let v: Value = serde_json::from_str(&read(&root().join(PROVENANCE_MAP))).expect("map json");
+    let mut by = BTreeMap::new();
+    for c in v["commits"].as_array().into_iter().flatten() {
+        let legacy = c["legacy"].as_str().unwrap_or_default();
+        let hw = c["rind_hardware"].as_str().map(str::to_string);
+        if legacy.is_empty() {
+            continue;
+        }
+        by.insert(legacy.to_string(), hw.clone());
+        if legacy.len() >= 7 {
+            by.entry(legacy[..7].to_string()).or_insert(hw.clone());
+        }
+        for a in c["aliases"].as_array().into_iter().flatten() {
+            let a = a.as_str().unwrap_or_default();
+            if a.is_empty() {
+                continue;
+            }
+            by.insert(a.to_string(), hw.clone());
+            if a.len() >= 7 {
+                by.entry(a[..7].to_string()).or_insert(hw.clone());
+            }
+        }
+    }
+    HwMap(by)
+}
+
+fn expected_hw(map: &HwMap, recorded: &str) -> String {
+    let sha = recorded_sha(recorded).unwrap_or_default();
+    let hit = map.0.get(&sha).cloned().flatten().or_else(|| {
+        (sha.len() >= 7)
+            .then(|| map.0.get(&sha[..7]).cloned().flatten())
+            .flatten()
+    });
+    match hit {
+        Some(h) => h,
+        None => format!("ancestor of {SQUASH}"),
+    }
+}
+
+fn hw_cell(hw: &str) -> String {
+    if let Some(rest) = hw.strip_prefix("ancestor of ") {
+        format!("ancestor of `{}`", &rest[..7.min(rest.len())])
+    } else {
+        format!("`{}`", &hw[..7.min(hw.len())])
+    }
+}
+
+fn check_provenance(rep: &mut Report) {
+    let map = load_hw_map();
+    let mut images = 0;
+    for rel in IMAGE_JSON {
+        let path = root().join(rel);
+        let v: Value = serde_json::from_str(&read(&path)).expect("images json");
+        let Some(imgs) = v["images"].as_object() else {
+            rep.bad("provenance", format!("{rel}: no images object"));
+            continue;
+        };
+        for (name, i) in imgs {
+            images += 1;
+            let rec = i
+                .get("legacy_rind_bench")
+                .and_then(|x| x.as_str())
+                .unwrap_or("");
+            if rec.is_empty() {
+                rep.bad(
+                    "provenance",
+                    format!("{rel}:{name}: missing legacy_rind_bench"),
+                );
+                continue;
+            }
+            let want = expected_hw(&map, rec);
+            let have = i
+                .get("rind_hardware")
+                .and_then(|x| x.as_str())
+                .unwrap_or("");
+            if have != want {
+                rep.bad(
+                    "provenance",
+                    format!("{rel}:{name}: rind_hardware {have:?}, map says {want}"),
+                );
+            }
+            let alias = i.get("rind_bench").and_then(|x| x.as_str()).unwrap_or("");
+            if !alias.is_empty() && alias != rec {
+                rep.bad(
+                    "provenance",
+                    format!("{rel}:{name}: rind_bench does not match legacy_rind_bench"),
+                );
+            }
+        }
+    }
+    let mut rows = 0;
+    for rel in RESULTS_MD {
+        let text = read(&root().join(rel));
+        // Find the sibling images.json (same directory).
+        let img_path = root().join(rel).with_file_name("images.json");
+        let v: Value =
+            serde_json::from_str(&read(&img_path)).expect("images json beside RESULTS.md");
+        let imgs = v["images"].as_object().expect("images");
+        let mut in_table = false;
+        for line in text.lines() {
+            if line.contains("| Image |") && line.contains("legacy rind-bench") {
+                in_table = true;
+                continue;
+            }
+            if in_table && line.starts_with("  |---") {
+                continue;
+            }
+            if in_table && line.starts_with("  | ") {
+                let cols: Vec<&str> = line
+                    .trim()
+                    .trim_matches('|')
+                    .split('|')
+                    .map(str::trim)
+                    .collect();
+                // name, sha256, rind, rind-hardware, legacy, built
+                if cols.len() < 6 {
+                    rep.bad("provenance", format!("{rel}: short provenance row: {line}"));
+                    continue;
+                }
+                let name = cols[0];
+                let Some(i) = imgs.get(name) else {
+                    rep.bad(
+                        "provenance",
+                        format!("{rel}: table names {name}, not in images.json"),
+                    );
+                    continue;
+                };
+                rows += 1;
+                let rec = i
+                    .get("legacy_rind_bench")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("");
+                let want_hw = hw_cell(
+                    i.get("rind_hardware")
+                        .and_then(|x| x.as_str())
+                        .unwrap_or(""),
+                );
+                if cols[3] != want_hw {
+                    rep.bad(
+                        "provenance",
+                        format!("{rel}:{name}: hardware col {:?}, want {want_hw}", cols[3]),
+                    );
+                }
+                if cols[4] != rec {
+                    rep.bad(
+                        "provenance",
+                        format!("{rel}:{name}: legacy col {:?}, want {rec}", cols[4]),
+                    );
+                }
+                continue;
+            }
+            in_table = false;
+        }
+    }
+    println!("provenance: {images} images, {rows} RESULTS.md rows checked");
+}
+
 fn main() -> ExitCode {
     let mut boards = vec![];
     let mut args = std::env::args().skip(1);
@@ -904,6 +1105,7 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     }
+    check_provenance(&mut rep);
     for n in &rep.notes {
         println!("NOTE {n}");
     }

@@ -5,20 +5,20 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows on one core o
 - rind: upstream `99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef`, plus the port's patches: `0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch`, `0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch`, `0003-feat-build-for-bare-metal-targets-without-std.patch`, `0004-feat-bench-leave-aws-lc-rs-rows-out-of-sha3-on-Xtensa.patch`, `ring-0.17.14-xtensa-poly1305-align.patch`
 - Firmware images (one per bench file; `images.sha256` beside this file):
 
-  | Image | sha256 | rind | rind-bench | Built |
-  |---|---|---|---|---|
-  | aes_gcm | `e5235b433188e179…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | chacha20poly1305 | `f581ff142514edea…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | cipher | `7d75475e4e93adb7…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | ed25519 | `81569af99e208f40…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | hkdf | `a2544a9b9b7956b6…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | hmac | `44b5e8bbb69022d0…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | mlkem768 | `bcfd05e275511f45…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | p256 | `0ca6a233201372f8…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | sha2 | `9b352830d35438ff…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | sha3 | `cb776505583c9be1…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | x25519 | `0d5dd95d542a3c7a…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
-  | xchacha20poly1305 | `11af9bb8ea4824df…` | `99b509a6` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | Image | sha256 | rind | rind-hardware | legacy rind-bench | Built |
+  |---|---|---|---|---|---|
+  | aes_gcm | `e5235b433188e179…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | chacha20poly1305 | `f581ff142514edea…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | cipher | `7d75475e4e93adb7…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | ed25519 | `81569af99e208f40…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | hkdf | `a2544a9b9b7956b6…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | hmac | `44b5e8bbb69022d0…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | mlkem768 | `bcfd05e275511f45…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | p256 | `0ca6a233201372f8…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | sha2 | `9b352830d35438ff…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | sha3 | `cb776505583c9be1…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | x25519 | `0d5dd95d542a3c7a…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
+  | xchacha20poly1305 | `11af9bb8ea4824df…` | `99b509a6` | ancestor of `8d9c1bb` | 0463305 (2026-11-12 10:35 PST), clean tree | 2026-11-12 10:35-10:38 PST |
 
 - OS: ESP-IDF v5.5.1 (FreeRTOS), bare board
 - SPI flash clock, as the bootloader reported it each boot: 80 MHz
@@ -284,7 +284,7 @@ Bytes of code and read-only data, summed over symbols across every image, each c
 
 Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `esp32s3.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. Relinking an image moves its short-input rows far more than that: see `diag/layout-relink-2026-11-12/`, and read short-input ratios with the README's layout caveat.
 
-The `rind-bench` column and the recorded `rind_bench` commit IDs are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Those commit IDs are not in the public history and are left as recorded. The Python tools in the commands below produced this set and have since been replaced by `cargo xtask`. To rebuild today, follow the current RESULTS.md using `rind-hardware`.
+The `legacy rind-bench` column and the `legacy_rind_bench` field are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Each image's `rind_hardware` field is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`. See `tools/legacy-rind-bench-map.json`. The Python tools in the commands below produced this set and have since been replaced by `cargo xtask`. To rebuild today, follow the current RESULTS.md using `rind-hardware`.
 
 ## Reproduce
 

@@ -5,19 +5,19 @@ rind-bench's own benches, run unchanged but for the aws-lc-rs rows, on the nRF52
 - rind: upstream `99b509a680cf0ad0cd8b7d9c03f7360e7fd95cef`, plus the port's patches: `0001-fix-portable-build-MD5-on-Xtensa-whose-inline-assemb.patch`, `0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch`, `0003-feat-build-for-bare-metal-targets-without-std.patch`, `ring-0.17.14-thumbv7em.patch`
 - Firmware images (one per bench file; `images.sha256` beside this file):
 
-  | Image | sha256 | rind | rind-bench | Built |
-  |---|---|---|---|---|
-  | aes_gcm | `175f6220bf624eb2…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | chacha20poly1305 | `66c7228d51db4ac8…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | cipher | `0338fe1f95874f5f…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | ed25519 | `63005609c0cffae3…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | hkdf | `a31671c7eaa3029c…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | hmac | `ea09235adce44cec…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | mlkem768 | `a6442d42c7721568…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | p256 | `854f8cfb08835a7e…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | sha2 | `e75d1f6137a6935c…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | x25519 | `a206f54be8941dd6…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
-  | xchacha20poly1305 | `31a38e4c1b2dcd53…` | `99b509a6` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | Image | sha256 | rind | rind-hardware | legacy rind-bench | Built |
+  |---|---|---|---|---|---|
+  | aes_gcm | `175f6220bf624eb2…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | chacha20poly1305 | `66c7228d51db4ac8…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | cipher | `0338fe1f95874f5f…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | ed25519 | `63005609c0cffae3…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | hkdf | `a31671c7eaa3029c…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | hmac | `ea09235adce44cec…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | mlkem768 | `a6442d42c7721568…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | p256 | `854f8cfb08835a7e…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | sha2 | `e75d1f6137a6935c…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | x25519 | `a206f54be8941dd6…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
+  | xchacha20poly1305 | `31a38e4c1b2dcd53…` | `99b509a6` | ancestor of `8d9c1bb` | the uncommitted tree that became c778f64 (2026-11-12 02:23 PST) | 2026-11-12 02:12-02:14 PST |
 
 - OS: none (bare metal, no_std); the board's UF2 bootloader and S140 SoftDevice stay in flash, unused
 - Runs: 33 of 33 completed, one firmware image per rind-bench bench file
@@ -240,7 +240,7 @@ Run on the board before any timing, every run. A library failing an operation's 
 
 Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `nrf52840.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. No relinked build has been run on this board, so layout sensitivity here is unmeasured.
 
-The `rind-bench` column and the recorded `rind_bench` commit IDs are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Those commit IDs are not in the public history and are left as recorded. The Python tools in the commands below produced this set and have since been replaced by `cargo xtask`. To rebuild today, follow the current RESULTS.md using `rind-hardware`.
+The `legacy rind-bench` column and the `legacy_rind_bench` field are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Each image's `rind_hardware` field is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`. See `tools/legacy-rind-bench-map.json`. The Python tools in the commands below produced this set and have since been replaced by `cargo xtask`. To rebuild today, follow the current RESULTS.md using `rind-hardware`.
 
 ## Reproduce
 
