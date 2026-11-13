@@ -13,6 +13,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
+/// The published Mac and Pi host results. Not the comparable-set pin
+/// (`layout::COMPARABLE_PIN`). Pass it with `--commit` to reproduce those runs.
 pub const HOST_COMMIT: &str = "b66514238d449fc211d75fd14554301bb690e421";
 
 pub fn home_dir() -> Result<PathBuf, String> {
@@ -813,8 +815,19 @@ fn host_relax(free_target: bool) -> Relax {
     }
 }
 
-/// `scripts/mac-run.sh`. Default commit is the published `b6651423` run.
+fn note_published_host_commit(commit: &str) {
+    if crate::layout::sha_matches(commit, HOST_COMMIT) {
+        eprintln!(
+            "host commit {commit} is the published b6651423 set, not the comparable pin {}",
+            crate::layout::COMPARABLE_PIN
+        );
+    }
+}
+
+/// `scripts/mac-run.sh`. The default commit is the comparable-set pin.
+/// `HOST_COMMIT` is the published `b6651423` run.
 pub fn mac_run(home: &Path, commit: &str) -> Result<(), String> {
+    note_published_host_commit(commit);
     let status = home.join("status");
     let free = df_avail_cmd(home, &["-g"])?;
     if mac_abort(free) {
@@ -870,8 +883,10 @@ pub fn mac_run(home: &Path, commit: &str) -> Result<(), String> {
     rc
 }
 
-/// `scripts/pi-run.sh`.
+/// `scripts/pi-run.sh`. The default commit is the comparable-set pin.
+/// `HOST_COMMIT` is the published `b6651423` run.
 pub fn pi_run(home: &Path, commit: &str) -> Result<(), String> {
+    note_published_host_commit(commit);
     let status = home.join("status");
     let _ = fs::remove_file(&status);
     if Command::new("openssl")
@@ -1003,6 +1018,23 @@ fn df_avail_cmd(home: &Path, flags: &[&str]) -> Result<u64, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mac_and_pi_default_to_the_comparable_pin() {
+        assert_eq!(
+            crate::layout::COMPARABLE_PIN,
+            "d6ca9a756d3d1e71489e61e44c04f33c3c893589"
+        );
+        assert_ne!(HOST_COMMIT, crate::layout::COMPARABLE_PIN);
+        assert!(crate::layout::sha_matches(
+            "d6ca9a75",
+            crate::layout::COMPARABLE_PIN
+        ));
+        assert!(!crate::layout::sha_matches(
+            HOST_COMMIT,
+            crate::layout::COMPARABLE_PIN
+        ));
+    }
 
     #[test]
     fn faketime_script_reads_the_offset_at_exec() {
