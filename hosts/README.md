@@ -44,6 +44,15 @@ Raw JSON, a trimmed log, and notes are in each folder. The top-level
 | Jetson Orin Nano | Cortex-A78AE, up to 1.73 GHz, Ubuntu 24.04, MAXN_SUPER | [results/jetson-orin-nano/RESULTS.md](../results/jetson-orin-nano/RESULTS.md) |
 | RP2040 (Raspberry Pi Pico) | Cortex-M0+, 125 MHz | Known-answer checks passed on a Pico (2026-11-12). No `results/rp2040/` tree is on main yet, so this repo does not publish timing numbers for it. |
 
+
+## Later Linux host (rind `a6577cb4`)
+
+New publishes use `results/<host>/<upstream-sha>/`. This is the first Linux host in that layout.
+
+| Board or host | Hardware | Where the numbers are |
+|---|---|---|
+| [pi2b-bench](../results/pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) | Raspberry Pi 2 Model B Rev 1.1, BCM2836 Cortex-A7, 900 MHz, armv7 | [RESULTS.md](../results/pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) at rind `a6577cb4` |
+
 ## Later findings (2026-11-12, America/Los_Angeles)
 
 These sit beside the published sets. None of them changes a gap verdict on the published 16 KB-cache ESP32-S3 tables.
