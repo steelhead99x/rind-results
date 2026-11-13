@@ -2,15 +2,20 @@
 //! `cargo xtask setup-toolchain RIND_HARDWARE_DIR`: installs, without root,
 //! what building and flashing rind-hardware's ESP32-S3 images needs, at the
 //! versions the published results used:
-//! rustup (stable), espup 0.19.0 -> Rust "esp" 1.97.0.0 + Xtensa GCC
-//! esp-14.2.0_20241119, ldproxy 0.3.5, espflash 4.7.0.
+//! rustup-init 1.29.3, then the stable toolchain;
+//! espup 0.19.0 -> Rust "esp" 1.97.0.0 + Xtensa GCC esp-14.2.0_20241119;
+//! ldproxy 0.3.5; espflash 4.7.0.
 //!
 //! Tools land in RIND_HARDWARE_DIR/.tools. ESP-IDF v5.5.1 itself is fetched
 //! by the first firmware build into esp32/.embuild. The downloads are the
-//! Linux builds, as before. This replaces `tools/setup-toolchain.sh` and runs
-//! the same commands in the same order
-//! (`tools/xtask/tests/setup_toolchain.rs`).
+//! Linux builds. Every downloaded binary is checked against
+//! `tools/checksums.sha256` before it is executed or marked executable; a
+//! mismatch deletes the file and stops.
+//!
+//! This replaces `tools/setup-toolchain.sh` and runs the same commands in the
+//! same order (`tools/xtask/tests/setup_toolchain.rs`).
 
+use sha2::{Digest, Sha256};
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -19,8 +24,12 @@ use std::process::{Command, Stdio};
 pub struct Args {
     /// The rind-hardware checkout
     rind_hardware: PathBuf,
+    /// SHA-256 pins for the downloads [default: tools/checksums.sha256]
+    #[arg(long, hide = true)]
+    checksums: Option<PathBuf>,
 }
 
+const RUSTUP_VERSION: &str = "1.29.3";
 const ESPUP: &str = "https://github.com/esp-rs/espup/releases/download/v0.19.0";
 const ESPFLASH: &str = "https://github.com/esp-rs/espflash/releases/download/v4.7.0";
 
@@ -80,35 +89,49 @@ fn machine() -> Result<String, String> {
     Ok(String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
-/// rustup's installer, `curl ... | sh -s -- -y --profile minimal`.
-fn install_rustup() -> Result<(), String> {
-    let mut curl = Command::new("curl")
-        .args([
-            "--proto",
-            "=https",
-            "--tlsv1.2",
-            "-sSf",
-            "https://sh.rustup.rs",
-        ])
-        .stdout(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("curl: {e}"))?;
-    let script = curl.stdout.take().ok_or("curl: no stdout")?;
-    let sh = Command::new("sh")
-        .args(["-s", "--", "-y", "--profile", "minimal"])
-        .stdin(script)
-        .status()
-        .map_err(|e| format!("sh: {e}"));
-    let fetched = curl.wait().map_err(|e| format!("curl: {e}"))?;
-    let sh = sh?;
-    // A pipeline's status is its last command's, as in the script.
-    if !sh.success() {
-        return Err(format!("rustup installer failed ({sh}, curl {fetched})"));
+/// The pinned SHA-256 for `name`: the first field of the line whose second
+/// field is `name` (`#` lines are comments).
+fn pinned<'a>(sums: &'a str, name: &str) -> Option<&'a str> {
+    sums.lines().filter(|l| !l.starts_with('#')).find_map(|l| {
+        let mut f = l.split_whitespace();
+        let (hash, n) = (f.next()?, f.next()?);
+        (n == name).then_some(hash)
+    })
+}
+
+/// Checks `dir/base` against the pin named `name`, printing `base: OK` as
+/// `sha256sum -c` did. Anything else deletes the file.
+fn verify(sums: &str, dir: &Path, base: &str, name: &str) -> Result<(), String> {
+    let file = dir.join(base);
+    let Some(want) = pinned(sums, name) else {
+        let _ = std::fs::remove_file(&file);
+        return Err(format!("no checksum recorded for {name}"));
+    };
+    let got = std::fs::read(&file).map(|b| {
+        Sha256::digest(&b)
+            .iter()
+            .map(|x| format!("{x:02x}"))
+            .collect::<String>()
+    });
+    if got.as_deref().ok() == Some(want) {
+        println!("{base}: OK");
+        return Ok(());
     }
-    Ok(())
+    println!("{base}: FAILED");
+    let _ = std::fs::remove_file(&file);
+    Err(format!("{base}: sha256 does not match {name}"))
 }
 
 pub fn run(a: Args) -> Result<(), String> {
+    run_inner(a).map_err(|e| format!("setup-toolchain: {e}"))
+}
+
+fn run_inner(a: Args) -> Result<(), String> {
+    let sums_path = a
+        .checksums
+        .unwrap_or_else(|| crate::root().join("tools/checksums.sha256"));
+    let sums =
+        std::fs::read_to_string(&sums_path).map_err(|e| format!("{}: {e}", sums_path.display()))?;
     let bench = std::path::absolute(&a.rind_hardware)
         .map_err(|e| format!("{}: {e}", a.rind_hardware.display()))?;
     if !bench.is_dir() {
@@ -117,12 +140,43 @@ pub fn run(a: Args) -> Result<(), String> {
     let tools = bench.join(".tools");
     std::fs::create_dir_all(&tools).map_err(|e| format!("{}: {e}", tools.display()))?;
     let arch = machine()?;
+    if arch != "x86_64" && arch != "aarch64" {
+        return Err(format!("no pinned checksum for arch {arch}"));
+    }
+    // Every download: `curl --proto =https --tlsv1.2 -fsSL -o FILE URL`.
+    let fetch = |file: &Path, url: &str, path: Option<&OsString>| {
+        let mut c = Command::new("curl");
+        if let Some(p) = path {
+            c.env("PATH", p);
+        }
+        check(
+            c.args(["--proto", "=https", "--tlsv1.2", "-fsSL", "-o"])
+                .arg(file)
+                .arg(url),
+        )
+    };
 
     let home = PathBuf::from(std::env::var_os("HOME").ok_or("HOME is not set")?);
     let cargo_bin = home.join(".cargo/bin");
     let path = std::env::var_os("PATH").unwrap_or_default();
     if !on_path("rustup", &path) && !is_exe(&cargo_bin.join("rustup")) {
-        install_rustup()?;
+        let triple = format!("{arch}-unknown-linux-gnu");
+        let init = tools.join("rustup-init");
+        fetch(
+            &init,
+            &format!(
+                "https://static.rust-lang.org/rustup/archive/{RUSTUP_VERSION}/{triple}/rustup-init"
+            ),
+            None,
+        )?;
+        verify(
+            &sums,
+            &tools,
+            "rustup-init",
+            &format!("rustup-init-{RUSTUP_VERSION}-{triple}"),
+        )?;
+        make_exe(&init)?;
+        check(Command::new(&init).args(["-y", "--profile", "minimal"]))?;
     }
     let path = std::env::join_paths(std::iter::once(cargo_bin).chain(std::env::split_paths(&path)))
         .map_err(|e| format!("PATH: {e}"))?;
@@ -146,11 +200,16 @@ pub fn run(a: Args) -> Result<(), String> {
 
     let espup = tools.join("espup");
     if !is_exe(&espup) {
-        check(
-            cmd("curl".as_ref())
-                .args(["-sSfL", "-o"])
-                .arg(&espup)
-                .arg(format!("{ESPUP}/espup-{arch}-unknown-linux-gnu")),
+        fetch(
+            &espup,
+            &format!("{ESPUP}/espup-{arch}-unknown-linux-gnu"),
+            Some(&path),
+        )?;
+        verify(
+            &sums,
+            &tools,
+            "espup",
+            &format!("espup-0.19.0-{arch}-unknown-linux-gnu"),
         )?;
         make_exe(&espup)?;
     }
@@ -171,12 +230,14 @@ pub fn run(a: Args) -> Result<(), String> {
 
     let espflash = tools.join("espflash");
     if !is_exe(&espflash) {
+        let zip_name = format!("espflash-{arch}-unknown-linux-musl.zip");
         let zip = tools.join("espflash.zip");
-        check(
-            cmd("curl".as_ref())
-                .args(["-sSfL", "-o"])
-                .arg(&zip)
-                .arg(format!("{ESPFLASH}/espflash-{arch}-unknown-linux-musl.zip")),
+        fetch(&zip, &format!("{ESPFLASH}/{zip_name}"), Some(&path))?;
+        verify(
+            &sums,
+            &tools,
+            "espflash.zip",
+            &format!("espflash-4.7.0-{arch}-unknown-linux-musl.zip"),
         )?;
         check(
             cmd("unzip".as_ref())
@@ -184,8 +245,8 @@ pub fn run(a: Args) -> Result<(), String> {
                 .current_dir(&tools)
                 .env("PWD", &tools),
         )?;
-        make_exe(&espflash)?;
         std::fs::remove_file(&zip).map_err(|e| format!("{}: {e}", zip.display()))?;
+        make_exe(&espflash)?;
     }
 
     println!(
