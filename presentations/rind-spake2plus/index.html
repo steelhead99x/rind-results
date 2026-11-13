@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPAKE2+ comes to rind: RFC 9383 and Matter PASE</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  1. DATA block (id="deck-data"): the benchmark numbers, copied unchanged from the DATA block of
+     presentations/rind-aarch64-perf/index.html. Only some fields are used here.
+  2. STYLE: the rind-aarch64-perf deck's CSS plus a few additions at the end.
+  3. SLIDES: one <section class="slide"> per slide. Slide numbers and footers are generated.
+  4. RENDER + NAVIGATION script at the end (arrow keys, PageUp/PageDown, Home/End, #N in the URL).
+-->
+<script id="deck-data">
+const DATA = {
+  meta: {
+    title: "SPAKE2+ comes to rind (bench data from the rind-aarch64-perf deck)",
+    subtitle: "Raspberry Pi 5 (Cortex-A76) and Apple M1 Pro · public-key dispatch and Argon2id",
+    asOf: "2026-11-12 16:00 PST",
+    start: "2026-11-11",
+    piNote: "Pi 5 figures: CPU held at a fixed 1.5 GHz because the board has no fan (nominal 2.4 GHz). Both sides of every A/B ran at that clock, so ratios hold."
+  },
+  /* Executive-summary cards: value, label, detail, source */
+  kpis: [
+    { v: "252.8 → 107.6 µs", l: "X25519 on Pi 5 (PR #33)", d: "narrow/wide 0.43; now 0.99× aws-lc-rs", src: "results/pr33-pi5/README.md" },
+    { v: "14 of 16", l: "Pi 5 ops at or ahead of aws-lc-rs", d: "with PR #33; P-256 verify 1.07× and P-384 verify 1.13× remain", src: "results/pr33-pi5/README.md" },
+    { v: "0.75× / 0.73×", l: "P-256 / P-384 ECDSA verify vs aws-lc-rs", d: "narrow NIST + P-384 w7 on Pi 5 (was 1.07× / 1.13× with #33)", src: "hosts/pi5/ab-narrow-mul/README.md" },
+    { v: "2.578 ms", l: "Argon2id 1 MiB, t=3 on Pi 5", d: "interleave + scalar riders: 0.611× RustCrypto (4.218 ms); 0.55× the original fill (4.728 ms)", src: "results/argon2-scalar-rider/RESULTS.md" }
+  ],
+  /* Phase 1: PR #33 on Pi 5. Median of 3 interleaved rounds. Ratios as printed in the source. */
+  pr33: [
+    // op, wide, narrow, aws, narrow/wide, narrow/aws, wide/aws
+    ["ed25519-sign", "51.48 µs", "34.55 µs", "35.42 µs", 0.67, 0.98, 1.45],
+    ["ed25519-verify", "263.02 µs", "169.74 µs", "182.37 µs", 0.65, 0.93, 1.44],
+    ["p256-ecdh", "326.62 µs", "200.03 µs", "213.54 µs", 0.61, 0.94, 1.53],
+    ["p256-ecdsa-sign", "60.72 µs", "45.10 µs", "75.91 µs", 0.74, 0.59, 0.80],
+    ["p256-ecdsa-verify", "303.22 µs", "273.88 µs", "256.66 µs", 0.90, 1.07, 1.18],
+    ["p384-ecdh", "1.116 ms", "662.02 µs", "699.32 µs", 0.59, 0.95, 1.60],
+    ["p384-ecdsa-sign", "248.36 µs", "175.02 µs", "350.03 µs", 0.70, 0.50, 0.71],
+    ["p384-ecdsa-verify", "1.021 ms", "896.78 µs", "792.49 µs", 0.88, 1.13, 1.29],
+    ["p521-ecdh", "2.386 ms", "1.448 ms", "1.472 ms", 0.61, 0.98, 1.62],
+    ["p521-ecdsa-sign", "522.08 µs", "366.32 µs", "850.01 µs", 0.70, 0.43, 0.61],
+    ["p521-ecdsa-verify", "2.116 ms", "1.382 ms", "1.741 ms", 0.65, 0.79, 1.22],
+    ["rsa2048-pkcs1-sign", "5.209 ms", "3.071 ms", "3.134 ms", 0.59, 0.98, 1.66],
+    ["rsa2048-pkcs1-verify", "151.73 µs", "85.92 µs", "90.58 µs", 0.57, 0.95, 1.68],
+    ["rsa2048-pss-sign", "5.211 ms", "3.072 ms", "3.136 ms", 0.59, 0.98, 1.66],
+    ["rsa2048-pss-verify", "153.35 µs", "87.57 µs", "92.15 µs", 0.57, 0.95, 1.66],
+    ["x25519-ecdh", "252.77 µs", "107.61 µs", "108.84 µs", 0.43, 0.99, 2.32]
+  ],
+  /* Phase 2: follow-up branches. status: win | tooling | split | pending */
+  followups: [
+    { b: "perf/pi5-narrow-nist", sha: "529a9d64", status: "win", what: "Ten P-256/P-384/P-521 field and point schedules proven by program equivalence now run on narrow cores", result: "ECDSA verify vs #33: P-256 273.8 → 192.5 µs, P-384 896.6 → 609.6 µs, P-521 1381.4 → 1324.8 µs (spreads ≤ 0.4%)" },
+    { b: "perf/pi5-rsa-bench-sizes", sha: "41f45409", status: "tooling", what: "rsa_sizes bench: RSA-2048/3072/4096 sign + verify, rind vs aws-lc-rs", result: "Bench only; produced the RSA-3072/4096 rows" },
+    { b: "perf/pi5-rsa-8n", sha: "850e9c34", status: "win", what: "s2n-bignum generic product + 8n reduction at 24/48/64 words", result: "RSA-3072 sign 0.753×, verify 0.716×; RSA-4096 verify 0.710× of #33; RSA-2048 unchanged" },
+    { b: "perf/pi5-mont-uninit", sha: "d4e79165", status: "win", what: "Karatsuba scratch left uninitialised (no memset per call)", result: "RSA-2048 sign 3069.9 → 3039.0 µs (0.990×); other rows 0.998–1.000×" },
+    { b: "perf/pi5-p384-verify-w7", sha: "41e69151", status: "win", what: "P-384 verify: generator terms from a width-7 NAF over G..63G", result: "P-384 verify 609.7 → 582.1 µs (0.955×, 0.73× aws-lc-rs); controls 1.000×" },
+    { b: "perf/pi5-p521-verify-w7", sha: "da1895d2", status: "win", what: "The same width-7 generator NAF for P-521", result: "P-521 verify 1325.0 → 1267.3 µs (0.956×, 0.73× aws-lc-rs); controls 0.999–1.000×" },
+    { b: "perf/pi5-cpu-detect", sha: "4a496bad", status: "split", what: "Lazy, MIDR_EL1-first multiplier detection; unreadable cpuinfo keeps _alt", result: "P-256 sign 45.1 → 46.2 µs (1.025×), ECDH 1.005×. Traced to the generator table's address mod 64; a 64-byte alignment fix is being timed" }
+  ],
+  nistVerify: [
+    // op, #33 µs, NIST µs, aws µs, #33/aws, NIST/aws
+    // op, #33 µs, NIST µs, aws µs, #33/aws, NIST/aws, +w7/aws (null = no w7 branch)
+    ["P-256 verify", 273.8, 192.5, 256.6, 1.07, 0.75, null],
+    ["P-384 verify", 896.6, 609.6, 791.6, 1.13, 0.77, 0.73],
+    ["P-521 verify", 1381.4, 1324.8, 1740.3, 0.79, 0.76, 0.73]
+  ],
+  rsa8n: [
+    // op, #33 µs, rsa-8n µs, aws µs, rsa8n/#33, #33/aws, rsa8n/aws
+    ["RSA-2048 sign", 3069.9, 3070.4, 3135.2, 1.000, 0.98, 0.98],
+    ["RSA-3072 sign", 17084.3, 12868.7, 13431.0, 0.753, 1.27, 0.96],
+    ["RSA-3072 verify", 307.1, 219.9, 253.3, 0.716, 1.21, 0.87],
+    ["RSA-4096 sign", 20624.8, 20487.9, 21698.5, 0.993, 0.95, 0.94],
+    ["RSA-4096 verify", 543.2, 385.5, 439.7, 0.710, 1.24, 0.88]
+  ],
+  /* Phase 3: Argon2id NEON on M1 Pro, 2026-11-11, from perf/argon2-neon commit messages (ms) */
+  argonNeon: {
+    sizes: ["1 MiB, t=3", "16 MiB, t=1", "64 MiB, t=1"],
+    series: [
+      { n: "Branch start", v: [1.106, 6.353, 32.00], c: "before" },
+      { n: "Before fuse (bd907631)", v: [1.018, 5.534, 28.43], c: "mid" },
+      { n: "Fused loads/stores, NEON", v: [0.800, 4.378, 23.99], c: "neon" },
+      { n: "SHA3 xar (4ad61ae3)", v: [0.724, 3.929, 22.46], c: "after" },
+      { n: "RustCrypto argon2", v: [1.054, 6.141, 29.82], c: "ref" }
+    ]
+  },
+  /* Phase 4: umlal BlaMka, c1/a0, median of 5 interleaved runs */
+  umlal: {
+    sizes: ["1 MiB", "16 MiB", "64 MiB"],
+    series: [
+      { n: "M1 Pro, SHA3 fill", v: [0.865, 0.866, 0.939], c: "after" },
+      { n: "M1 Pro, NEON fill", v: [0.867, 0.876, 0.871], c: "neon" },
+      { n: "Pi 5 (A76), NEON fill", v: [1.025, 1.021, 1.019], c: "bad" }
+    ],
+    m1: [["1 MiB, t=3", "720.6 µs", "623.2 µs", "0.865", "1.055 ms"], ["16 MiB, t=1", "3.888 ms", "3.367 ms", "0.866", "5.85 ms"], ["64 MiB, t=1", "21.02 ms", "19.74 ms", "0.939", "30.1 ms"]],
+    pi: [["1 MiB, t=3", "4.729 ms", "4.847 ms", "1.025", "4.201 ms"], ["16 MiB, t=1", "28.11 ms", "28.71 ms", "1.021", "26.35 ms"], ["64 MiB, t=1", "124.4 ms", "126.8 ms", "1.019", "118.2 ms"]]
+  },
+  /* Phase 5: PMU per 1 KiB block, 1 MiB / 3 passes, Pi 5, median of 8 alternations (raw/pi5-pmu-r4.tsv) */
+  pmu: [
+    // name, cycles, inst, stall_backend, stall %, IPC, L1D refill
+    ["rind a0 (before)", 2307, 2816, 1560, "68%", 1.22, 11.9],
+    ["RustCrypto 0.6", 2048, 4365, 451, "22%", 2.13, 13.6],
+    ["rind g1 (after)", 1522, 2664, 756, "50%", 1.75, 17.9]
+  ],
+  interleavePi: {
+    sizes: ["1 MiB, t=3", "16 MiB, t=1", "64 MiB, t=1"],
+    a0: [4.728, 28.116, 124.111], g1: [3.113, 19.720, 90.356], rc: [4.202, 26.357, 117.839],
+    g1a0: ["0.658", "0.701", "0.728"], g1rc: ["0.741", "0.748", "0.767"]
+  },
+  /* Phase 5c: scalar riders (h2), Pi 5 criterion set r6, 5 interleaved runs (results/argon2-scalar-rider/RESULTS.md) */
+  riderPi: {
+    sizes: ["1 MiB, t=3", "16 MiB, t=1", "64 MiB, t=1"],
+    rc: [4.218, 26.486, 119.071], g1: [3.119, 19.994, 92.168], h2: [2.578, 17.722, 84.629],
+    h2g1: ["0.827", "0.886", "0.918"], h2rc: ["0.611", "0.669", "0.711"], vsA0: ["0.55", "0.64", "0.68"]
+  },
+  riderPmu: [
+    // size, cycles/blk g1 -> h2, IPC g1 -> h2, stall_backend/blk g1 -> h2 (raw/pi5-pmu-h2.tsv)
+    ["1 MiB, t=3", "1522 → 1259", "1.75 → 2.62", "756 → 345"],
+    ["16 MiB", "1817 → 1645", "1.44 → 1.95", "1059 → 744"],
+    ["64 MiB", "1758 → 1584", "1.48 → 2.02", "1002 → 686"]
+  ],
+  interleaveM1: [
+    ["1 MiB", "sha3", "624.95 µs", "562.30 µs", "0.900"],
+    ["16 MiB", "sha3", "3.538 ms", "3.233 ms", "0.914"],
+    ["64 MiB", "sha3", "22.141 ms", "20.496 ms", "0.926"],
+    ["1 MiB", "neon", "799.14 µs", "726.69 µs", "0.909"],
+    ["16 MiB", "neon", "4.436 ms", "4.078 ms", "0.919"],
+    ["64 MiB", "neon", "26.711 ms", "23.700 ms", "0.887"]
+  ]
+};
+</script>
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions */
+.flow text{font-family:var(--sans)}
+.flow .hd{font-size:17px;font-weight:700;fill:#fff}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .bx{fill:var(--panel);stroke:var(--line)}
+.flow .t1{font-size:14px;fill:var(--ink)}
+.flow .t2{font-size:12px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:13px;fill:var(--navy)}
+.flow .lbl{font-size:13px;font-weight:700;fill:var(--accent)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.checks{display:grid;grid-template-columns:1.6fr 1fr;gap:28px}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+.tag.run{background:var(--pend-bg);color:#8a6d0b}
+.tag.skip{background:var(--split-bg);color:#4a5578}
+.timeline.t5{grid-template-columns:repeat(5,1fr)}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · password-authenticated key exchange</div>
+    <h1>SPAKE2+ comes to rind: RFC 9383 and Matter PASE</h1>
+    <div class="sub">What the protocol does, how rind implements it, where pull request moq-dev/rind#689 stands, and the aarch64 performance work from the same two days</div>
+  </div>
+  <div class="meta">moq-dev/rind · steelhead99x/rind-results<br>November 12, 2026</div>
+  <div class="foot"><span class="src">Sources are listed on the last slide. Facts with no source are left out.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 2. PROBLEM ============ -->
+<section class="slide" data-section="Problem">
+  <div class="kicker">The problem</div>
+  <h2>A client should prove it knows a password without sending it, and a stolen server database should not let anyone pose as the client</h2>
+  <div class="cols" style="margin-top:28px">
+    <div class="card"><h3>Requirement 1: the password never crosses the wire</h3><ul class="b">
+      <li>Client and server share a password, or a value derived from it.</li>
+      <li>They agree on a session key, and each proves to the other that it knows the password.</li>
+      <li>Someone who records the exchange cannot test password guesses offline.</li>
+    </ul></div>
+    <div class="card"><h3>Requirement 2: the server record is not a password</h3><ul class="b">
+      <li>Servers get breached. Whatever the server stores should not be enough to log in as the client.</li>
+      <li>The attacker who steals the record can still run a guessing attack against it, but cannot use the record itself as a credential.</li>
+      <li>SPAKE2+ (RFC 9383) meets both. Matter uses it for PASE, its commissioning handshake.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">RFC 9383 · draft-bar-cfrg-spake2plus-01 · moq-dev/rind#689</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 3. INFOGRAPHIC ============ -->
+<section class="slide" data-section="Protocol">
+  <div class="kicker">The protocol on one page</div>
+  <h2 style="margin-bottom:16px">Both sides exchange masked shares, derive the same keys, and trust the key only after the tags check</h2>
+  <svg class="flow" viewBox="0 0 1152 478" width="1152" height="478" role="img" aria-label="SPAKE2+ message flow between prover and verifier">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+  </defs>
+  <!-- headers -->
+  <rect x="0" y="0" width="400" height="38" rx="8" fill="#0e2238"/>
+  <text class="hd" x="200" y="25" text-anchor="middle">Prover (client)</text>
+  <rect x="752" y="0" width="400" height="38" rx="8" fill="#0e2238"/>
+  <text class="hd" x="952" y="25" text-anchor="middle">Verifier (server)</text>
+  <line x1="200" y1="38" x2="200" y2="420" stroke="#dfe4ea" stroke-width="2"/>
+  <line x1="952" y1="38" x2="952" y2="420" stroke="#dfe4ea" stroke-width="2"/>
+
+  <!-- 1 setup -->
+  <text class="st" x="576" y="64" text-anchor="middle">1 · SETUP</text>
+  <rect class="bx" x="0" y="48" width="400" height="58" rx="8"/>
+  <text class="t1" x="16" y="72">Holds w0 and w1, derived from the password</text>
+  <text class="t2" x="16" y="93">The caller stretches the password first</text>
+  <rect class="bx" x="752" y="48" width="400" height="58" rx="8"/>
+  <text class="m" x="768" y="72">stores w0, L = w1·G</text>
+  <text class="t2" x="768" y="93">The stored record has no w1</text>
+
+  <!-- 2 shares -->
+  <text class="st" x="576" y="130" text-anchor="middle">2 · MASKED SHARES</text>
+  <rect class="bx" x="0" y="118" width="400" height="74" rx="8"/>
+  <text class="t2" x="16" y="142">Picks a random scalar x</text>
+  <text class="m" x="16" y="170">X = x·G + w0·M</text>
+  <rect class="bx" x="752" y="118" width="400" height="74" rx="8"/>
+  <text class="t2" x="768" y="142">Picks a random scalar y</text>
+  <text class="m" x="768" y="170">Y = y·G + w0·N</text>
+  <line x1="408" y1="152" x2="744" y2="152" stroke="#0f766e" stroke-width="2" marker-end="url(#ah)"/>
+  <text class="lbl" x="576" y="146" text-anchor="middle">X (shareP)</text>
+  <line x1="744" y1="180" x2="408" y2="180" stroke="#0f766e" stroke-width="2" marker-end="url(#ah)"/>
+  <text class="lbl" x="576" y="174" text-anchor="middle">Y (shareV)</text>
+
+  <!-- 3 compute -->
+  <text class="st" x="576" y="218" text-anchor="middle">3 · COMPUTE Z, V</text>
+  <rect class="bx" x="0" y="204" width="400" height="66" rx="8"/>
+  <text class="m" x="16" y="230">Z = x·(Y − w0·N)</text>
+  <text class="m" x="16" y="254">V = w1·(Y − w0·N)</text>
+  <rect class="bx" x="752" y="204" width="400" height="66" rx="8"/>
+  <text class="m" x="768" y="230">Z = y·(X − w0·M)</text>
+  <text class="m" x="768" y="254">V = y·L</text>
+  <text class="t2" x="576" y="242" text-anchor="middle">Both sides get</text>
+  <text class="m" x="576" y="260" text-anchor="middle">Z = xy·G, V = w1·y·G</text>
+
+  <!-- 4 transcript -->
+  <text class="st" x="576" y="296" text-anchor="middle">4 · TRANSCRIPT AND KEYS</text>
+  <rect x="0" y="304" width="1152" height="44" rx="8" fill="#eef0f6" stroke="#dfe4ea"/>
+  <text class="t1" x="576" y="331" text-anchor="middle">Both hash context, identities, M, N, X, Y, Z, V, w0 into the confirmation keys and the shared key</text>
+
+  <!-- 5 confirm -->
+  <text class="st" x="576" y="370" text-anchor="middle">5 · CONFIRMATION TAGS</text>
+  <rect class="bx" x="0" y="362" width="400" height="62" rx="8"/>
+  <text class="t1" x="16" y="387">Checks confirmV in constant time</text>
+  <text class="t2" x="16" y="409">Sends confirmP only if it matches</text>
+  <rect class="bx" x="752" y="362" width="400" height="62" rx="8"/>
+  <text class="t1" x="768" y="387">Sends confirmV with Y</text>
+  <text class="t2" x="768" y="409">Checks confirmP in constant time</text>
+  <text class="lbl" x="576" y="391" text-anchor="middle">confirmV</text>
+  <line x1="744" y1="397" x2="408" y2="397" stroke="#0f766e" stroke-width="2" marker-end="url(#ah)"/>
+  <line x1="408" y1="413" x2="744" y2="413" stroke="#0f766e" stroke-width="2" marker-end="url(#ah)"/>
+  <text class="lbl" x="576" y="429" text-anchor="middle">confirmP</text>
+
+  <!-- 6 key -->
+  <rect x="0" y="438" width="1152" height="40" rx="8" fill="#0f766e"/>
+  <text x="576" y="463" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">6 · Each side releases the shared key only after the peer's tag checks</text>
+</svg>
+
+  <div class="foot"><span class="src">RFC 9383, section 3 · M and N are fixed curve points; G is the generator</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 4. SETUP ============ -->
+<section class="slide" data-section="Protocol">
+  <div class="kicker">Step 1 · setup</div>
+  <h2>The verifier stores w0 and L = w1·G, so a stolen record cannot act as the client</h2>
+  <p class="lede">This is the "+" over SPAKE2: the two sides hold different secrets.</p>
+  <div class="cols3">
+    <div class="card"><h3>Password to w0, w1</h3><ul class="b sm">
+      <li>The caller stretches the password with a slow hash and derives two scalars, w0 and w1.</li>
+      <li>rind takes w0 and w1 as input. Choosing the stretching function is the caller's job.</li>
+    </ul></div>
+    <div class="card"><h3>Who holds what</h3><ul class="b sm">
+      <li>Prover (client): <b>w0 and w1</b>.</li>
+      <li>Verifier (server): <b>w0 and L = w1·G</b>, computed once at registration.</li>
+    </ul></div>
+    <div class="card"><h3>Why L is safe to store</h3><ul class="b sm">
+      <li>Recovering w1 from L is a discrete-log problem on P-256.</li>
+      <li>The prover's V uses w1 directly. Without w1, a thief holding (w0, L) cannot compute the prover's V, so the tags fail.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">RFC 9383, sections 3.2 and 3.3</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 5. SHARES ============ -->
+<section class="slide" data-section="Protocol">
+  <div class="kicker">Step 2 · masked shares</div>
+  <h2>Each share is masked with w0, so an eavesdropper cannot test password guesses offline</h2>
+  <div class="cols c64" style="margin-top:22px">
+    <div>
+      <div class="callout" style="font-size:20px;line-height:1.7"><span class="mono">X = x·G + w0·M</span> (prover)<br><span class="mono">Y = y·G + w0·N</span> (verifier)</div>
+      <ul class="b" style="margin-top:20px">
+        <li>x and y are fresh random scalars for each handshake.</li>
+        <li>M and N are fixed points whose discrete logs nobody knows.</li>
+        <li>A guessed w0 turns a recorded X into a candidate x·G, but checking it means computing Z, which needs x or y. Neither leaves its owner.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>What an attacker can do</h3><ul class="b sm">
+      <li><b>Passive:</b> record X and Y. They look like random points, and give no way to check a guess.</li>
+      <li><b>Active:</b> run the handshake with one guessed password. A wrong guess fails at the tag check.</li>
+      <li>So each attempt tests one guess, online. The guesses cannot be run offline.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">RFC 9383, sections 3.3 and 4 (M, N for P-256 are given in the RFC)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 6. COMPUTE AND CONFIRM ============ -->
+<section class="slide" data-section="Protocol">
+  <div class="kicker">Steps 3 to 6 · compute and confirm</div>
+  <h2>Both sides reach the same Z and V, hash the transcript into keys, and release the key only after the peer's tag checks</h2>
+  <div class="cols" style="margin-top:22px">
+    <div class="card"><h3>Same values, different inputs</h3><ul class="b sm">
+      <li>Prover removes w0·N from Y, then multiplies by x and by w1.</li>
+      <li>Verifier removes w0·M from X, then multiplies by y; it gets V from L as y·L.</li>
+      <li>Both end with <span class="mono">Z = xy·G</span> and <span class="mono">V = w1·y·G</span>.</li>
+    </ul></div>
+    <div class="card"><h3>Transcript into keys</h3><ul class="b sm">
+      <li>The transcript is context, both identities, M, N, X, Y, Z, V and w0.</li>
+      <li>It is hashed into two confirmation keys and the shared key.</li>
+      <li>Any change to any field gives different keys, so a tampered handshake fails at the tags.</li>
+    </ul></div>
+  </div>
+  <div class="callout" style="margin-top:20px">Confirmation tags are compared in constant time. rind returns the shared key only after the peer's tag checks. A failed handshake tells an active attacker that one guess was wrong, and nothing else.</div>
+  <div class="foot"><span class="src">RFC 9383, sections 3.4 and 3.5 · moq-dev/rind#689</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. SUITES ============ -->
+<section class="slide" data-section="rind design">
+  <div class="kicker">rind design · two suites</div>
+  <h2>rind ships two suites, RFC 9383 and Matter PASE, and the type system keeps them from being mixed</h2>
+  <table class="t" style="margin-top:18px;font-size:14.5px">
+    <tr><th style="width:20%"></th><th style="width:40%;text-transform:none"><code>Suite&lt;Rfc9383&gt;</code></th><th style="text-transform:none"><code>Suite&lt;MatterPase&gt;</code></th></tr>
+    <tr><td>Spec</td><td>RFC 9383</td><td>draft-bar-cfrg-spake2plus-01, which Matter PASE uses</td></tr>
+    <tr><td>Key schedule</td><td>Transcript hash fed to HKDF</td><td>Hash(TT) split into Ka || Ke; confirmation keys come from HKDF over Ka; 16-byte keys</td></tr>
+    <tr><td>Primitives</td><td colspan="2">P-256, SHA-256, HKDF-SHA256, HMAC-SHA256. All already in rind; no new primitive.</td></tr>
+  </table>
+  <div class="cols" style="margin-top:20px">
+    <div class="callout warn"><b>The draft disagrees with itself.</b> Its prose and its diagram split Hash(TT) differently. rind follows the draft's appendix B test vectors and the connectedhomeip vectors.</div>
+    <div class="callout">The suite is part of the type. Mixing the two suites in one handshake fails to compile.</div>
+  </div>
+  <div class="foot"><span class="src">moq-dev/rind#689 · RFC 9383 · draft-bar-cfrg-spake2plus-01 (appendix B)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 8. HARD PART ============ -->
+<section class="slide" data-section="rind design">
+  <div class="kicker">rind design · the hard part</div>
+  <h2>The identity check runs without a secret-dependent branch</h2>
+  <p class="lede">A share equal to w0·M or w0·N makes X − w0·M or Y − w0·N the identity point, and the handshake must reject it. Testing for that with an ordinary <code>if</code> would branch on a value derived from the password.</p>
+  <div class="cols">
+    <div class="card"><h3>How rind does it</h3><ul class="b sm">
+      <li>If the point is the identity, the multiplication and the transcript run on the generator instead, so the work looks the same either way.</li>
+      <li>The "was identity" bit is declassified once, together with the tag check result.</li>
+      <li>The maintainer refactored <code>complete_add</code> onto hash-to-curve's <code>sum</code>.</li>
+    </ul></div>
+    <div class="card"><h3>Other limits and hygiene</h3><ul class="b sm">
+      <li>Hostile input is bounded: context and identities at 1024 bytes, scalars at 128 bytes.</li>
+      <li>Secrets are wiped on drop.</li>
+      <li>Per-handshake state is consumed by <code>finish</code>, so it cannot be reused.</li>
+      <li>One stored record (or one set of prover secrets) serves many handshakes.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">moq-dev/rind#689 (description, review decisions and maintainer commits)</span><span class="num"></span></div>
+</section>
+<!-- ============ 9. PR JOURNEY ============ -->
+<section class="slide" data-section="Pull request">
+  <div class="kicker">The pull request · Nov 12, 2026 (times PST)</div>
+  <h2>Three earlier attempts led to moq-dev/rind#689; the maintainer added commits and a review bot approved it</h2>
+  <div class="timeline t5" style="margin-top:18px">
+    <div class="tl"><div class="ph">Before</div><h4>#616, #680, #685</h4>Earlier attempts, superseded by #689.</div>
+    <div class="tl"><div class="ph">Opened</div><h4>#689</h4>Opened by steelhead99x: "feat(spake2plus): add RFC 9383 and Matter PASE". 8 commits, +2061 / −20, 17 files.</div>
+    <div class="tl"><div class="ph">About 1:50 PM</div><h4>Labeled</h4>The maintainer labeled it <code>quest:active</code> and added a Decisions section.</div>
+    <div class="tl"><div class="ph">Then</div><h4>Maintainer commits</h4>Out of draft. <code>complete_add</code> moved onto <code>sum</code>; one record or set of secrets serves many handshakes; C and crates.io differentials left out of wasm; main merged in.</div>
+    <div class="tl"><div class="ph">3:12 PM</div><h4>Approved</h4>Pullfrog bot approved head <code>f3ccebb7</code>. The repo now requires an approving review.</div>
+  </div>
+  <div class="card" style="margin-top:22px"><h3>Tests in the pull request</h3><ul class="b sm" style="columns:2;column-gap:36px">
+    <li>RFC 9383 test vectors</li>
+    <li>draft-bar-cfrg-spake2plus-01 test vectors</li>
+    <li>connectedhomeip (Matter) test vectors</li>
+    <li>Differential tests against pakery and matter-crypto</li>
+    <li>ctgrind constant-time checks</li>
+    <li>Tests that secrets are zeroed</li>
+  </ul></div>
+  <div class="foot"><span class="src">github.com/moq-dev/rind/pull/689 (timeline, commits, reviews)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 10. STATUS BOARD ============ -->
+<section class="slide" data-section="Status">
+  <div class="kicker">Status as of 4:22 PM PST, Nov 12, 2026</div>
+  <h2>#689 is approved and conflict-free; it waits on one running check and a maintainer merge</h2>
+  <div class="board" style="margin-top:18px">
+    <div class="cell"><div class="k">Mergeable</div><div class="v">Yes</div></div>
+    <div class="cell"><div class="k">Conflicts</div><div class="v">None</div></div>
+    <div class="cell"><div class="k">GitHub merge state</div><div class="v bad">Blocked</div></div>
+    <div class="cell"><div class="k">Review</div><div class="v">Approved</div></div>
+  </div>
+  <div class="checks">
+    <div>
+      <div class="chart-title">Passed</div>
+      <div class="chk"><span>lean</span><span>neon</span><span>cosim</span><span>clippy-aarch64</span><span>binsec (portable)</span><span>binsec (x86_64)</span><span>binsec (aarch64)</span><span>build (ubuntu-latest, --release)</span><span>pullfrog</span></div>
+      <table class="t" style="margin-top:18px">
+        <tr><th style="width:24%">Check</th><th style="width:20%">State</th><th>Detail</th></tr>
+        <tr><td><code>check</code></td><td><span class="tag run">running</span></td><td>Started 3:54 PM</td></tr>
+        <tr><td><code>hol-light</code></td><td><span class="tag drop">cancelled</span></td><td>Ran 3:43 to 4:13 PM. Cause not confirmed.</td></tr>
+        <tr><td>Some matrix jobs</td><td><span class="tag skip">skipped</span></td><td>Several matrix entries did not run</td></tr>
+      </table>
+    </div>
+    <div class="callout" style="align-self:start"><b>Next actor: the maintainer.</b><br>The author is an outside contributor, so the maintainer has to merge.</div>
+  </div>
+  <div class="foot"><span class="src">github.com/moq-dev/rind/pull/689 (checks and merge state, read 4:22 PM PST)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 11. NEXT ============ -->
+<section class="slide" data-section="Next">
+  <div class="kicker">What's next</div>
+  <h2>After the merge, six ready follow-up fixes get rebuilt on the merged code, and Ed25519 work continues in #709</h2>
+  <div class="cols3" style="margin-top:24px">
+    <div class="card"><h3>1. Merge #689</h3><ul class="b sm">
+      <li>Waiting on the maintainer.</li>
+    </ul></div>
+    <div class="card"><h3>2. Follow-up fixes</h3><ul class="b sm">
+      <li>Six fixes are ready on branch <code>spake2plus-followup-r1</code>, with 1029 tests passing.</li>
+      <li>They will be rebuilt on the merged result. Anything the maintainer already covered is dropped.</li>
+    </ul></div>
+    <div class="card"><h3>3. Ed25519</h3><ul class="b sm">
+      <li>Ed25519 work continues as moq-dev/rind#709.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">moq-dev/rind#689 · moq-dev/rind#709 · follow-up branch test run</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 12. BENCH SUMMARY ============ -->
+<section class="slide" data-section="Benchmarks">
+  <div class="kicker">rind on aarch64 · Nov 11 to 12, 2026</div>
+  <h2>On the Pi 5, rind now matches or beats aws-lc-rs on the ops shown, and its Argon2id beats RustCrypto</h2>
+  <p class="lede">Raspberry Pi 5 (Cortex-A76) for public-key ops and Argon2id; Apple M1 Pro for the first Argon2id NEON work.</p>
+  <div class="kpis" id="kpis"></div>
+  <div class="cols">
+    <div class="card"><h3>Raspberry Pi 5</h3><ul class="b sm">
+      <li>PR #33 picks narrow multipliers on the A76: X25519 0.43× the wide path.</li>
+      <li>Follow-ups: ECDSA verify now 0.75× (P-256) and 0.73× (P-384, P-521) of aws-lc-rs; RSA-3072/4096 verify 0.87× / 0.88×.</li>
+      <li>Argon2id: 29–39% less time than RustCrypto across 1, 16 and 64 MiB.</li>
+    </ul></div>
+    <div class="card"><h3>Apple M1 Pro</h3><ul class="b sm">
+      <li>Argon2id NEON fill, 1 MiB t=3: 1.106 → 0.724 ms, against 1.054 ms for RustCrypto.</li>
+      <li>SHA3 <code>umlal</code> BlaMka: 0.865× at 1 MiB.</li>
+    </ul></div>
+  </div>
+  <div class="pi-note" data-k="meta.piNote"></div>
+  <div class="foot"><span class="src">rind-results: pr33-pi5/README.md · pi5/ab-narrow-mul/README.md · argon2-scalar-rider/RESULTS.md · argon2/RESULTS.md · perf/argon2-neon commits</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 13. PI 5 BRANCHES ============ -->
+<section class="slide" data-section="Pi 5 optimizations">
+  <div class="kicker">Pi 5 optimizations · the follow-up branches</div>
+  <h2>Five follow-up branches are measured wins, one adds a bench, and one is held back</h2>
+  <p class="lede" style="margin-bottom:12px">Each branch is stacked on PR #33. Medians of 3 to 7 interleaved rounds on the Pi 5.</p>
+  <table class="t" id="tb-followups" style="font-size:12.5px"></table>
+  <div class="pi-note" data-k="meta.piNote"></div>
+  <div class="foot"><span class="src">rind-results results/pi5-lane-2026-11-12: hosts/pi5/ab-narrow-mul/README.md and ab-*.md · branch commit messages</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14. PI 5 CHARTS ============ -->
+<section class="slide" data-section="Pi 5 optimizations">
+  <div class="kicker">Pi 5 optimizations · ECDSA verify and RSA</div>
+  <h2>Narrow NIST and the width-7 tables bring ECDSA verify under <span style="white-space:nowrap">aws-lc-rs</span>, and rsa-8n does the same for RSA-3072/4096</h2>
+  <p class="lede" style="margin-bottom:10px">Time relative to aws-lc-rs on the Pi 5; below 1.0× is faster. Grey: PR #33 alone. Teal: with the follow-up. Blue: with the width-7 NAF.</p>
+  <div class="cols">
+    <div><div class="chart-title">ECDSA verify</div><div id="ch-nist"></div>
+      <p style="font-size:13px;color:var(--ink2);margin:6px 0 0">P-256 273.8 → 192.5 µs. P-384 896.6 → 609.6 µs, then 609.7 → 582.1 µs with w7. P-521 1381.4 → 1324.8 µs, then 1325.0 → 1267.3 µs with w7.</p></div>
+    <div><div class="chart-title">RSA, with perf/pi5-rsa-8n</div><div id="ch-rsa"></div>
+      <p style="font-size:13px;color:var(--ink2);margin:6px 0 0">RSA-3072 sign 0.753× and RSA-4096 verify 0.710× the time of PR #33. Separately, mont-uninit cuts RSA-2048 sign by about 1% (3069.9 → 3039.0 µs).</p></div>
+  </div>
+  <div class="pi-note" data-k="meta.piNote"></div>
+  <div class="foot"><span class="src">rind-results results/pi5-lane-2026-11-12: hosts/pi5/ab-narrow-mul/ab-narrow-mul.md, ab-rsa-8n.md, ab-p384-w7.md, ab-p521-w7.md, README.md</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 15. PI 5 ARGON2 ============ -->
+<section class="slide" data-section="Pi 5 optimizations">
+  <div class="kicker">Pi 5 optimizations · Argon2id</div>
+  <h2>With the NEON interleave and the scalar rider, Argon2id on the Pi 5 takes 29–39% less time than RustCrypto</h2>
+  <p class="lede" style="margin-bottom:10px">Time relative to RustCrypto argon2 on the Pi 5, median of 5 interleaved runs; below 1.0× is faster.</p>
+  <div class="cols c64">
+    <div><div id="ch-argon"></div>
+      <div class="legend"><span><i style="background:#6b5ca5"></i>RustCrypto argon2</span><span><i style="background:#5aa9a0"></i>rind, two-round interleave (g1)</span><span><i style="background:#0f766e"></i>rind, interleave + scalar rider (h2)</span></div></div>
+    <div><table class="t" id="tb-argon"></table>
+      <ul class="b sm" style="margin-top:14px">
+        <li>PMU per 1 KiB block at 1 MiB, g1 → h2: cycles 1522 → 1259, IPC 1.75 → 2.62, back-end stall cycles 756 → 345.</li>
+        <li>Against rind's original fill, h2 takes 0.55×, 0.64× and 0.68× the time.</li>
+      </ul></div>
+  </div>
+  <div class="pi-note" data-k="meta.piNote"></div>
+  <div class="foot"><span class="src">rind-results results/argon2-a76-interleave: results/argon2-scalar-rider/RESULTS.md (criterion set r6) · results/argon2-interleave/RESULTS.md</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 16. SOURCES ============ -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Sources</div>
+  <h2>Every fact in this deck comes from one of these sources</h2>
+  <table class="t" style="margin-top:14px;font-size:14px">
+    <tr><th style="width:26%">Topic</th><th>Source</th></tr>
+    <tr><td>Pull request, checks, timeline</td><td><a href="https://github.com/moq-dev/rind/pull/689">github.com/moq-dev/rind/pull/689</a> · follow-on Ed25519 work: <a href="https://github.com/moq-dev/rind/pull/709">moq-dev/rind#709</a></td></tr>
+    <tr><td>SPAKE2+ protocol</td><td><a href="https://www.rfc-editor.org/rfc/rfc9383">RFC 9383: SPAKE2+, an Augmented Password-Authenticated Key Exchange (PAKE) Protocol</a></td></tr>
+    <tr><td>Matter PASE suite</td><td><a href="https://datatracker.ietf.org/doc/html/draft-bar-cfrg-spake2plus-01">draft-bar-cfrg-spake2plus-01</a> (appendix B test vectors) · connectedhomeip test vectors</td></tr>
+    <tr><td>Pi 5 public-key results</td><td>steelhead99x/rind-results <code>results/pr33-pi5/README.md</code> (branch <code>results/m1pro-pi5-argon2-2026-11-12</code>) · <code>hosts/pi5/ab-narrow-mul/</code> (branch <code>results/pi5-lane-2026-11-12</code>)</td></tr>
+    <tr><td>Argon2id results</td><td>steelhead99x/rind-results <code>results/argon2/RESULTS.md</code> (branch <code>results/m1pro-pi5-argon2-2026-11-12</code>) · <code>results/argon2-interleave/</code> and <code>results/argon2-scalar-rider/</code> (branch <code>results/argon2-a76-interleave</code>)</td></tr>
+    <tr><td>Pi 5 clock</td><td>steelhead99x/rind-results <code>hosts/pi5/NOTES.md</code> · the companion deck <code>presentations/rind-aarch64-perf</code> (branch <code>docs/perf-phases-deck</code>)</td></tr>
+  </table>
+  <div class="foot"><span class="src">Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const D = DATA, $ = (s,r=document)=>r.querySelector(s), NS="http://www.w3.org/2000/svg";
+  const C = {before:"#a8b3c1", mid:"#cbd3dc", neon:"#5aa9a0", after:"#0f766e", ref:"#6b5ca5", bad:"#b4532a", accent2:"#2b6cb0"};
+  const get = p => p.split('.').reduce((o,k)=>o&&o[k], D);
+  document.querySelectorAll('[data-k]').forEach(e=>{ e.textContent = get(e.dataset.k); });
+  const fmt = (v,d=2)=>Number(v).toFixed(d);
+  function el(tag, attrs, parent, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; if(parent) parent.appendChild(e); return e; }
+  function svg(w,h){ return el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img'}); }
+
+  // KPI cards
+  $('#kpis').innerHTML = D.kpis.map(k=>`<div class="kpi"><div class="v">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+
+  // Follow-up table
+  const tagTxt={win:'measured win',tooling:'bench / tooling',split:'held back',pending:'pending'};
+  $('#tb-followups').innerHTML = `<tr><th style="width:22%">Branch</th><th style="width:28%">Change</th><th>Pi 5 result</th><th style="width:12%">Status</th></tr>` +
+    D.followups.map(f=>`<tr><td><code>${f.b}</code><br><span class="mono" style="color:#7b8797">${f.sha}</span></td><td>${f.what}</td><td>${f.result}</td><td><span class="tag ${f.status}">${tagTxt[f.status]}</span></td></tr>`).join('');
+
+  // Paired bars: ratio vs aws-lc-rs
+  function pairbars(target, rows, iA, iB, {w=560,max=1.4,iC=null}={}){
+    const rowH=iC!=null?58:44, h=rows.length*rowH+30, s=svg(w,h), x0=120, x1=w-46, sc=v=>x0+(x1-x0)*v/max;
+    for(let t=0;t<=max+1e-9;t+=0.2){ el('line',{x1:sc(t),x2:sc(t),y1:4,y2:h-22,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-6,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,fmt(t,1)+'×'); }
+    rows.forEach((r,i)=>{ const y=6+i*rowH;
+      el('text',{x:x0-8,y:y+rowH/2+3,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,r[0]);
+      [[r[iA],C.before,0],[r[iB],C.after,1]].concat(iC!=null&&r[iC]!=null?[[r[iC],C.accent2,2]]:[]).forEach(([v,c,k])=>{ const yy=y+4+k*17;
+        el('rect',{x:x0,y:yy,width:sc(v)-x0,height:14,rx:2,fill:c},s);
+        el('text',{class:'v',x:sc(v)+5,y:yy+11,'font-size':11,fill:'#465467','font-weight':600},s,fmt(v)+'×'); }); });
+    el('line',{x1:sc(1),x2:sc(1),y1:2,y2:h-22,stroke:'#0e2238','stroke-width':1.5,'stroke-dasharray':'4 3'},s);
+    $(target).appendChild(s);
+  }
+  pairbars('#ch-nist', D.nistVerify, 4, 5, {w:560, iC:6});
+  pairbars('#ch-rsa', D.rsa8n, 5, 6, {w:560});
+
+  // Argon2 Pi 5: grouped bars normalised to RustCrypto
+  (function(){
+    const rp=D.riderPi, ser=[['rc',C.ref],['g1',C.neon],['h2',C.after]];
+    const w=640, rowH=92, h=rp.sizes.length*rowH+30, s=svg(w,h), x0=110, x1=w-60, max=1.2, sc=v=>x0+(x1-x0)*v/max;
+    for(let t=0;t<=max+1e-9;t+=0.2){ el('line',{x1:sc(t),x2:sc(t),y1:4,y2:h-22,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-6,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,fmt(t,1)+'×'); }
+    rp.sizes.forEach((sz,i)=>{ const y=8+i*rowH;
+      el('text',{x:x0-8,y:y+38,'font-size':12.5,'text-anchor':'end',fill:'#16202e'},s,sz);
+      ser.forEach(([k,c],j)=>{ const v=rp[k][i]/rp.rc[i], yy=y+6+j*24;
+        el('rect',{x:x0,y:yy,width:sc(v)-x0,height:19,rx:2,fill:c},s);
+        el('text',{class:'v',x:sc(v)+6,y:yy+14,'font-size':11.5,fill:'#465467','font-weight':600},s,`${fmt(v,3)}×  (${rp[k][i]} ms)`); }); });
+    el('line',{x1:sc(1),x2:sc(1),y1:2,y2:h-22,stroke:'#0e2238','stroke-width':1.5,'stroke-dasharray':'4 3'},s);
+    $('#ch-argon').appendChild(s);
+    $('#tb-argon').innerHTML = `<tr><th>size</th><th class="n">h2 / RustCrypto</th><th class="n">less time</th></tr>` +
+      rp.sizes.map((sz,i)=>`<tr><td>${sz}</td><td class="n">${rp.h2rc[i]}×</td><td class="n"><b>${Math.round((1-rp.h2rc[i])*100)}%</b></td></tr>`).join('');
+  })();
+
+  // Navigation
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, innerHeight/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>
