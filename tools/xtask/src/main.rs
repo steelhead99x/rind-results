@@ -4,6 +4,7 @@
 //! table and screenshot comes from one of these commands; `cargo verify`, a
 //! separate crate that shares no code with this one, re-checks them.
 
+mod bench;
 mod capture;
 mod charts;
 mod compare;
@@ -20,6 +21,7 @@ mod run_all;
 mod script2cast;
 mod sizes;
 mod tables;
+mod upstream_run;
 
 use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
@@ -70,6 +72,56 @@ enum Cmd {
         #[arg(long)]
         rind: PathBuf,
     },
+    /// Measure one board: host, Android capture, or bare-metal images.
+    Bench(bench::Args),
+    /// Re-check a result tree. With no flags, the published set.
+    Verify {
+        #[arg(long)]
+        dir: Vec<PathBuf>,
+        #[arg(long)]
+        board: Vec<String>,
+    },
+    /// Turn an Android criterion capture into a host JSON.
+    AndroidConvert {
+        #[arg(long)]
+        rind: PathBuf,
+        #[arg(long)]
+        capture: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        host: String,
+        #[arg(long)]
+        commit: String,
+        #[arg(long)]
+        rustc: String,
+        #[arg(long)]
+        cargo: String,
+        #[arg(long)]
+        target: String,
+        #[arg(long)]
+        cpu_model: String,
+        #[arg(long)]
+        logical_cpus: i64,
+        #[arg(long, default_value = "")]
+        openssl_linked: String,
+    },
+    /// Render host JSON with rind's bench-report tables, into a side directory.
+    Render {
+        #[arg(long)]
+        rind: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
+        /// HOST FILE, repeated
+        #[arg(long, num_args = 2, value_names = ["HOST", "FILE"])]
+        note: Vec<String>,
+        json: Vec<PathBuf>,
+    },
+    /// Stage a results tree from host JSON. Remaining arguments are stage-repo's.
+    Stage {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
+        args: Vec<String>,
+    },
     /// Print `results/<host>/<upstream-sha>[-<label>]/`, the directory a new publish uses.
     PublishDir {
         #[arg(long)]
@@ -99,6 +151,77 @@ fn main() -> ExitCode {
         Cmd::HostRun(a) => host_run::run(a),
         Cmd::Check => check(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
+        Cmd::Bench(a) => bench::run(a),
+        Cmd::Verify { dir, board } => run_verify(&dir, &board),
+        Cmd::AndroidConvert {
+            rind,
+            capture,
+            out,
+            host,
+            commit,
+            rustc,
+            cargo,
+            target,
+            cpu_model,
+            logical_cpus,
+            openssl_linked,
+        } => {
+            let args = android_convert::ConvertArgs {
+                rind,
+                capture,
+                out,
+                host,
+                commit,
+                rustc,
+                cargo,
+                target,
+                cpu_model,
+                logical_cpus,
+                openssl_linked,
+            };
+            match android_convert::convert(&args) {
+                Ok(converted) => match android_convert::write_out(&args, &converted) {
+                    Ok(()) => {
+                        print!("{}", converted.stdout);
+                        Ok(())
+                    }
+                    Err(e) => Err(e),
+                },
+                Err(e) => Err(e),
+            }
+        }
+        Cmd::Render {
+            rind,
+            out,
+            note,
+            json,
+        } => {
+            let mut notes = vec![];
+            let mut it = note.into_iter();
+            while let (Some(host), Some(file)) = (it.next(), it.next()) {
+                notes.push((host, PathBuf::from(file)));
+            }
+            match render_side::render(&render_side::RenderArgs {
+                rind,
+                out,
+                notes,
+                json,
+            }) {
+                Ok(rendered) => {
+                    println!("{}", rendered.sheet.display());
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
+        }
+        Cmd::Stage { args } => {
+            let code = stage_repo::main_with_args(args);
+            if code == ExitCode::SUCCESS {
+                Ok(())
+            } else {
+                Err("stage-repo failed".into())
+            }
+        }
         Cmd::PublishDir {
             host,
             commit,
@@ -112,6 +235,30 @@ fn main() -> ExitCode {
             eprintln!("{e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+fn run_verify(dirs: &[PathBuf], boards: &[String]) -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let sib = exe.with_file_name("verify");
+    let mut cmd = if sib.is_file() {
+        Command::new(sib)
+    } else {
+        let mut c = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()));
+        c.args(["run", "-q", "--release", "-p", "verify", "--"]);
+        c
+    };
+    for d in dirs {
+        cmd.arg("--dir").arg(d);
+    }
+    for b in boards {
+        cmd.arg("--board").arg(b);
+    }
+    let status = cmd.status().map_err(|e| format!("verify: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("verify: {status}"))
     }
 }
 

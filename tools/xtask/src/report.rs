@@ -31,8 +31,13 @@ pub struct Args {
     raw: PathBuf,
     #[arg(long)]
     rind: PathBuf,
+    /// required for a board report; a host directory (`--dir` with raw/run-*.json) does not use it
     #[arg(long)]
-    firmware: PathBuf,
+    firmware: Option<PathBuf>,
+    /// measured directory. A host tree (`raw/run-*.json`) is aggregated in place.
+    /// A board tree uses this as `--out` and `raw/` under it as `--raw`, unless those were set.
+    #[arg(long)]
+    dir: Option<PathBuf>,
     #[arg(long)]
     sizes: Option<PathBuf>,
     /// JSON with toolchain and board facts
@@ -328,7 +333,33 @@ fn lock_versions(firmware: &Path, t: &Tables) -> Result<Value, String> {
     Ok(Value::Object(libs))
 }
 
-pub fn run(args: Args) -> Result<(), String> {
+fn has_host_runs(dir: &Path) -> bool {
+    let Ok(rd) = std::fs::read_dir(dir.join("raw")) else {
+        return false;
+    };
+    rd.flatten().any(|e| {
+        let n = e.file_name().to_string_lossy().into_owned();
+        n.starts_with("run-") && n.ends_with(".json")
+    })
+}
+
+pub fn run(mut args: Args) -> Result<(), String> {
+    if let Some(dir) = args.dir.clone() {
+        if has_host_runs(&dir) {
+            return crate::host_report::run_dir(args.rind, dir);
+        }
+        if args.out.as_os_str() == "results" {
+            args.out = dir.clone();
+        }
+        if args.raw.as_os_str() == "results/raw" {
+            let raw = dir.join("raw");
+            args.raw = if raw.is_dir() { raw } else { dir };
+        }
+    }
+    let firmware = args
+        .firmware
+        .clone()
+        .ok_or("report of a board needs --firmware")?;
     let board = match args.board.as_str() {
         "nrf52840" => &NRF52840,
         _ => &ESP32S3,
@@ -484,7 +515,7 @@ pub fn run(args: Args) -> Result<(), String> {
         "toolchain".into(),
         meta.get("toolchain").cloned().unwrap_or(json!({})),
     );
-    host.insert("libraries".into(), lock_versions(&args.firmware, &t)?);
+    host.insert("libraries".into(), lock_versions(&firmware, &t)?);
     host.insert(
         "rind_cpu".into(),
         json!({"backend": "portable", "has_aes_hardware": false}),
@@ -506,7 +537,7 @@ pub fn run(args: Args) -> Result<(), String> {
         "note".into(),
         meta.get("note").cloned().unwrap_or(json!(board.note)),
     );
-    host.insert("port".into(), Value::Object(port_of(&args.firmware)?));
+    host.insert("port".into(), Value::Object(port_of(&firmware)?));
     host.insert("results".into(), Value::Array(results));
     let mut ext = ".elf".to_string();
     if let Some(p) = &args.images {
