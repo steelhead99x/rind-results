@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs inside ~/rind-bench-run only. Crate cache and build dir stay inside it.
+# Runs inside rind-bench-run only. Crate cache and build dir stay inside it.
 D="$HOME/rind-bench-run"; cd "$D" || exit 1
 export PATH="/opt/homebrew/bin:$PATH" CARGO_HOME="$D/cargo" HOSTRUN_FREE_TARGET=1
 free_gb() { df -g "$HOME" | awk 'NR==2{print $4}'; }

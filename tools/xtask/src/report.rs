@@ -232,8 +232,8 @@ fn read_runs(raw: &Path) -> Result<Vec<Run>, String> {
 }
 
 /// The firmware-repo commit the images came from and the patches applied.
-/// The JSON field is still `rind_bench` (and published files keep historical SHAs from
-/// the private steelhead99x/rind-bench history; the public repo is rind-hardware).
+/// Published files keep the recorded private SHA in `legacy_rind_bench` (and, for
+/// compatibility, `rind_bench`) and the public mapping in `rind_hardware`.
 fn port_of(firmware: &Path) -> Result<Map<String, Value>, String> {
     let root = std::fs::canonicalize(firmware).map_err(|e| e.to_string())?;
     let root = root.parent().unwrap_or(&root);
@@ -471,7 +471,11 @@ pub fn run(args: Args) -> Result<(), String> {
     if let Some(p) = &args.images {
         let prov = read_json(p)?;
         let port = host["port"].as_object_mut().unwrap();
-        port.insert("images".into(), prov["images"].clone());
+        let map = crate::legacy_map::LegacyMap::load()?;
+        port.insert(
+            "images".into(),
+            crate::legacy_map::enrich_images(prov["images"].clone(), &map),
+        );
         // The patches the images were built with, not those in the tree now.
         if let Some(p) = prov.get("patches") {
             port.insert("patches".into(), p.clone());
@@ -878,9 +882,10 @@ impl Ctx<'_> {
         let mut out = vec![
             "- Firmware images (one per bench file; `images.sha256` beside this file):".to_string(),
             String::new(),
-            "  | Image | sha256 | rind | rind-bench | Built |".into(),
-            "  |---|---|---|---|---|".into(),
+            "  | Image | sha256 | rind | rind-hardware | legacy rind-bench | Built |".into(),
+            "  |---|---|---|---|---|---|".into(),
         ];
+        let map = crate::legacy_map::LegacyMap::load().expect(crate::legacy_map::MAP_PATH);
         let mut names: Vec<&String> = imgs.keys().collect();
         names.sort();
         for name in names {
@@ -888,10 +893,11 @@ impl Ctx<'_> {
             let sha = py_str(&i["sha256"]);
             let rind = py_str(&i["rind"]);
             out.push(format!(
-                "  | {name} | `{}…` | `{}` | {} | {} |",
+                "  | {name} | `{}…` | `{}` | {} | {} | {} |",
                 &sha[..16.min(sha.len())],
                 &rind[..8.min(rind.len())],
-                py_str(&i["rind_bench"]),
+                crate::legacy_map::hardware_cell_of(i, &map),
+                crate::legacy_map::legacy_cell_of(i),
                 py_str(&i["built"])
             ));
         }
@@ -1188,7 +1194,7 @@ impl Ctx<'_> {
         w("```".into());
         w(String::new());
         w(
-            "The published images were built from `steelhead99x/rind-bench` (private, now archived).              The `rind-bench` commit IDs in `images.json` and the provenance table refer to that history.              The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware);              its first commit (`8d9c1bb`) is a squash of that history. Build new images from rind-hardware."
+            "The published images were built from `steelhead99x/rind-bench` (private, now archived).              The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware);              its first commit (`8d9c1bb`) is a squash of that history. Each image's `rind_hardware` field              is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or              `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier              in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`.              See `tools/legacy-rind-bench-map.json`. Build new images from rind-hardware."
                 .into(),
         );
         w(String::new());

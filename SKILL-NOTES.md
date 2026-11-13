@@ -47,7 +47,7 @@ suggestions for whoever updates it.
    `OPENSSL_INCLUDE_DIR` / `OPENSSL_LIB_DIR` (merging the multiarch `configuration.h`). Nothing was installed
    on the system.
 9. **Hosts reached through another machine.** Nothing on how to run on a board that is only reachable
-   from the user's desktop (ssh alias `pi5` in `~/.ssh/config`): copy a `git archive` of the
+   from the user's desktop (an SSH config alias `pi5`): copy a `git archive` of the
    commit (vendored submodules aren't needed for benches) and run in one backgrounded `nohup` job.
 10. **ML-DSA.** The published BENCHMARKS.md shows ML-DSA-65 as "not timed" on all six hosts; at
     `b6651423` the harness times it (62 operations, not 59), so new hosts aren't directly comparable
