@@ -2,6 +2,21 @@
 
 Each refresh reworks the whole deck into one story; this log records what changed in each refresh. Times are PST.
 
+## 2026-11-13 08:30
+
+- No new measurements. Status changes only; every number in the DATA block is unchanged.
+- All results are on rind-results main: PR #4 (Pi 5 follow-up A/B, incl. `series2-layout/` and `table-align/`) merged at
+  07:49 and PR #5 (PR #33 A/B, Argon2 umlal, interleave and scalar riders) at 07:52. The "where the numbers live" slide
+  now says so, and branch-only footers and appendix rows point at main. The merge corrected one M1 spread in
+  `results/argon2-interleave/RESULTS.md` (64 MiB NEON before: 11.7% → 10.7%); the deck does not quote it.
+- PR #33 (603b7120) was closed unmerged on 2026-11-12 at 18:52. Its close is recorded as superseded by upstream #672,
+  which only removes upstream's aarch64 X25519 quest note and carries none of the narrow schedules. The summary, status
+  and next-steps slides now end on that open decision: reopen #33 or re-propose the narrow dispatch on current main.
+- `fix/p256-table-align` (now c1b2e883, measured at 8e6f1670) and `perf/pi5-rsa-bench-sizes` (now bba85832, was 41f45409)
+  were moved onto fork main as single commits and opened as rind PRs #79 and #80.
+- Jetson Orin Nano: full-suite results are on main (`results/jetson-orin-nano/`, 3 pinned runs at another rind commit).
+  They are listed on the status slide only, since they are not an A/B of this work.
+
 ## 2026-11-12 20:15
 
 - Phase 2 now has eight branches. `perf/pi5-cpu-detect` (3d7dd094) moves from "held back" to "neutral, kept":

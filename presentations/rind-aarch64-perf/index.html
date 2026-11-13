@@ -22,7 +22,7 @@ const DATA = {
   meta: {
     title: "rind on aarch64: performance work, phase by phase",
     subtitle: "Raspberry Pi 5 (Cortex-A76) and Apple M1 Pro · public-key dispatch and Argon2id",
-    asOf: "2026-11-12 20:15 PST",
+    asOf: "2026-11-13 08:30 PST",
     start: "2026-11-11",
     piNote: "Pi 5 figures: fixed 1.5 GHz clock on a passively cooled board (see “Why the Pi 5 runs at 1.5 GHz”). Both sides of every A/B ran at the same clock, so ratios hold."
   },
@@ -241,7 +241,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <section class="slide" data-section="Summary">
   <div class="kicker">Executive summary</div>
   <h2>On the Pi 5, rind now matches or beats the reference libraries in most measured operations</h2>
-  <p class="lede">The cause was the same on both tracks: code tuned for Apple's wide cores was running on the A76. PR #33 changed the dispatch, and the Argon2 fill now overlaps its dependency chains.</p>
+  <p class="lede">The cause was the same on both tracks: code tuned for Apple's wide cores was running on the A76. PR #33 changed the dispatch, and the Argon2 fill now overlaps its dependency chains. All results are now on rind-results main; the code is not on rind main yet, and PR #33 was closed unmerged on Nov 12.</p>
   <div class="kpis" id="kpis"></div>
   <div class="cols">
     <ul class="b sm">
@@ -345,7 +345,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <div class="tl"><div class="ph">Phase 1</div><h4>PR #33 on Pi 5</h4><div class="when">2026-11-12 11:39–11:58</div>Narrow vs wide multiplier A/B. <span class="tag win">measured</span></div>
     <div class="tl"><div class="ph">Phase 2</div><h4>Pi 5 follow-ups</h4><div class="when">2026-11-12 ≈12:00–18:35</div>NIST, RSA sizes, 8n, uninit, P-384/P-521 w7, detect, table alignment. <span class="tag win">all kept</span></div>
     <div class="tl argon"><div class="ph">Phase 5</div><h4>Interleave + scalar riders</h4><div class="when">2026-11-12 13:20–14:14</div>PMU root cause, two fixes. <span class="tag win">kept</span></div>
-    <div class="tl" style="border-top-color:var(--mute)"><div class="ph">Now</div><h4>Verify and next steps</h4><div class="when">as of <span data-k="meta.asOf"></span></div>Reviews and PRs, Argon2 rider splits, clean M1 rerun. <span class="tag pending">open</span></div>
+    <div class="tl" style="border-top-color:var(--mute)"><div class="ph">Now</div><h4>Verify and next steps</h4><div class="when">as of <span data-k="meta.asOf"></span></div>Results on main; PR #33 closed unmerged; PRs #79 and #80 open. <span class="tag pending">open</span></div>
   </div>
   <p style="font-size:14px;color:var(--ink2);margin-top:22px">The cards are in time order. The phase numbers follow the presentation order: public key (1–2), then Argon2id (3–5).</p>
   <div class="foot"><span class="src">Run times from the results files' method sections and the lane status notes</span><span class="num"></span></div>
@@ -371,7 +371,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     </div>
   </div>
   <div class="pi-note" data-k="meta.piNote"></div>
-  <div class="foot"><span class="src">results/pr33-pi5/README.md, raw.md (rind-results results/m1pro-pi5-argon2-2026-11-12) · scripts/pi5-pr33-ab.sh</span><span class="num"></span></div>
+  <div class="foot"><span class="src">results/pr33-pi5/README.md, raw.md (rind-results main, via PR #5) · scripts/pi5-pr33-ab.sh</span><span class="num"></span></div>
 </section>
 
 <section class="slide" data-section="Phase 1 · PR #33">
@@ -397,10 +397,10 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <section class="slide" data-section="Phase 2 · Pi 5 follow-ups">
   <div class="kicker">Phase 2 · Pi 5 follow-up series</div>
   <h2>Eight follow-up branches: five measured wins, one bench, and two neutral P-256 table-alignment fixes</h2>
-  <p class="lede">Each branch is stacked on PR #33 @ 86de4410 (the table fix on narrow-nist 529a9d64), and all are on origin. The A/B data is in rind-results <code>results/pi5-lane-2026-11-12</code>. Medians of 3–7 interleaved rounds.</p>
+  <p class="lede">Each branch is stacked on PR #33 @ 86de4410 (the table fix on narrow-nist 529a9d64), and all are on origin; <code>fix/p256-table-align</code> and <code>perf/pi5-rsa-bench-sizes</code> have since been moved onto fork main as PRs #79 and #80. The A/B data is on rind-results main (PR #4). Medians of 3–7 interleaved rounds.</p>
   <table class="t" id="tb-followups" style="font-size:12px"></table>
   <div class="pi-note" data-k="meta.piNote"></div>
-  <div class="foot"><span class="src">results/pi5-lane-2026-11-12 (14c89e4): hosts/pi5/ab-narrow-mul/README.md, ab-*.md, series2-layout/README.md, table-align/README.md · branch commit messages</span><span class="num"></span></div>
+  <div class="foot"><span class="src">hosts/pi5/ab-narrow-mul/README.md, ab-*.md, series2-layout/README.md, table-align/README.md · branch commit messages</span><span class="num"></span></div>
 </section>
 
 <section class="slide" data-section="Phase 2 · Pi 5 follow-ups">
@@ -414,7 +414,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <p style="font-size:13px;color:var(--ink2);margin:6px 0 0">RSA-3072 sign 17084.3 → 12868.7 µs (0.753×). RSA-4096 sign was already Karatsuba (0.993×). Spreads ≤ 1.2%. The <code>rsa_sizes</code> bench verifies with a pre-parsed key.</p></div>
   </div>
   <div class="pi-note" data-k="meta.piNote"></div>
-  <div class="foot"><span class="src">results/pi5-lane-2026-11-12: hosts/pi5/ab-narrow-mul/ab-narrow-mul.md, ab-rsa-8n.md, ab-p384-w7.md, ab-p521-w7.md, README.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">hosts/pi5/ab-narrow-mul/ab-narrow-mul.md, ab-rsa-8n.md, ab-p384-w7.md, ab-p521-w7.md, README.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ PHASE 3 ============ -->
@@ -452,7 +452,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     </div>
   </div>
   <div class="pi-note" data-k="meta.piNote"></div>
-  <div class="foot"><span class="src">results/argon2/RESULTS.md (results/m1pro-pi5-argon2-2026-11-12), raw/m1pro-round2.md, raw/pi5-round1.md · rind a05b78e4 commit message</span><span class="num"></span></div>
+  <div class="foot"><span class="src">results/argon2/RESULTS.md, raw/m1pro-round2.md, raw/pi5-round1.md · rind a05b78e4 commit message</span><span class="num"></span></div>
 </section>
 
 <!-- ============ PHASE 5 ============ -->
@@ -472,7 +472,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     </div>
   </div>
   <div class="pi-note" data-k="meta.piNote"></div>
-  <div class="foot"><span class="src">results/argon2-interleave/RESULTS.md, raw/pi5-pmu-r4.tsv, raw/pi5-disasm-summary.txt (results/argon2-a76-interleave) · scripts/argon2-pmu/ (perf_event_open, user-only)</span><span class="num"></span></div>
+  <div class="foot"><span class="src">results/argon2-interleave/RESULTS.md, raw/pi5-pmu-r4.tsv, raw/pi5-disasm-summary.txt · scripts/argon2-pmu/ (perf_event_open, user-only)</span><span class="num"></span></div>
 </section>
 
 <section class="slide" data-section="Phase 5 · Interleave">
@@ -568,15 +568,15 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ WHERE THINGS STAND ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Where things stand · <span data-k="meta.asOf"></span></div>
-  <h2>On the Pi 5, every measured public-key and Argon2 gap is closed on a pushed branch</h2>
-  <p class="lede">Before and after for each item, with its branch status.</p>
+  <h2>On the Pi 5, every measured public-key and Argon2 gap is closed on a pushed branch, but none has landed</h2>
+  <p class="lede">Before and after for each item, with its branch status. PR #33, which the public-key rows build on, was closed unmerged on 2026-11-12 at 18:52 PST.</p>
   <table class="t">
     <tr><th>Area (Pi 5 unless noted)</th><th>Start</th><th>Now</th><th>Branch</th><th>State</th></tr>
-    <tr><td>X25519 vs aws-lc-rs</td><td>2.32×</td><td>0.99×</td><td><code>cursor/aarch64-narrow-mul-132a</code></td><td><span class="tag win">PR #33 open</span></td></tr>
-    <tr><td>RSA-2048 sign vs aws-lc-rs</td><td>1.66×</td><td>0.98×</td><td>PR #33</td><td><span class="tag win">PR #33 open</span></td></tr>
+    <tr><td>X25519 vs aws-lc-rs</td><td>2.32×</td><td>0.99×</td><td><code>cursor/aarch64-narrow-mul-132a</code></td><td><span class="tag pending">PR #33 closed</span></td></tr>
+    <tr><td>RSA-2048 sign vs aws-lc-rs</td><td>1.66×</td><td>0.98×</td><td>PR #33</td><td><span class="tag pending">PR #33 closed</span></td></tr>
     <tr><td>P-256 / P-384 / P-521 ECDSA verify vs aws-lc-rs</td><td>1.18× / 1.29× / 1.22×</td><td>0.75× / 0.73× / 0.73×</td><td><code>perf/pi5-narrow-nist</code> + w7</td><td><span class="tag win">pushed</span></td></tr>
     <tr><td>RSA-3072 sign vs aws-lc-rs</td><td>1.27×</td><td>0.96×</td><td><code>perf/pi5-rsa-8n</code></td><td><span class="tag win">pushed</span></td></tr>
-    <tr><td>cpu-detect overhead (P-256 sign)</td><td>–</td><td>1.002× with the 64-byte table fix (was 1.025×)</td><td><code>perf/pi5-cpu-detect</code>, <code>fix/p256-table-align</code></td><td><span class="tag win">pushed</span></td></tr>
+    <tr><td>cpu-detect overhead (P-256 sign)</td><td>–</td><td>1.002× with the 64-byte table fix (was 1.025×)</td><td><code>perf/pi5-cpu-detect</code>, <code>fix/p256-table-align</code></td><td><span class="tag win">fix: PR #79 open</span></td></tr>
     <tr><td>Argon2id 1 MiB vs RustCrypto</td><td>4.729 vs 4.201 ms</td><td>2.578 vs 4.218 ms (0.611×)</td><td><code>perf/argon2-neon-scalar-rider</code></td><td><span class="tag win">pushed</span></td></tr>
     <tr><td>Argon2id M1 Pro SHA3, 1 MiB</td><td>1.106 ms (branch start)</td><td>562.30 µs (noisy host)</td><td>sha3-umlal → interleave</td><td><span class="tag win">pushed</span></td></tr>
   </table>
@@ -588,8 +588,8 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ NEXT STEPS ============ -->
 <section class="slide" data-section="Next">
   <div class="kicker">Open items and next steps</div>
-  <h2>Next: review and land the branches, try the Argon2 rider splits, and rerun the M1 Pro cleanly</h2>
-  <p class="lede">Every Pi 5 follow-up now has a measured result. Items marked pending or not tried have no result yet.</p>
+  <h2>Next: decide how to land the narrow dispatch now that PR #33 is closed, then the follow-ups, rider splits and a clean M1 rerun</h2>
+  <p class="lede">Every Pi 5 follow-up has a measured result and all results are on rind-results main. Items marked pending or not tried have no result yet.</p>
   <div class="cols3">
     <div class="card"><h3>Performance</h3><ul class="b sm">
       <li><b>Argon2 rider splits:</b> try two scalar riders per pair, or riders in the row pass only. The A76 is now at IPC 2.62. <span class="tag pending">not tried</span></li>
@@ -601,8 +601,8 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <li>Native ct-qemu and ctgrind on the Argon2 commits</li>
     </ul></div>
     <div class="card"><h3>Review and landing</h3><ul class="b sm">
-      <li>PR #33: cherry-pick the p521 seed fix (b5eb9ec2), the Lean <code>wide_mux</code> declaration patch and the P-256 table fix (8e6f1670 applies cleanly to 603b7120). Leave narrow X25519 to ct-qemu in the BINSEC CI row.</li>
-      <li>Open PRs for the pushed perf branches, and get <b>CodeRabbit reviews</b>.</li>
+      <li><b>PR #33 closed unmerged</b> (603b7120). The close is recorded as superseded by upstream #672, but #672 only removes upstream's aarch64 X25519 quest note; it carries none of the narrow schedules. Reopen it or re-propose on current main with the p521 seed fix (b5eb9ec2), the Lean <code>wide_mux</code> patch and the table fix. <span class="tag pending">needs decision</span></li>
+      <li>PRs #79 (P-256 table alignment) and #80 (RSA size bench) are open on fork main. Open PRs for the other pushed perf branches, and get <b>CodeRabbit reviews</b>.</li>
       <li>Land the tooling patches: Argon2 ctgrind test taint, ct-qemu reserved VA, prove SIGPIPE</li>
     </ul></div>
   </div>
@@ -612,18 +612,17 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ WHERE THE NUMBERS LIVE (added 2026-11-12 evening) ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Where the numbers live · checked <span data-k="meta.asOf"></span></div>
-  <h2>This deck's Pi 5 and M1 Pro numbers are on results branches, not on rind-results main; Orin results are pending</h2>
+  <h2>Every Pi 5 and M1 Pro number in this deck is now on rind-results main</h2>
   <table class="t" style="margin-top:16px;font-size:14.5px">
     <tr><th style="width:30%">Source used in this deck</th><th style="width:34%">Where it is</th><th>Status</th></tr>
     <tr><td><code>hosts/pi5/NOTES.md</code>, <code>hosts/pi5/pi5.json</code></td><td>main (the b6651423 host run)</td><td><span class="tag ok">on main</span></td></tr>
-    <tr><td><code>hosts/pi5/ab-narrow-mul/</code></td><td>branch <code>results/pi5-lane-2026-11-12</code></td><td><span class="tag pending">in progress</span></td></tr>
-    <tr><td><code>results/pr33-pi5/</code>, <code>results/argon2/</code>, <code>results/m1pro-8feee30e/</code></td><td>branches <code>results/m1pro-pi5-argon2-2026-11-12</code>, <code>results/argon2-a76-interleave</code></td><td><span class="tag pending">not merged</span></td></tr>
-    <tr><td><code>results/argon2-interleave/</code>, <code>results/argon2-scalar-rider/</code></td><td>branch <code>results/argon2-a76-interleave</code></td><td><span class="tag pending">not merged</span></td></tr>
-    <tr><td><code>hosts/pi5/ab-narrow-mul/series2-layout/</code>, <code>table-align/</code></td><td>branch <code>results/pi5-lane-2026-11-12</code></td><td><span class="tag pending">not merged</span></td></tr>
-    <tr><td>NVIDIA Jetson Orin Nano</td><td>bench scripts on main (edcd461); no results yet</td><td><span class="tag pending">pending</span></td></tr>
+    <tr><td><code>hosts/pi5/ab-narrow-mul/</code>, incl. <code>series2-layout/</code> and <code>table-align/</code></td><td>PR #4 from <code>results/pi5-lane-2026-11-12</code>, merged 2026-11-13 07:49 PST</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td><code>results/pr33-pi5/</code>, <code>results/argon2/</code>, <code>results/m1pro-8feee30e/</code></td><td>PR #5 from <code>results/argon2-a76-interleave</code>, merged 07:52 PST (the same files as <code>results/m1pro-pi5-argon2-2026-11-12</code>)</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td><code>results/argon2-interleave/</code>, <code>results/argon2-scalar-rider/</code></td><td>PR #5, merged 07:52 PST</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td>NVIDIA Jetson Orin Nano</td><td>full-suite results on main (<code>results/jetson-orin-nano/</code>, 3 pinned runs at another rind commit); not an A/B of this work</td><td><span class="tag ok">on main</span></td></tr>
   </table>
-  <div class="callout warn" style="margin-top:18px">Until these branches are merged, treat this deck's phase results as branch results. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy.</div>
-  <div class="foot"><span class="src">git ls-tree of steelhead99x/rind-results main (edcd461) and branches results/pi5-lane-2026-11-12 (14c89e4), results/m1pro-pi5-argon2-2026-11-12 (94b8b1a), results/argon2-a76-interleave (3a481c4) · README.md host table</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:18px">The merge also corrected one M1 spread in the interleave table (64 MiB NEON, before: 11.7% → 10.7%); no median or ratio in this deck changed. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy.</div>
+  <div class="foot"><span class="src">git ls-tree of steelhead99x/rind-results main (f88cc53) · rind-results PRs #4 and #5 · results/argon2-interleave/RESULTS.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ APPENDIX ============ -->
@@ -634,13 +633,13 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="cols">
     <table class="t" style="font-size:12.5px">
       <tr><th>rind branch</th><th>head</th><th>where</th></tr>
-      <tr><td><code>cursor/aarch64-narrow-mul-132a</code> (PR #33)</td><td class="mono">603b7120</td><td>origin (measured at 86de4410)</td></tr>
+      <tr><td><code>cursor/aarch64-narrow-mul-132a</code> (PR #33, closed)</td><td class="mono">603b7120</td><td>origin (measured at 86de4410)</td></tr>
       <tr><td><code>perf/pi5-narrow-nist</code></td><td class="mono">529a9d64</td><td>origin</td></tr>
-      <tr><td><code>perf/pi5-rsa-bench-sizes</code></td><td class="mono">41f45409</td><td>origin</td></tr>
+      <tr><td><code>perf/pi5-rsa-bench-sizes</code></td><td class="mono">bba85832</td><td>PR #80 (was 41f45409)</td></tr>
       <tr><td><code>perf/pi5-rsa-8n</code></td><td class="mono">850e9c34</td><td>origin</td></tr>
       <tr><td><code>perf/pi5-mont-uninit</code></td><td class="mono">d4e79165</td><td>origin</td></tr>
       <tr><td><code>perf/pi5-cpu-detect</code></td><td class="mono">3d7dd094</td><td>origin (incl. table fix)</td></tr>
-      <tr><td><code>fix/p256-table-align</code></td><td class="mono">8e6f1670</td><td>origin</td></tr>
+      <tr><td><code>fix/p256-table-align</code></td><td class="mono">c1b2e883</td><td>PR #79 (measured at 8e6f1670)</td></tr>
       <tr><td><code>perf/pi5-p384-verify-w7</code></td><td class="mono">41e69151</td><td>origin</td></tr>
       <tr><td><code>perf/pi5-p521-verify-w7</code></td><td class="mono">da1895d2</td><td>origin</td></tr>
     </table>
@@ -652,9 +651,9 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <tr><td><code>perf/argon2-neon-prefetch</code> (dropped)</td><td class="mono">78d88485</td><td>local</td></tr>
       <tr><td><code>perf/argon2-neon-scalar-rider</code></td><td class="mono">3025440d</td><td>origin</td></tr>
       <tr><th>rind-results branch</th><th>head</th><th></th></tr>
-      <tr><td><code>results/m1pro-pi5-argon2-2026-11-12</code></td><td class="mono">94b8b1a</td><td>origin</td></tr>
-      <tr><td><code>results/argon2-a76-interleave</code></td><td class="mono">3a481c4</td><td>origin</td></tr>
-      <tr><td><code>results/pi5-lane-2026-11-12</code></td><td class="mono">14c89e4</td><td>origin</td></tr>
+      <tr><td><code>results/argon2-a76-interleave</code></td><td class="mono">af1527b</td><td>merged, PR #5</td></tr>
+      <tr><td><code>results/pi5-lane-2026-11-12</code></td><td class="mono">4e3e855</td><td>merged, PR #4</td></tr>
+      <tr><td><code>results/m1pro-pi5-argon2-2026-11-12</code></td><td class="mono">665e1be</td><td>no PR; files in PR #5</td></tr>
     </table>
   </div>
   <div class="foot"><span class="src">git ls-remote origin, steelhead99x/rind and steelhead99x/rind-results</span><span class="num"></span></div>
@@ -668,7 +667,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <tr><th style="width:20%">Phase</th><th>Files</th></tr>
     <tr><td>Starting point</td><td><code>hosts/pi5/NOTES.md</code>, <code>hosts/pi5/pi5.json</code> (b6651423) · <code>results/m1pro-8feee30e/</code> · the static scout notes (llvm-mca)</td></tr>
     <tr><td>1 · PR #33</td><td><code>results/pr33-pi5/README.md</code>, <code>raw.md</code>, <code>run.log</code> · <code>scripts/pi5-pr33-ab.sh</code>, <code>pi5-pr33-build.sh</code>, <code>crit-parse.py</code></td></tr>
-    <tr><td>2 · Pi 5 follow-ups</td><td><code>results/pi5-lane-2026-11-12</code>: <code>hosts/pi5/ab-narrow-mul/</code> (<code>README.md</code>, <code>ab-narrow-mul.*</code>, <code>ab-rsa-8n.*</code>, <code>ab-cpu-detect.*</code>, <code>ab-p384-w7.*</code>, <code>ab-p521-w7.*</code>, <code>series2-layout/</code>, <code>table-align/</code>, <code>scripts/</code>), <code>hosts/m1pro/ab-narrow-mul/</code>, <code>hosts/pi5/NOTES.md</code></td></tr>
+    <tr><td>2 · Pi 5 follow-ups</td><td><code>hosts/pi5/ab-narrow-mul/</code> (<code>README.md</code>, <code>ab-narrow-mul.*</code>, <code>ab-rsa-8n.*</code>, <code>ab-cpu-detect.*</code>, <code>ab-p384-w7.*</code>, <code>ab-p521-w7.*</code>, <code>series2-layout/</code>, <code>table-align/</code>, <code>scripts/</code>), <code>hosts/m1pro/ab-narrow-mul/</code>, <code>hosts/pi5/NOTES.md</code></td></tr>
     <tr><td>3 · Argon2 NEON</td><td>rind <code>perf/argon2-neon</code> commit messages (705167ac, bd907631, 4ad61ae3)</td></tr>
     <tr><td>4 · SHA3 umlal</td><td><code>results/argon2/RESULTS.md</code>, <code>raw/m1pro-round{1,2,3}.md</code>, <code>raw/pi5-round{1,2,3}*.md</code>, <code>pi5-final-run.log</code> · <code>scripts/argon2-build-variants.sh</code>, <code>argon2-run-ab.sh</code></td></tr>
     <tr><td>5 · Interleave</td><td><code>results/argon2-interleave/RESULTS.md</code>, <code>raw/pi5-criterion-r5.md</code>, <code>raw/pi5-pmu-r{1..5}*.tsv</code>, <code>raw/pi5-disasm-summary.txt</code>, <code>raw/m1pro-criterion-r6.md</code>, <code>raw/m1pro-*-wall-r*.tsv</code> · <code>scripts/argon2-pmu/</code>, <code>argon2-pmu-*.sh</code>, <code>argon2-pmu-sum.py</code> · <code>results/argon2-scalar-rider/RESULTS.md</code>, <code>raw/pi5-criterion-r6.md</code>, <code>r7.md</code>, <code>raw/pi5-pmu-h2.tsv</code>, <code>raw/m1pro-*</code></td></tr>
