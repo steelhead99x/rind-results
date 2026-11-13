@@ -20,9 +20,9 @@ use std::time::{Duration, Instant};
 pub struct Args {
     images: PathBuf,
     benches: Vec<String>,
-    /// ESP32-S3 serial port
-    #[arg(long, env = "PORT", default_value = "<PORT>")]
-    port: String,
+    /// ESP32-S3 serial port (required for the ESP32-S3); no default
+    #[arg(long, env = "PORT")]
+    port: Option<String>,
     #[arg(long, env = "RUNS", default_value_t = 3)]
     runs: u32,
     /// default results/raw (ESP32-S3) or results/raw-nrf52840
@@ -84,11 +84,12 @@ pub fn run(board: Board, a: Args) -> Result<(), String> {
         let image = a.images.join(format!("{b}{ext}"));
         let port = match board {
             Board::Esp => {
+                let esp_port = capture::esp_port(a.port.as_deref())?;
                 let st = Command::new(&a.espflash)
                     .args([
                         "flash",
                         "--port",
-                        &a.port,
+                        &esp_port,
                         "--chip",
                         "esp32s3",
                         "--non-interactive",
@@ -101,7 +102,7 @@ pub fn run(board: Board, a: Args) -> Result<(), String> {
                 if !st.success() {
                     return Err(format!("{b}: espflash failed"));
                 }
-                a.port.clone()
+                esp_port
             }
             Board::Nrf => {
                 let drive = a.drive.clone().unwrap_or_else(|| {
