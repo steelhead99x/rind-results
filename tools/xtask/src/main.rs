@@ -112,17 +112,21 @@ enum Cmd {
         home: Option<PathBuf>,
     },
     /// `scripts/mac-run.sh`: M1 Pro run with the free-space watchdog.
+    /// `--commit` defaults to the comparable-set pin. The published b6651423
+    /// numbers used `boards::HOST_COMMIT`.
     MacRun {
         #[arg(long)]
         home: Option<PathBuf>,
-        #[arg(long, default_value = boards::HOST_COMMIT)]
+        #[arg(long, default_value = layout::COMPARABLE_PIN)]
         commit: String,
     },
     /// `scripts/pi-run.sh`: Pi 5 run, unpacking libssl-dev locally if needed.
+    /// `--commit` defaults to the comparable-set pin. The published b6651423
+    /// numbers used `boards::HOST_COMMIT`.
     PiRun {
         #[arg(long)]
         home: Option<PathBuf>,
-        #[arg(long, default_value = boards::HOST_COMMIT)]
+        #[arg(long, default_value = layout::COMPARABLE_PIN)]
         commit: String,
     },
     /// Re-check a result tree. With no flags, the published set.
