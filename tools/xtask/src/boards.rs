@@ -538,11 +538,51 @@ pub struct PixelOpts {
     pub wait_for: Option<PathBuf>,
 }
 
+/// One absolute phone path that is safe to interpolate into `adb shell`
+/// and to pass as an adb push/pull argument. Letters, digits, `.`, `_`,
+/// and `-` only, so the remote shell cannot see a second command.
+fn remote_path(path: &str) -> Result<&str, String> {
+    let mut segs = path.split('/');
+    if !path.starts_with('/') || segs.next() != Some("") {
+        return Err(remote_path_err());
+    }
+    let mut any = false;
+    for seg in segs {
+        any = true;
+        if seg.is_empty() || seg == "." || seg == ".." {
+            return Err(remote_path_err());
+        }
+        let safe = seg
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'));
+        if !safe {
+            return Err(remote_path_err());
+        }
+    }
+    if any {
+        Ok(path)
+    } else {
+        Err(remote_path_err())
+    }
+}
+
+fn remote_path_err() -> String {
+    "pixel remote path must be one absolute path of letters, digits, '.', '_' and '-'".into()
+}
+
+/// Product model and Android release/SDK only. A full `getprop` includes
+/// serials and radio addresses. Values stay in getprop's `[key]: [value]`
+/// form so android-convert can parse the capture.
+const PIXEL_GETPROP: &str = concat!(
+    "for k in ro.product.model ro.build.version.release ro.build.version.sdk; do ",
+    r#"printf '[%s]: [%s]\n' "$k" "$(getprop "$k")"; done"#,
+);
+
 /// The adb and tar steps of `pixel-run.sh` or `pixel-run2.sh`, in order.
 /// Sleeps and the status-file wait are not in this list; the runner does those.
-pub fn pixel_adbs(o: &PixelOpts) -> Vec<PixelStep> {
+pub fn pixel_adbs(o: &PixelOpts) -> Result<Vec<PixelStep>, String> {
     let s = &o.serial;
-    let p = &o.remote;
+    let p = remote_path(&o.remote)?;
     let adb = |args: &[&str]| {
         PixelStep::Adb(Adb {
             args: args.iter().map(|s| (*s).to_string()).collect(),
@@ -560,7 +600,7 @@ pub fn pixel_adbs(o: &PixelOpts) -> Vec<PixelStep> {
     };
     v.push(capture("dumpsys battery", "battery-before.txt"));
     if !o.second_pass {
-        v.push(capture("getprop", "getprop.txt"));
+        v.push(capture(PIXEL_GETPROP, "getprop.txt"));
         v.push(capture("cat /proc/cpuinfo; uname -a", "cpuinfo.txt"));
     }
     v.push(adb(&[
@@ -637,29 +677,20 @@ pub fn pixel_adbs(o: &PixelOpts) -> Vec<PixelStep> {
         stdout: Some("cleanup-check.txt".into()),
         append: false,
     }));
-    v
+    Ok(v)
 }
 
 fn poll_phone(o: &PixelOpts) -> Result<(), String> {
+    let p = remote_path(&o.remote)?;
     loop {
         let mut probe = Command::new("adb");
-        probe.args([
-            "-s",
-            &o.serial,
-            "shell",
-            &format!("test -f {}/done", o.remote),
-        ]);
+        probe.args(["-s", &o.serial, "shell", &format!("test -f {p}/done")]);
         if probe.status().map(|s| s.success()).unwrap_or(false) {
             return Ok(());
         }
         std::thread::sleep(Duration::from_secs(60));
         let mut tail = Command::new("adb");
-        tail.args([
-            "-s",
-            &o.serial,
-            "shell",
-            &format!("tail -1 {}/run.log", o.remote),
-        ]);
+        tail.args(["-s", &o.serial, "shell", &format!("tail -1 {p}/run.log")]);
         if let Ok(out) = tail.output() {
             let line: String = String::from_utf8_lossy(&out.stdout)
                 .chars()
@@ -687,6 +718,7 @@ fn poll_phone(o: &PixelOpts) -> Result<(), String> {
 }
 
 pub fn pixel_run(o: PixelOpts) -> Result<(), String> {
+    remote_path(&o.remote)?;
     if o.serial.is_empty() || o.serial == "<phone-serial>" {
         return Err(
             "pixel-run needs --serial (the old script's <phone-serial> placeholder)".into(),
@@ -716,7 +748,7 @@ pub fn pixel_run(o: PixelOpts) -> Result<(), String> {
         .arg("-C")
         .arg(&pkg)
         .current_dir(&o.work))?;
-    for step in pixel_adbs(&o).into_iter().skip(1) {
+    for step in pixel_adbs(&o)?.into_iter().skip(1) {
         let PixelStep::Adb(step) = step else {
             poll_phone(&o)?;
             continue;
@@ -1098,6 +1130,7 @@ mod tests {
             wait_for: None,
         };
         let flat: Vec<String> = pixel_adbs(&o)
+            .expect("remote")
             .iter()
             .map(|s| match s {
                 PixelStep::Poll => "poll".into(),
@@ -1120,6 +1153,11 @@ mod tests {
             flat.iter()
                 .any(|s| s.contains("rm -rf /data/local/tmp/rind"))
         );
+        assert!(flat.iter().any(|s| s.contains(PIXEL_GETPROP)));
+        assert!(
+            flat.iter()
+                .all(|s| { !s.split_whitespace().any(|w| w == "getprop") })
+        );
     }
 
     #[test]
@@ -1133,6 +1171,7 @@ mod tests {
             wait_for: None,
         };
         let flat: Vec<String> = pixel_adbs(&o)
+            .expect("remote")
             .iter()
             .filter_map(|s| match s {
                 PixelStep::Adb(a) => Some(a.args.join(" ")),
@@ -1145,6 +1184,33 @@ mod tests {
         );
         assert!(flat.iter().any(|s| s.contains("sh ./run2.sh")));
         assert!(flat.iter().all(|s| !s.contains("cpuid.json")));
+        assert!(flat.iter().all(|s| !s.contains("ro.product.model")));
+    }
+
+    #[test]
+    fn pixel_remote_path_rejects_shell_metacharacters() {
+        let sample = |remote: &str, second_pass: bool| PixelOpts {
+            serial: "ABC".into(),
+            work: PathBuf::from("/tmp/pixel"),
+            pkg_tar: PathBuf::from("/tmp/pixel-pkg.tar.gz"),
+            remote: remote.into(),
+            second_pass,
+            wait_for: None,
+        };
+        for remote in [
+            "data/local/tmp/rind",
+            "/data/local/tmp/rind;rm",
+            "/data/local/tmp/$(id)",
+            "/data/../etc",
+            "/data/local/tmp/rind rind",
+            "",
+            "/data/local/tmp/rind/",
+            "/data//local",
+            "/data/local/tmp/rind'",
+        ] {
+            assert!(pixel_adbs(&sample(remote, false)).is_err(), "{remote}");
+        }
+        assert!(pixel_adbs(&sample("/data/local/tmp/rind", false)).is_ok());
     }
 
     #[test]
