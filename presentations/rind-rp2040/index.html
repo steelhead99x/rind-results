@@ -8,7 +8,7 @@
   Self-contained deck: no network access, no external libraries.
   1. DATA block (id="deck-data", right below): every number, table and the live-results rows.
   2. STYLE: the CSS of presentations/rind-spake2plus (itself from rind-aarch64-perf) plus additions at the end.
-  3. SLIDES: one <section class="slide"> per slide (19). Slide numbers and footers are generated.
+  3. SLIDES: one <section class="slide"> per slide (22). Slide numbers and footers are generated.
   4. RENDER + NAVIGATION script at the end (arrow keys, PageUp/PageDown, Home/End, #N in the URL).
   To update the live-results slide, edit DATA.live only; see README.md.
 -->
@@ -33,7 +33,7 @@ const DATA = {
   constraints: [
     { k: "No OS", v: "no std", what: "No operating system, so no std: no thread-locals and no OS mutex. Code that needs std does not compile.", fix: "patch 0003: no_std on bare metal" },
     { k: "No CAS", v: "ARMv6-M", what: "No compare-and-swap, so compare_exchange and fetch_max are missing, and so is alloc::sync::Arc.", fix: "patch 0005: Cell path; no_std branch: portable-atomic" },
-    { k: "Multiplier", v: "32×32→32", what: "No 64-bit product in hardware. muls takes a fixed 1 or 32 cycles, by the chip maker's implementation option; the 64-bit product is four muls in software, branch-free on rustc 1.99.1.", fix: "__aeabi_lmul in software; muls-only fixes, slides 12–14" },
+    { k: "Multiplier", v: "32×32→32", what: "No 64-bit product in hardware. muls takes a fixed 1 or 32 cycles, by the chip maker's implementation option; the 64-bit product is four muls in software, branch-free on rustc 1.99.1.", fix: "__aeabi_lmul in software; muls-only fixes, slides 13–17" },
     { k: "No hardware RNG", v: "no TRNG", what: "Only a ring-oscillator bit, which is not a vetted entropy source.", fix: "the program supplies getrandom's backend" },
     { k: "Little RAM", v: "264 KiB", what: "264 KiB of SRAM in total, 256 KiB of it main SRAM.", fix: "listed as a blocker in the survey" }
   ],
@@ -112,12 +112,15 @@ const DATA = {
      --------------------------------------------------------------- */
   live: {
     /* RP2040 bench lane: summarize.py over the SysTick-fixed ("fix") rounds, snapshot 2026-11-12 18:35 PST.
-       rounds = valid rounds / rounds counted for that row, of 5 planned. All rows SysTick cycles. */
+       OLD BASE (pre-rebase). rounds = valid rounds / rounds counted for that row, of 5 planned. All rows SysTick cycles.
+       New-base timing had started by 21:13 PST but had no completed medians (only round 1 in progress). */
     status: "partial",          /* "pending" | "partial" | "complete" */
     asOf: "2026-11-12 18:35 PST",
+    base: "old base",
+    baseNote: "old base, before the rebase onto upstream main c333c59e; 2 or 3 of 5 planned rounds per row. New-base board timing: pending, no completed medians yet.",
     source: "RP2040 bench lane round logs, summarized with summarize.py (not yet published in this repository)",
     placement: "XIP flash, cache on",
-    title: "Baseline: rind is within 2% of, or faster than, the fastest other library on 10 of 11 rows; AES-GCM at 2.31× is the exception",
+    title: "Old base: rind is within 2% of, or faster than, the fastest other library on 10 of 11 rows; AES-GCM at 2.31× is the exception",
     rows: [
       { bench: "aes_gcm", op: "AES-128 seal 16 KiB", unit: "cycles", rind: 16553054, best: 7159498, bestLib: "RustCrypto", rounds: "3/3" },
       { bench: "chacha20poly1305", op: "seal 16 KiB", unit: "cycles", rind: 3233347, best: 3238675, bestLib: "RustCrypto", rounds: "2/2" },
@@ -150,12 +153,15 @@ const DATA = {
 
   /* [rp2040] STATUS (16:44 backup), raw run JSON "start" records */
   pico: { board: "Raspberry Pi Pico", fw: "MicroPython v1.19.1-18", reads: 2, heap: "98,304", runs: 75 },
+  picoW: { board: "Raspberry Pi Pico W", fw: "MicroPython v1.24.0", reads: 2 },
+  catwan: { board: "CatWAN USBStick2040", backup: "pending" },
 
   /* [rp2040] STATUS 16:46-16:50, raw smoke-sha2 / fix runs */
   systick: {
     beforeCycles: "4,278,193,285", beforeUs: "38", afterCycles: "37,500,815", afterUs: "300,021",
     sha512Before: "34.97 M", sha512After: "18.19 M", wrap: "2<sup>24</sup>", wrapN: "16,777,216",
-    branch: "rp2040-systick-fix", pushed: "rp2040/systick-wrap-fix", pushedAt: "a9d057a"
+    branch: "rp2040-systick-fix", pushed: "rp2040/systick-wrap-fix", pushedAt: "a9d057a",
+    mainLacks: "a87d3a1f", rebased: "rp2040/systick-wrap-fix-r2", rebasedAt: "518ee6c"
   },
 
   /* [rp2040] summarize.py on raw/sha512 vs raw/fix, 3 of 3 rounds each; sizes from [m0] REPORT */
@@ -172,10 +178,11 @@ const DATA = {
     cpbBefore: "2,201.1", cpbAfter: "208.8", cpbLibcrux: "2,200.2", cpbSha256: "101.7"
   },
 
-  /* [rp2040] summarize.py on raw/sha512, raw/probe, raw/fix (3 of 3 rounds each) */
-  layout: [ ["sha256/rind/32B", "10,103", "14,831", "14,848", "+47%"],
-            ["hmac-sha256/rind/32B", "34,940", "54,724", "54,734", "+57%"],
-            ["hkdf-sha256/expand/rind", "24,454", "43,819", "27,844", "+79%"] ],
+  /* [rp2040] STATUS 20:30 PST: old-base layout controls, 4 rounds (fix / opt / probe). Measured. */
+  layout: { asOf: "2026-11-12 20:30 PST", rounds: 4, base: "old base",
+    rows: [ ["sha256/rind/32B", "10,103", "14,828", "14,844", "+47%"],
+            ["hmac-sha256/rind/32B", "34,927", "54,780", "54,748", "+57%"],
+            ["hkdf-sha256/expand/rind", "24,462", "43,792", "27,855", "+79%"] ] },
 
   /* [rp2040] summarize.py on raw/ghash vs raw/fix (3 of 3 rounds); function sizes from [m0] REPORT */
   ghash: {
@@ -202,41 +209,95 @@ const DATA = {
     x25519Est: "80,000"
   },
 
-  /* [m0] REPORT (prototype), [rp2040] STATUS 18:21-18:23 (bench-image disassembly) */
-  p256: { tests: 80, mulWide: [64, 0], sqrWide: [36, 0], reduceN: [5, 0], mulsInMulWide: 256, mulsInSqrWide: 136,
-          left: [["bignum_modinv", 104], ["fe_to_mont", 48], ["bignum_demont", 40], ["fe_from_mont", 8]],
-          p384: [576, 300], rounds: 5, baseEcdh: "22,033,990", baseRounds: 2 },
+  /* [p256] lane-p256 REPORT.md, BUILD-P256CT.md, STATUS.md (2026-11-12 20:20 PST).
+     Base: no-std/thumbv6m-alloc @ 3dc5634b on upstream main @ c333c59e. Not pushed. Not timed on a board.
+     Estimates are Unicorn emulation (zero-wait, 1-cycle muls, no XIP misses), not hardware timings. */
+  p256: {
+    base: "3dc5634b", upstream: "c333c59e", branch: "rp2040/p256-ct-on-3dc",
+    rustc: "1.98.1",
+    lmul: { base: 305, p0008: 200, ct: 0 },
+    text: { base: "1,221,676", p0008: "1,226,332", ct: "1,209,564", vsBase: "−12,112" },
+    fixCommit: "178f7966", oldFix: "8edbbedc", notCt: "0008",
+    tests: { p32: "445/0", p64: "434/0", x86: "745/0", wycheproof: "21/0", crosschecks: "74/0" },
+    /* ESTIMATES (Unicorn), cycles. +0008 column is not constant-time and is shown only as a control. */
+    est: [
+      ["mul_wide", "4,859", "2,925 (not CT)", "3,745", "−23%"],
+      ["jdouble", "37,277", "25,859 (not CT)", "30,599", "−18%"],
+      ["jadd", "78,252", "50,556 (not CT)", "62,264", "−20%"],
+      ["jmixadd", "53,519", "34,671 (not CT)", "42,646", "−20%"],
+      ["field invert", "897,579", "587,183", "~187,000", "−79%"],
+      ["scalar modinv", "2,108,875", "1,363,517", "203,983", "−90%"]
+    ],
+    ecdsaEst: ["5.3M", "2.2M"],
+    ecdhEst: ["14.4M", "11.7M", "−19%"],
+    carryCost: "28%",
+    /* old-base measured ECDH, 2 rounds, not a result of this stack */
+    baseEcdh: "22,033,990", baseRounds: 2
+  },
+
+  /* [placement] lane-placement REPORT.md and BUILD.md. Base: moq-dev/rind c333c59e + rind-hardware a87d3a1f.
+     Everything marked EST is a model estimate. Measured layout swings are old-base, from the bench lane. */
+  place: {
+    cache: "16 KiB", ways: 2, line: 8, alias: "8 KiB", refillEst: 80, refillMeas: "68–91",
+    sha256Update: "9,940", overlap: "1.7 KB",
+    /* EST: core cycles + 80 × misses per iteration; up-a vs up-b */
+    est: [
+      ["sha256/32B", "11,125", "39", "8,048", "0", "−28%"],
+      ["sha256/1KB", "114,251", "35", "112,697", "0", "−1%"],
+      ["hmac-sha256/32B", "32,805", "50", "28,797", "0", "−12%"],
+      ["hkdf-sha256 expand", "18,317", "29", "16,080", "0", "−12%"]
+    ],
+    sram: [["sha2 / hmac", "+4.8 KB"], ["hkdf", "+5.4 KB"], ["aes_gcm", "+0.6 KB"], ["p256", "+8.6 KB"]],
+    modelLow: "5–20%"
+  },
+
+  /* [aes] lane-aes BUILD.md and STATUS.md (2026-11-12 20:10 PST).
+     Base: 3dc5634b on c333c59e. Estimates from a Unicorn M0+ model of these ELFs (XIP cache assumed to hit).
+     Not timed on a board. AES-128-GCM 16 KiB mixes a measured non-AES share with a modelled AES share. */
+  aes: {
+    rustc: "1.98.1",
+    calModel: "4,489,507", calMeas: "4,489,798", calErr: "−0.006%",
+    ctr: [
+      ["ghash (bitsliced AES)", "274.0", "324.0", "373.5", "1.00×"],
+      ["A: fixslice, pure Rust", "247.9", "290.3", "336.6", "1.11×"],
+      ["B: fixslice + Thumb-1 asm", "176.8", "205.5", "237.2", "1.55×"]
+    ],
+    /* GCM 16 KiB: ghash ~7.93M is measured; A and B are estimates; RustCrypto ~7.16M is measured. */
+    gcm: { ghashMeas: "7.93M", aEst: "~7.50M", bEst: "~6.34M", rustcryptoMeas: "~7.16M" },
+    keysetup: { ghash: "8.7k", a: "12.3k", b: "12.1k" }
+  },
+
 
   /* [nostd] STATUS.md, gates log */
   nostd: { branch: "no-std/thumbv6m-alloc", commit: "3dc5634b", base: "c333c59e", errBefore: "1,739", errAfter: "0",
            codegen: [["aarch64-apple-darwin", "1022/1022"], ["x86_64-linux", "1176/1176"], ["aarch64, rind_portable", "934/934"]],
            x86Lib: 722, portLib: 426, linkKB: 136, msrv: "1.90" },
 
-  /* Status slide: [rp2040] STATUS, [m0] STATUS, [nostd] STATUS + gates log, [25519] STATUS */
+  /* Status slide: [rp2040] STATUS through 21:13 PST, [p256] [placement] [aes] reports, [nostd] STATUS */
   status: {
     verified: [
-      "SysTick fix on the board: 37,500,815 cycles in 300,021 µs at boot; the wrap outliers are gone.",
-      "All 12 SysTick-fixed images run on the Pico: 75 of 75 runs in the snapshot report 0 known-answer failures.",
-      "Rolled SHA-512: 0.095× the time at 16 KiB (3 rounds). Test against the backend's SHA-512 passes.",
-      "Muls-only GHASH: AES-128-GCM 16 KiB 0.479× the time (3 rounds). GHASH tests pass natively.",
-      "ARMv6-M cfg: rebuilt aes_gcm and hmac code is byte-identical to the first variants.",
-      "no_std/alloc: 1,739 → 0 thumbv6m errors; codegen identical on three desktop configurations; x86_64 and portable tests pass."
+      "SysTick fix on the board: 37,500,815 cycles in 300,021 µs; wrap outliers gone.",
+      "Old-base images: 75 of 75 runs in the 18:35 PST snapshot, 0 known-answer failures.",
+      "Rolled SHA-512: 0.095× at 16 KiB (old base, 3 rounds). Muls-only GHASH: AES-128-GCM 16 KiB 0.479× (old base, 3 rounds).",
+      "Layout controls, 4 rounds, old base: sha256/32B 10,103 / 14,828 / 14,844; HMAC 34,927 / 54,780 / 54,748; HKDF 24,462 / 43,792 / 27,855 (probe only partly reproduces HKDF).",
+      "P-256 CT on 3dc5634b: 0 rind lmul; tests and Wycheproof pass; desktop codegen unchanged. Not timed on a board.",
+      "Fixsliced AES: tests and Wycheproof pass; asm path has no secret branches or tables. Not timed on a board.",
+      "no_std/alloc: 1,739 → 0 thumbv6m errors; desktop codegen identical."
     ],
     pending: [
-      "Full suite: 2 or 3 of 5 planned rounds per row; round 3 is running.",
-      "P-256 muls-only image: 5 interleaved rounds against the baseline, queued.",
-      "HKDF-SHA-256 expand +79% in the SHA-512 images: its probe image does not reproduce it (27,844 vs 43,819 cycles).",
-      "no_std link test (P-256 ECDH + SHA-256, 136 KB text): links, not run on a board.",
-      "no_std branch on the Mac: fmt OK; aarch64 clippy, tests and thumbv6m build pending.",
-      "X25519 / Ed25519 / Poly1305 __aeabi_lmul removal: in progress, no prototype yet.",
-      "Not run for the rind branch: just ci (nix), ctgrind, Linux and armv7 QEMU gates.",
-      "Restore the Pico's MicroPython backup after the last round."
+      "New-base timing on the Pico and Pico W: started; no completed medians yet.",
+      "CatWAN USBStick2040: a fresh flash backup is still required before any write.",
+      "P-256 CT, sram-hot, and fixsliced AES: board timing, plus on-device boot known-answer checks for AES.",
+      "Do not ship patch 0008 without 178f7966: 0008 alone is not constant-time on thumbv6m.",
+      "rind-hardware main still lacks the SysTick wrap fix. Restore MicroPython backups after the last round."
     ],
     prs: [
-      ["rind", "no_std/alloc gating", "fork branch no-std/thumbv6m-alloc (3dc5634b), commit message drafted"],
-      ["rind", "rolled SHA-512 + muls-only GHASH", "fork branch rp2040/armv6m-no-std (c08c91ea); to be rebased onto the no_std branch as a separate branch"],
-      ["rind", "P-256 / P-384 mul_add by muls", "prototype branch rp2040/armv6m-mul-wide-muls; waits for timing"],
-      ["harness", "SysTick wrap fix, SHA-512/GHASH patches", "rind-hardware rp2040/systick-wrap-fix (a9d057a), rp2040/armv6m-sha512-ghash (6abf7fd)"]
+      ["rind", "no_std/alloc gating", "fork branch no-std/thumbv6m-alloc (3dc5634b); message drafted"],
+      ["rind", "rolled SHA-512 + muls-only GHASH", "to be rebased onto the no_std branch"],
+      ["rind", "P-256 CT stack", "local branch rp2040/p256-ct-on-3dc, not pushed"],
+      ["rind", "fixsliced AES (A pure Rust, B generated asm)", "not pushed; B is experimental"],
+      ["rind", "sram-hot loops in SRAM", "local, not pushed"],
+      ["harness", "SysTick wrap fix", "main still lacks it; branch rp2040/systick-wrap-fix-r2 (518ee6c)"]
     ]
   },
 
@@ -251,10 +312,11 @@ const DATA = {
   ],
   /* 2026-11-12 work: working notes, not yet in this repository (no local paths) */
   notes: [
-    ["Slides 2, 6–12, 14, 18", "RP2040 bench lane: STATUS notes, round logs, raw run JSON summarized with summarize.py, commit message drafts"],
-    ["Slides 11–14", "M0+ static-analysis lane: REPORT.md and STATUS.md"],
-    ["Slides 4, 15, 18", "no_std lane: STATUS.md and gates log"],
-    ["Slides 14, 18", "X25519 / Ed25519 / Poly1305 lane: STATUS.md"]
+    ["Slides 2, 6–11, 13, 21", "Bench lane: STATUS notes, round logs, summarize.py (completed medians only)"],
+    ["Slide 12", "Placement lane: REPORT.md, BUILD.md. Layout medians: bench STATUS 20:30 PST"],
+    ["Slide 14", "AES lane: BUILD.md and STATUS.md (estimates and constant-time scan)"],
+    ["Slides 16–17", "P-256 lane: REPORT.md, BUILD-P256CT.md, STATUS.md (stack on 3dc5634b)"],
+    ["Slides 4, 11, 15, 18, 21", "no_std, M0+ scan, and X25519/Ed25519/Poly1305 lanes: STATUS / REPORT"]
   ]
 };
 </script>
@@ -401,10 +463,29 @@ table.t.live{font-size:12.5px}
 table.t.live td{padding:4px 6px;vertical-align:middle;white-space:nowrap}
 table.t.live th{font-size:11px}
 .board .cell .sub2{margin-top:2px}
-.cols3.st3 .card{min-height:420px;padding:14px 16px}
-.cols3.st3 ul.b.sm{font-size:13.5px;line-height:1.4}
-.cols3.st3 ul.b li{margin-bottom:6px}
+.cols3.st3 .card{min-height:0;padding:10px 12px}
+.cols3.st3 ul.b.sm{font-size:12.5px;line-height:1.35}
+.cols3.st3 ul.b li{margin-bottom:4px}
+.slide[data-section="Status"] h2{margin-bottom:8px}
+.slide[data-section="Status"] .callout{margin-top:8px;font-size:13.5px;padding:8px 12px}
+.slide[data-section="Sources"] .cols{margin-top:8px;margin-bottom:6px}
+.slide[data-section="Sources"] table.t{font-size:12px}
+.slide[data-section="Sources"] table.t td{padding:4px 8px}
+.slide[data-section="Sources"] .card{padding:8px 12px}
+.slide[data-section="Sources"] .card h3{margin-bottom:4px}
+.slide[data-section="Sources"] #tb-src{margin-bottom:0}
 table.t.sv code{font-size:11.5px}
+
+/* r3 update: estimate / old-base / pending-timing markers */
+.tag.est{background:var(--pend-bg);color:#8a6d0b}
+.tag.meas{background:var(--good-bg);color:var(--accent)}
+.tag.old{background:var(--split-bg);color:#4a5578}
+h2 .tag,.kicker .tag{margin-left:8px;vertical-align:middle;text-transform:uppercase}
+.estbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:8px 14px;border-radius:0 8px 8px 0;font-size:14px;color:#5c4a08;margin:8px 0 0}
+.callout.est{border-color:#c9a227;background:var(--pend-bg);color:#5c4a08}
+.kpis.k3{grid-template-columns:repeat(3,1fr)}
+.kpis.k5{grid-template-columns:repeat(4,1fr)}
+table.t td.est,table.t th.est{background:#fdf8ec}
 </style>
 </head>
 <body>
@@ -416,7 +497,7 @@ table.t.sv code{font-size:11.5px}
   <div class="inner">
     <div class="kicker">rind · bare-metal port</div>
     <h1>rind on the RP2040</h1>
-    <div class="sub"><span data-k="chip.mhz"></span> MHz Cortex-M0+, no operating system. How a Rust cryptography library was made to build for this chip, what the first on-device runs measured, and what was changed because of them.</div>
+    <div class="sub"><span data-k="chip.mhz"></span> MHz Cortex-M0+, no operating system. How a Rust cryptography library was made to build for this chip, what the first on-device runs measured, what was changed because of them, and which later figures are still model or emulator estimates.</div>
   </div>
   <div class="meta">steelhead99x/rind-results<br><span data-k="meta.date"></span></div>
   <div class="foot"><span class="src">Sources are listed on the last slide. Anything without a source is left out or marked pending.</span><span class="num"></span></div>
@@ -424,23 +505,23 @@ table.t.sv code{font-size:11.5px}
 
 <!-- ============ 2. BOARD ============ -->
 <section class="slide" data-section="Board">
-  <div class="kicker">The board</div>
-  <h2>Two RP2040 boards: the first was backed up and left alone, and the runs used a Raspberry Pi Pico, backed up first</h2>
-  <div class="board" id="board-cells" style="margin-top:22px"></div>
+  <div class="kicker">The boards</div>
+  <h2>A Pico and a Pico W were backed up before any write; a CatWAN USBStick2040 is still waiting on a fresh backup</h2>
+  <div class="board" id="board-cells" style="margin-top:16px"></div>
   <div class="cols c64" style="margin-top:8px">
-    <div class="card tall"><h3>The chip</h3><ul class="b">
-      <li>The RP2040 is the chip on the Raspberry Pi Pico. The first board's chip is silicon revision <span data-k="chip.rev"></span>.</li>
-      <li>Rust calls this target <code>thumbv6m-none-eabi</code>: the ARMv6-M instruction set, with no operating system underneath.</li>
+    <div class="card tall"><h3>The chip</h3><ul class="b sm">
+      <li>The RP2040 is the chip on these boards. Rust calls this target <code>thumbv6m-none-eabi</code>: the ARMv6-M instruction set, with no operating system underneath.</li>
       <li>Code runs from the <span data-k="chip.flashMiB"></span> MiB external flash (XIP, "execute in place") or from on-chip SRAM.</li>
+      <li>An earlier RP2040 board, silicon revision <span data-k="chip.rev"></span>, was backed up and left alone (never written).</li>
     </ul></div>
     <div class="card tall"><h3>What was done to the boards</h3><ul class="b sm">
-      <li><b>First board:</b> an Arduino (Mbed OS) sketch of about <span data-k="chip.stockKiB"></span> KiB. Flash read <span data-k="chip.backupReads"></span> times with picotool <span data-k="chip.picotool"></span>, all copies matched, never written.</li>
-      <li><b>Run board:</b> a <span data-k="pico.board"></span> running <span data-k="pico.fw" style="white-space:nowrap"></span>. Its full 2 MiB was read <span data-k="pico.reads"></span> times before anything was flashed; the copies are identical.</li>
-      <li>Neither backup is in this repository. Restoring the Pico is one <code>picotool load</code>.</li>
+      <li><b>Pico (run board):</b> <span data-k="pico.fw" style="white-space:nowrap"></span>. Full 2 MiB read <span data-k="pico.reads"></span> times before anything was flashed; the copies are identical.</li>
+      <li><b>Pico W:</b> <span data-k="picoW.fw" style="white-space:nowrap"></span>. Full flash read <span data-k="picoW.reads"></span> times, copies identical, then restored to that firmware. No completed multi-round medians yet.</li>
+      <li><b>CatWAN USBStick2040:</b> a fresh flash backup is still required before any write. Nothing has been flashed to it. <span class="tag pending">status: pending board timing</span></li>
     </ul></div>
   </div>
-  <div class="callout" style="margin-top:22px">The target survey lists the RP2040 as "the floor" of its suggested benchmark chips.</div>
-  <div class="foot"><span class="src">baremetal/rp2040/README.md · hosts/rp2040/DEVICE.md · hosts/rp2040/NOTES.md (commit 2cb88c3) · baremetal/rp2040/TARGET-SURVEY.md · Pico: RP2040 bench lane STATUS (16:44 backup)</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:14px">Backups are not in this repository. Restoring a Pico is one <code>picotool load</code>. The target survey lists the RP2040 as "the floor" of its suggested benchmark chips.</div>
+  <div class="foot"><span class="src">baremetal/rp2040/README.md · hosts/rp2040/DEVICE.md · hosts/rp2040/NOTES.md (commit 2cb88c3) · Pico backup: bench lane STATUS 16:44 · Pico W backup: STATUS 19:51 · CatWAN: STATUS 20:00 / 21:13</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 3. CONSTRAINTS ============ -->
@@ -448,7 +529,7 @@ table.t.sv code{font-size:11.5px}
   <div class="kicker">Why it is hard</div>
   <h2>rind has to work within five limits on this chip that desktop targets do not have</h2>
   <div class="cons" id="cons" style="margin-top:22px"></div>
-  <div class="callout" style="margin-top:20px">Other microcontrollers share some or all of these limits (slide 17).</div>
+  <div class="callout" style="margin-top:20px">Other microcontrollers share some or all of these limits (slide 20).</div>
   <div class="foot"><span class="src">baremetal/rp2040/TARGET-SURVEY.md · baremetal/rp2040/COMPETITOR-BUILDS.md (Notes)</span><span class="num"></span></div>
 </section>
 
@@ -466,7 +547,7 @@ table.t.sv code{font-size:11.5px}
       <div class="err"><code>error[E0463]: can't find crate for `std`</code></div>
       <p class="small">rind had no <code>#![no_std]</code>, so the compiler looked for the standard library (<code>std</code>), which this target does not have. Without the custom-backend option, getrandom 0.4.3 fails first with "target is not supported".</p>
       <p class="small">Command: <code>cargo build -p rind --release --target thumbv6m-none-eabi</code> with <code>--cfg getrandom_backend="custom"</code>, rustc <span data-k="meta.rustc"></span>.</p>
-      <p class="small"><b>Update, 2026-11-12:</b> upstream rind at c333c59e gave 1,739 errors with rustc 1.98.1, and a std / alloc feature split takes that to 0 (slide 15).</p>
+      <p class="small"><b>Update, 2026-11-12:</b> upstream rind at c333c59e gave 1,739 errors with rustc 1.98.1, and a std / alloc feature split takes that to 0 (slide 18).</p>
       <p class="small">About the label: FEASIBILITY.md calls a4759c48 a rind commit. COMPETITOR-BUILDS.md takes its versions, including rind 0.3.2, from <code>rind-bench/Cargo.toml</code> at a4759c48.</p>
     </div>
     <div>
@@ -522,7 +603,8 @@ table.t.sv code{font-size:11.5px}
       <ul class="b sm">
         <li>Libraries in the images: rind, RustCrypto, dalek, libcrux. <b>ring <span data-k="images.ringVer"></span> is left out</b> (its Arm assembly uses NEON), and so is aws-lc-rs (it needs an OS).</li>
         <li>Known-answer checks run before the timed rows. All <span data-k="pico.runs"></span> runs in the snapshot report 0 failures.</li>
-        <li>Variant images, each changing one thing: <code>sha512</code>, <code>ghash</code>, <code>opt</code> (the final cfg), <code>probe</code> and padded builds (code-placement controls), <code>p256mul</code> (queued).</li>
+        <li>Old-base variant images, each changing one thing: <code>sha512</code>, <code>ghash</code>, <code>opt</code> (the final cfg), and <code>probe</code> plus padded builds (code-placement controls).</li>
+        <li>A new stack was rebuilt on upstream main <code>c333c59e</code> and the no_std commit <code>3dc5634b</code>. Board timing of that stack had started by 21:13 PST, but no multi-round medians were finished. <span class="tag pending">status: pending board timing</span></li>
         <li>The images built before the timer fix are not used for results: their timer is wrong (slide 8).</li>
       </ul>
     </div>
@@ -543,7 +625,7 @@ table.t.sv code{font-size:11.5px}
     </ul></div>
     <div class="card"><h3>What's next after the numbers</h3><ul class="b sm">
       <li>Finish the planned <span data-k="snap.planned"></span> rounds, then publish the raw results and tables in this repository and in this deck (slide 10).</li>
-      <li>Upstream pull requests are being prepared but none has been opened (slide 18).</li>
+      <li>Upstream pull requests are being prepared but none has been opened (slide 21).</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src">RP2040 bench lane: STATUS notes (16:44 backup, 18:33 lock change), round logs, raw run JSON start records</span><span class="num"></span></div>
@@ -566,9 +648,9 @@ table.t.sv code{font-size:11.5px}
       <li>The two SHA-512 numbers differ by 16.78 M cycles, the size of one wrap.</li>
     </ul></div>
     <div class="card tall"><h3>The fix and how it was checked</h3><ul class="b sm">
-      <li>Fixed on harness branch <code data-k="systick.branch"></code>, since pushed as <code><span data-k="systick.pushed"></span></code> (<span data-k="systick.pushedAt"></span>).</li>
+      <li>Fixed on harness branch <code data-k="systick.branch"></code>, pushed as <code><span data-k="systick.pushed"></span></code> (<span data-k="systick.pushedAt"></span>), and later rebased as <code><span data-k="systick.rebased"></span></code> (<span data-k="systick.rebasedAt"></span>).</li>
       <li>Checked on the board: the boot cross-check now agrees with the 1 MHz timer at about 125 cycles per µs, and the outliers are gone.</li>
-      <li>Every number in this deck comes from images built after the fix. The SysTick deck (<code>presentations/rind-systick</code>) covers the timer in detail.</li>
+      <li>Every measured number in this deck comes from images built after the fix, or is labeled as a model or emulator estimate. rind-hardware <code>main</code> still lacks the wrap fix.</li>
     </ul></div>
   </div>
   <div class="callout warn" style="margin-top:18px">The images built before the fix are not re-run. Their numbers are kept only as evidence of the bug, never as results.</div>
@@ -592,8 +674,8 @@ table.t.sv code{font-size:11.5px}
       <ul class="b sm">
         <li>Same algorithm, same clock, same memory placement. All hot crypto code examined runs from XIP flash with the cache on, for every library.</li>
         <li>Every run checks known answers on the device before it times anything.</li>
-        <li>Competitors are the builds listed in COMPETITOR-BUILDS.md (slide 16). ring is excluded.</li>
-        <li>Code placement alone can move a short row by tens of percent (slide 11), so a changed image is compared with probe or padded images that move code without changing it.</li>
+        <li>Competitors are the builds listed in COMPETITOR-BUILDS.md (slide 19). ring is excluded.</li>
+        <li>Code placement alone can move a short row by tens of percent (slides 11–12), so a changed image is compared with probe or padded images that move code without changing it.</li>
         <li>No comparisons against desktop numbers.</li>
       </ul>
     </div>
@@ -613,7 +695,7 @@ table.t.sv code{font-size:11.5px}
       <div id="ch-live"></div>
     </div>
   </div>
-  <div class="foot"><span class="src">RP2040 bench lane: summarize.py over the SysTick-fixed rounds (snapshot 2026-11-12 18:35 PST); not yet published in this repository. Update instructions: presentations/rind-rp2040/README.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">OLD BASE. RP2040 bench lane: summarize.py over the SysTick-fixed rounds (snapshot 2026-11-12 18:35 PST); not yet published in this repository. New-base timing: no completed medians. Update instructions: presentations/rind-rp2040/README.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 11. SHA-512 ============ -->
@@ -630,17 +712,42 @@ table.t.sv code{font-size:11.5px}
       <div class="chart-title">rind, SysTick-fixed image → rolled SHA-512 image (cycles, 3 of 3 rounds)</div>
       <table class="t" id="tb-sha512"></table>
       <p class="small">The rolled loop replaces HACL*'s SHA-512 only on Arm without CAS (ARMv6-M), where it is 1,724 bytes. Every index and branch depends only on the round number. A test checks it against the backend's own SHA-512 over 1 to 9 blocks.</p>
-      <div class="chart-title" style="margin-top:10px">Side effect seen in the same images: code placement</div>
+      <div class="chart-title" style="margin-top:10px">Side effect in the same images: code placement <span class="tag old">old base · measured · 4 rounds</span></div>
       <table class="t" id="tb-layout"></table>
-      <p class="small">A probe image with the old code but <code>memcpy</code> moved to the new address reproduces the SHA-256 and HMAC rows, so those are placement, not the SHA-512 change. The HKDF row is not reproduced yet.</p>
+      <p class="small">A probe image with the old code but <code>memcpy</code> moved to the new address reproduces the SHA-256 and HMAC rows, so those are placement, not the SHA-512 change. The HKDF row is only partly reproduced. The mechanism, and a modelled fix, are on the next slide.</p>
     </div>
   </div>
-  <div class="foot"><span class="src">RP2040 bench lane: summarize.py on the fix, sha512 and probe rounds; STATUS (17:05, 17:58–18:05); SHA-512 commit message draft · sizes: M0+ static-analysis REPORT</span><span class="num"></span></div>
+  <div class="foot"><span class="src">SHA-512 cycles: bench lane summarize.py on fix vs sha512, 3 of 3 rounds, old base. Layout table: bench lane STATUS 20:30 PST, 4-round medians, old base. Sizes: M0+ static-analysis REPORT</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 12. GHASH ============ -->
+
+<!-- ============ 12. PLACEMENT ============ -->
+<section class="slide" data-section="Placement">
+  <div class="kicker">Finding 3 · XIP layout <span class="tag pending">status: pending board timing</span></div>
+  <h2>SHA-256's unrolled compress is 9,940 bytes, larger than one 8 KiB cache way, so unrelated code can evict it every block</h2>
+  <div class="estbar"><b>Model / emulator estimates</b> for the sram-hot fix, except the old-base layout table, which is measured (4 rounds). The model's absolute cycles run 5–20% low; its deltas tracked the measured swings.</div>
+  <div class="cols c55" style="margin-top:10px">
+    <div>
+      <div class="chart-title">Why it happens</div>
+      <ul class="b sm">
+        <li>The RP2040 XIP cache is <span data-k="place.cache"></span>, <span data-k="place.ways"></span>-way, with <span data-k="place.line"></span>-byte lines. It aliases every <span data-k="place.alias"></span>. A refill costs about <span data-k="place.refillEst"></span> cycles; earlier measured rounds fit <span data-k="place.refillMeas"></span>.</li>
+        <li>On thumbv6m, rind's SHA-256 is libcrux HACL <code>sha256_update</code>, fully unrolled to <span data-k="place.sha256Update"></span> B. Its first and last ~<span data-k="place.overlap"></span> share sets and occupy both ways, so any other line in those sets evicts part of the compress function every block.</li>
+        <li><b>The fix (<code>sram-hot</code>):</b> on ARMv6-M, hot loops are copied into SRAM at reset. Modelled misses in the SHA-256, HMAC and HKDF loops drop to 0. SRAM cost: sha2/hmac <b>+4.8 KB</b>, hkdf <b>+5.4 KB</b>, aes_gcm <b>+0.6 KB</b>, p256 <b>+8.6 KB</b>.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="chart-title">Old base, measured, 4 rounds (fix / SHA-512 image / probe)</div>
+      <table class="t" id="tb-layout2"></table>
+      <div class="chart-title" style="margin-top:10px">sram-hot, model estimate (up-a → up-b, misses → 0)</div>
+      <table class="t" id="tb-place-est"></table>
+    </div>
+  </div>
+  <div class="foot"><span class="src">Placement lane: REPORT.md and BUILD.md (XIP model, rustc 1.98.1). Measured layout: bench lane STATUS 20:30 PST, 4-round medians, old base. rind-hardware main still lacks the SysTick wrap fix.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 13. GHASH ============ -->
 <section class="slide" data-section="AES-GCM">
-  <div class="kicker">Finding 2 · AES-GCM</div>
+  <div class="kicker">Finding 2 · AES-GCM <span class="tag meas">old base · measured · 3 rounds</span></div>
   <h2>rind's AES-GCM ran 2.1 to 2.3× RustCrypto's time on long messages, because GHASH called __aeabi_lmul for every 64-bit product</h2>
   <div class="cols c64" style="margin-top:14px">
     <div>
@@ -663,10 +770,40 @@ table.t.sv code{font-size:11.5px}
       </ul></div>
     </div>
   </div>
-  <div class="foot"><span class="src">RP2040 bench lane: summarize.py on the fix and ghash rounds; STATUS (17:16, 17:35); GHASH commit message draft · function sizes: M0+ static-analysis REPORT</span><span class="num"></span></div>
+  <div class="foot"><span class="src">OLD BASE, measured, 3 of 3 rounds. Bench lane: summarize.py on the fix and ghash rounds; STATUS (17:16, 17:35). Function sizes: M0+ static-analysis REPORT. Fixsliced AES is on the next slide.</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 13. STATIC SCAN ============ -->
+
+<!-- ============ 14. AES FIXSLICE ============ -->
+<section class="slide" data-section="AES">
+  <div class="kicker">Finding 4 · fixsliced AES <span class="tag pending">status: pending board timing</span></div>
+  <h2>A fixsliced AES, in pure Rust or with generated Thumb-1 rounds, is modelled to put long AES-GCM ahead of RustCrypto</h2>
+  <div class="estbar"><b>Model / emulator estimates</b> from a Unicorn M0+ cycle model of these exact ELFs, assuming XIP cache hits, except the two figures marked measured. The same model was <span data-k="aes.calErr"></span> against a measured AES-128-CTR 16 KiB run (<span data-k="aes.calModel"></span> vs <span data-k="aes.calMeas"></span> cycles).</div>
+  <div class="cols c55" style="margin-top:10px">
+    <div>
+      <div class="chart-title">AES-CTR over 16 KiB, cycles/byte (AES-192 from a 1 KiB run) · estimate</div>
+      <table class="t" id="tb-aes-ctr"></table>
+      <div class="board b2" style="margin-top:10px">
+        <div class="cell"><div class="k">AES-128-GCM seal 16 KiB</div><div class="v"><span data-k="aes.gcm.ghashMeas"></span> → <span data-k="aes.gcm.aEst"></span> → <span data-k="aes.gcm.bEst"></span></div><div class="sub2">ghash measured · A estimate · B estimate</div></div>
+        <div class="cell"><div class="k">RustCrypto on the same board</div><div class="v"><span data-k="aes.gcm.rustcryptoMeas"></span></div><div class="sub2">measured. B estimates about 11% under it; A about 5% over it</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card"><h3>Two versions, same gate</h3><ul class="b sm">
+        <li><b>A, pure Rust:</b> a full fixslice of AES-128/192/256 encrypt, used for CTR, GCM, CBC-encrypt and single blocks. About 1.11× on AES-128-CTR in the model. Decryption stays on the old bitsliced path.</li>
+        <li><b>B, generated assembly:</b> A's rounds in straight-line Thumb-1, added to the portable backend. About 1.55× in the model. Experimental: whether it belongs upstream is a separate decision.</li>
+        <li>Both sit on <code>3dc5634b</code> (upstream <code>c333c59e</code>). Tests, including Wycheproof, pass. Codegen on aarch64 and x86_64 is unchanged.</li>
+      </ul></div>
+      <div class="card" style="margin-top:10px"><h3>Constant-time scan</h3><ul class="b sm">
+        <li>The asm path: 0 branches, 0 register-offset loads or stores, and no tables. Remaining Rust branches and key-schedule loads are on public values (round count, length, key length).</li>
+        <li>First on-device check, still pending: boot known-answer tests must print OK, including on the asm path.</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="foot"><span class="src">AES lane: BUILD.md §4 and STATUS.md (2026-11-12 20:10 PST). Calibration uses a measured AES-128-CTR 16 KiB from the bench lane. rustc 1.98.1. Nothing pushed.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 15. STATIC SCAN ============ -->
 <section class="slide" data-section="Static scan">
   <div class="kicker">Static scan of the M0+ images</div>
   <h2>A scan of the built images ranks what is left: dalek's X25519/Ed25519 multiplies first, then P-256/P-384, then Poly1305</h2>
@@ -678,7 +815,7 @@ table.t.sv code{font-size:11.5px}
     <div>
       <div class="card"><h3>Ranked candidates</h3><ul class="b sm">
         <li><b>1. X25519 / Ed25519 (dalek u32):</b> the most multiplies at run time, about <span data-k="m0.x25519Est"></span> lmul calls per X25519 (<b>estimate</b>). The code is in curve25519-dalek, not rind.</li>
-        <li><b>2. P-256 / P-384 <code>mul_add</code>:</b> in rind, already tested against fiat-crypto. Prototyped (slide 14).</li>
+        <li><b>2. P-256 / P-384 <code>mul_add</code>:</b> in rind, already tested against fiat-crypto. The constant-time stack is on slides 16–17; it has not been timed on a board.</li>
         <li><b>3. Poly1305:</b> HACL* in libcrux, 52 lmul per update.</li>
       </ul></div>
       <div class="card" style="margin-top:12px"><h3>Constant-time findings</h3><ul class="b sm">
@@ -691,28 +828,50 @@ table.t.sv code{font-size:11.5px}
   <div class="foot"><span class="src">M0+ static-analysis lane: REPORT.md (llvm-nm / llvm-objdump on the SysTick-fixed images, rustc 1.98.1) and STATUS.md</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 14. P-256 PROTOTYPE ============ -->
+<!-- ============ 16. P-256 CT ============ -->
 <section class="slide" data-section="P-256">
-  <div class="kicker">Prototype · not timed yet</div>
-  <h2>A muls-only 32×32→64 helper removes every __aeabi_lmul from P‑256's field multiply and square, and passes 80 tests</h2>
-  <div class="kpis" id="kpi-p256" style="margin-top:20px"></div>
+  <div class="kicker">P-256 · constant time <span class="tag pending">status: pending board timing</span></div>
+  <h2>The constant-time P-256 stack removes every __aeabi_lmul from rind's P-256 code; patch 0008 alone is not constant-time</h2>
+  <div class="kpis" id="kpi-p256" style="margin-top:12px"></div>
   <div class="cols">
-    <div class="card"><h3>The change</h3><ul class="b sm">
-      <li>On ARMv6-M, each 32×32→64 product in <code>p256_mul32</code> and <code>p384_mul32</code> is four 16-bit <code>muls</code> and adds. Arm cores with <code>umull</code> keep the widening multiply. Same cfg as the GHASH change.</li>
-      <li>In the P-256 bench image, <code>mul_wide</code> has <span data-k="p256.mulsInMulWide"></span> <code>muls</code> and <code>sqr_wide</code> <span data-k="p256.mulsInSqrWide"></span>: and 0 lmul, the check required before timing.</li>
-      <li>P-384 <code>mul_wide</code> / <code>sqr_wide</code> also have 0 lmul in a release library build (576 / 300 <code>muls</code>).</li>
+    <div class="card"><h3>The stack, on 3dc5634b</h3><ul class="b sm">
+      <li>Rebased onto <code>no-std/thumbv6m-alloc</code> @ <code>3dc5634b</code>, one commit on upstream main @ <code>c333c59e</code>. Nothing pushed.</li>
+      <li>On ARMv6-M, 32×32→64 products, Montgomery conversions and inversion use <code>muls</code> alone. Inversion is Bernstein–Yang divsteps. The same changes apply to P-384.</li>
+      <li>Tests, rustc 1.98.1: lib portable32 <span data-k="p256.tests.p32"></span>, portable64 <span data-k="p256.tests.p64"></span>, x86_64 <span data-k="p256.tests.x86"></span>; Wycheproof <span data-k="p256.tests.wycheproof"></span> and crosschecks <span data-k="p256.tests.crosschecks"></span> on each. Desktop codegen is unchanged (aarch64, portable, portable32, armv7).</li>
     </ul></div>
-    <div class="card"><h3>Still to do</h3><ul class="b sm">
-      <li><b>Timing, queued:</b> <span data-k="p256.rounds"></span> interleaved rounds against the SysTick-fixed image. Baseline rind P-256 ECDH: <span data-k="p256.baseEcdh"></span> cycles (<span data-k="p256.baseRounds"></span> rounds).</li>
-      <li>Still calling lmul in that image, via fiat: <span id="p256-left"></span>.</li>
-      <li><b>In progress:</b> the same removal for dalek's X25519 / Ed25519 multiplies and for Poly1305. Started; no prototype yet.</li>
+    <div class="card warnc"><div class="pn">Do not ship 0008 without 178f7966</div><ul class="b sm">
+      <li>On thumbv6m, LLVM compiles 0008's u64-free carry compares into <code>cmp</code>/<code>blo</code> branches. The instruction trace of <code>mul_wide</code>, <code>sqr_wide</code>, <code>jdouble</code>, <code>jadd</code> and <code>jmixadd</code> then depends on secret data.</li>
+      <li><code>178f7966</code> (formerly <code>8edbbedc</code>) makes those carries and selections branch-free. 0008 alone must not be shipped or pushed without it.</li>
+      <li>The only <code>__aeabi_lmul</code> calls left in the CT image are in the bench-harness RNG, which is not rind.</li>
     </ul></div>
   </div>
-  <div class="callout warn" style="margin-top:16px">No speed claim yet: the prototype has not been timed on the board.</div>
-  <div class="foot"><span class="src">M0+ static-analysis REPORT (prototype, native tests) · RP2040 bench lane STATUS (18:21–18:23, bench-image disassembly) · X25519/Ed25519/Poly1305 lane STATUS</span><span class="num"></span></div>
+  <div class="foot"><span class="src">P-256 lane: REPORT.md, BUILD-P256CT.md and STATUS.md (2026-11-12 20:20 PST). rustc 1.98.1. Not timed on a board.</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 15. NO_STD ============ -->
+<!-- ============ 17. P-256 ESTIMATES ============ -->
+<section class="slide" data-section="P-256 estimates">
+  <div class="kicker">P-256 · emulator estimates <span class="tag pending">status: pending board timing</span></div>
+  <h2>The emulator puts scalar inverse at about 204k cycles, down from 2.11M, and point operations 18 to 23% faster</h2>
+  <div class="estbar"><b>Emulator estimates</b> from Unicorn, a zero-wait model with 1-cycle <code>muls</code> and no XIP or cache misses. These are not hardware timings. The 0008 column is a non-constant-time control and must not be shipped.</div>
+  <div class="cols c64" style="margin-top:10px">
+    <div>
+      <div class="chart-title">Estimated cycles: base image → CT image (0008 shown only as a control)</div>
+      <table class="t" id="tb-p256-est"></table>
+    </div>
+    <div>
+      <div class="card"><h3>How to read the table</h3><ul class="b sm">
+        <li>Field inverse: about 898k down to ~187k cycles (−79%). Scalar inverse: 2,108,875 down to 203,983 (−90%).</li>
+        <li>Point operations: <code>mul_wide</code> −23%, <code>jdouble</code> −18%, <code>jadd</code> and <code>jmixadd</code> −20%.</li>
+        <li>The 16-bit column carries cost about <span data-k="p256.carryCost"></span> on <code>mul_wide</code> compared with 0008's branchy carries. That is the price of constant time, and the result is still faster than the base.</li>
+        <li>Derived, rough: ECDSA sign about <span data-k="p256.ecdsaEst.0"></span> → <span data-k="p256.ecdsaEst.1"></span> cycles; variable-base scalar mul (ECDH) about <span data-k="p256.ecdhEst.0"></span> → <span data-k="p256.ecdhEst.1"></span> (<span data-k="p256.ecdhEst.2"></span>).</li>
+      </ul></div>
+      <div class="callout est" style="margin-top:10px">Queued for timing on all three boards, on this upstream base. Old-base measured rind P-256 ECDH was <span data-k="p256.baseEcdh"></span> cycles (<span data-k="p256.baseRounds"></span> rounds); that number is not a result of this stack.</div>
+    </div>
+  </div>
+  <div class="foot"><span class="src">P-256 lane: REPORT.md “ESTIMATES (Unicorn emulation…)” and STATUS.md (2026-11-12 20:20 PST). Not hardware timings. Nothing pushed.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 18. NO_STD ============ -->
 <section class="slide" data-section="no_std">
   <div class="kicker">Upstreamable no_std</div>
   <h2>A std / alloc feature split makes upstream rind build for thumbv6m with 0 errors, and leaves desktop code unchanged</h2>
@@ -739,7 +898,7 @@ table.t.sv code{font-size:11.5px}
   <div class="foot"><span class="src">no_std lane: STATUS.md and gates log (thumbv6m errors with rustc 1.98.1)</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 16. COMPETITORS ============ -->
+<!-- ============ 19. COMPETITORS ============ -->
 <section class="slide" data-section="Competitors">
   <div class="kicker">Other libraries</div>
   <h2>The RustCrypto and dalek crates compile for every target tested, while ring, aws-lc-rs and rustls do not compile for the RP2040</h2>
@@ -749,7 +908,7 @@ table.t.sv code{font-size:11.5px}
   <div class="foot"><span class="src">baremetal/rp2040/COMPETITOR-BUILDS.md · baremetal/rp2040/builds/README.md</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 17. SURVEY ============ -->
+<!-- ============ 20. SURVEY ============ -->
 <section class="slide" data-section="Survey">
   <div class="kicker">Other chips</div>
   <h2>Other Cortex-M and RISC-V chips share some of these limits, and the EFR32MG24 adds a crypto engine to compare against</h2>
@@ -763,7 +922,7 @@ table.t.sv code{font-size:11.5px}
   <div class="foot"><span class="src">baremetal/rp2040/TARGET-SURVEY.md · baremetal/mg24/README.md · baremetal/rp2040/COMPETITOR-BUILDS.md (Notes)</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 18. STATUS ============ -->
+<!-- ============ 21. STATUS ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Status and next steps</div>
   <h2>What is verified, what still needs timing, and the pull requests being prepared, none of them opened yet</h2>
@@ -772,18 +931,18 @@ table.t.sv code{font-size:11.5px}
     <div class="card fix warnc"><div class="pn">pending or in progress</div><ul class="b sm" id="st-pend"></ul></div>
     <div class="card fix"><div class="pn">being prepared · not opened</div><ul class="b sm" id="st-pr"></ul></div>
   </div>
-  <div class="callout" style="margin-top:12px">No pull request has been opened upstream. The branches above are on steelhead99x forks and repositories; patches stay there until a pull request is approved.</div>
-  <div class="foot"><span class="src">RP2040 bench lane STATUS · M0+ static-analysis STATUS · no_std lane STATUS and gates log · X25519/Ed25519/Poly1305 lane STATUS · snapshot <span data-k="snap.asOf"></span></span><span class="num"></span></div>
+  <div class="callout" style="margin-top:12px">No pull request has been opened upstream. The branches stay on steelhead99x forks until a pull request is approved.</div>
+  <div class="foot"><span class="src">Bench lane STATUS through 21:13 PST · P-256, placement and AES lane reports · no_std lane STATUS · snapshot of old-base live rows: <span data-k="snap.asOf"></span></span><span class="num"></span></div>
 </section>
 
-<!-- ============ 19. SOURCES ============ -->
+<!-- ============ 22. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
   <h2>Facts come from these files in steelhead99x/rind-results and, for the 2026-11-12 runs, from the working notes listed below</h2>
-  <table class="t" id="tb-src" style="margin-top:10px;font-size:13.5px"></table>
-  <div class="cols" style="margin-top:20px">
+  <table class="t" id="tb-src" style="margin-top:8px;font-size:13px"></table>
+  <div class="cols" style="margin-top:10px">
     <div class="card"><h3>Not yet in this repository</h3><table class="t" id="tb-notes" style="font-size:12.5px"></table></div>
-    <div class="card"><h3>Not in this deck</h3><p class="small" style="margin:0">Flash backup hashes, board serial numbers, local paths, and links into the benchmark harness repositories. The on-device numbers are a snapshot from <span data-k="snap.asOf"></span>, with rounds still running.</p></div>
+    <div class="card"><h3>Not in this deck</h3><p class="small" style="margin:0">Flash backup hashes, board serial numbers, local paths, and links into the benchmark harness repositories. The live-results numbers are an old-base snapshot from <span data-k="snap.asOf"></span> (2 or 3 of 5 planned rounds). Later figures are labeled measured or as a model/emulator estimate. New-base board timing had no completed medians as of 21:13 PST.</p></div>
   </div>
   <div class="foot"><span class="src">Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
 </section>
@@ -819,11 +978,11 @@ table.t.sv code{font-size:11.5px}
   })();
   $('#img-list').innerHTML = D.images.names.map(n=>`<span>${n}.elf</span>`).join('');
 
-  // Slide 16: competitor matrix
+  // Slide 19: competitor matrix
   $('#tb-comp').innerHTML = `<tr><th style="width:30%">Library</th>${D.compCols.map(h=>`<th class="c">${h}</th>`).join('')}<th>Main reason</th></tr>` +
     D.comp.map(([n,v,r])=>`<tr><td>${n}</td>${v.map(x=>`<td class="c"><i class="dot ${x?'y':'n'}">${x?'yes':'no'}</i></td>`).join('')}<td class="r">${r}</td></tr>`).join('');
 
-  // Slide 17: survey
+  // Slide 20: survey
   $('#tb-survey').innerHTML = `<tr><th>Core</th><th>Example chips</th><th>CAS</th><th>64-bit multiply</th><th>Crypto / RNG</th></tr>` +
     D.survey.map(r=>`<tr${r[0]==="Cortex-M0/M0+"?' class="hl"':''}><td>${r[0]}</td><td>${r[1]}</td><td class="${r[2]==='no'?'bad':''}">${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('');
   $('#mg24').innerHTML = D.mg24.map(x=>`<li>${x}</li>`).join('');
@@ -844,7 +1003,7 @@ table.t.sv code{font-size:11.5px}
     if(L.title&&L.status!=='pending') $('#live-title').textContent = L.title; else if(L.status!=='pending'&&done.length) $('#live-title').textContent = L.status==='complete' ? `On-device results for ${done.length} benchmarks are in` : `On-device results are in for ${done.length} of ${L.rows.length} benchmarks, with the rest pending`;
     $('#live-status').innerHTML = L.status==='pending'
       ? `<b>Pending, updated as on-device runs land.</b> No benchmark has run on the RP2040 yet. The rows are the ${L.rows.length} bench images listed in images.json.`
-      : `<b>${L.status==='complete'?'Complete':'Partial: rounds are still running'}.</b> SysTick-fixed images, ${L.rows.length} of ${L.rows.length} benches, 2 or 3 of ${D.snap.planned} planned rounds per row, as of ${L.asOf||'?'} · code in ${L.placement||'?'} · source: ${L.source||'?'}`;
+      : `<b>${L.status==='complete'?'Complete':'Partial, old base.'}</b> ${L.baseNote||''} SysTick-fixed images, ${L.rows.length} of ${L.rows.length} benches, as of ${L.asOf||'?'} · code in ${L.placement||'?'} · source: ${L.source||'?'}`;
     $('#tb-live').innerHTML = `<tr><th>Bench</th><th>Operation</th><th class="n">rind (cycles)</th><th class="n">Fastest other (cycles)</th><th class="n">rind / other</th><th class="n">Rounds</th></tr>` +
       L.rows.map(r=>{ const a=cyc(r.rind,r.unit), b=cyc(r.best,r.unit);
         return `<tr><td><code>${r.bench}</code></td><td>${r.op||'<span class="mut">to be set</span>'}</td><td class="n">${show(r.rind,r.unit)}</td><td class="n">${r.noOther?'<span class="mut">n/a</span>':show(r.best,r.unit)}${r.bestLib?` <span class="sub2">${r.bestLib}</span>`:''}</td><td class="n">${a!=null&&b!=null?(a/b).toFixed(2)+'×':(r.noOther?'<span class="mut">n/a</span>':P)}</td><td class="n">${r.rounds||''}</td></tr>`; }).join('');
@@ -860,18 +1019,22 @@ table.t.sv code{font-size:11.5px}
     $('#ch-live').appendChild(s);
   })();
 
-  // Slides 11-18: 2026-11-12 work
+  // Slides 11-21: 2026-11-12 work
   const T=(id,head,rows)=>{ $(id).innerHTML=`<tr>${head.map(x=>`<th${x.startsWith('#')?' class="n"':''}>${x.replace(/^#/,'')}</th>`).join('')}</tr>`+rows.map(r=>`<tr>${r.map((x,i)=>`<td${head[i].startsWith('#')?' class="n"':''}>${x}</td>`).join('')}</tr>`).join(''); };
   T('#tb-sha512',['Row','#Before','#After','#After / before'],D.sha512.rows.map(([a,b,c,d])=>[`<code>${a}</code>`,b,c,`<b>${d}</b>`]));
-  T('#tb-layout',['Row','#Fixed','#SHA-512 image','#Probe','#Change'],D.layout.map(([a,b,c,d,e])=>[`<code>${a}</code>`,b,c,d,e]));
+  T('#tb-layout',['Row','#Fixed','#SHA-512 image','#Probe','#Change'],D.layout.rows.map(([a,b,c,d,e])=>[`<code>${a}</code>`,b,c,d,e]));
+  T('#tb-layout2',['Row','#Fixed','#SHA-512 image','#Probe','#Change'],D.layout.rows.map(([a,b,c,d,e])=>[`<code>${a}</code>`,b,c,d,e]));
+  T('#tb-place-est',['Row','#up-a (misses)','#up-b (misses)','#Δ EST'],D.place.est.map(([a,b,m,c,n,d])=>[`<code>${a}</code>`,`${b} (${m})`,`${c} (${n})`,`<b>${d}</b>`]));
+  T('#tb-aes-ctr',['Image','#AES-128 c/B','#AES-192 c/B','#AES-256 c/B','#vs ghash'],D.aes.ctr.map(r=>[r[0],r[1],r[2],r[3],`<b>${r[4]}</b>`]));
+  T('#tb-p256-est',['Op (est. cycles)','#Base','#0008, not CT','#CT','#CT vs base'],D.p256.est.map(r=>[r[0],r[1],r[2],`<b>${r[3]}</b>`,`<b>${r[4]}</b>`]));
   T('#tb-ghash',['Operation','#rind before','#rind after','#RustCrypto','#rind / RustCrypto'],D.ghash.rows.map(([a,b,c,d,e,f])=>[a,b,`<b>${c}</b>`,`<span class="sub2">${d}</span>`,`${e} → <b>${f}</b>`]));
   T('#tb-m0',['Primitive','Function','Library','#Bytes','#lmul','#cond'],D.m0.rows.map(([a,b,c,d,e,f])=>[a,`<code>${b}</code>`,c,d,e,f]));
   T('#tb-codegen',['Configuration','#Identical functions'],D.nostd.codegen.map(([a,b])=>[a,`<b>${b}</b>`]));
   T('#tb-notes',['Used on','Working notes'],D.notes);
   (function(){ const P=D.p256;
-    $('#kpi-p256').innerHTML=[[`${P.mulWide[0]} → ${P.mulWide[1]}`,'mul_wide lmul calls','P-256 bench image'],[`${P.sqrWide[0]} → ${P.sqrWide[1]}`,'sqr_wide lmul calls','P-256 bench image'],[`${P.reduceN[0]} → ${P.reduceN[1]}`,'reduce_n lmul calls','P-256 bench image'],[`${P.tests} / 0`,'native tests passed / failed','P-256, P-384, ECDSA, ECDH, limb32']]
+    $('#kpi-p256').innerHTML=[[`${P.lmul.base} → ${P.lmul.ct}`,'rind P-256 lmul calls','base image → CT image'],[P.lmul.p0008,'lmul with 0008 only','not constant-time; do not ship'],[P.text.ct,'CT image text, bytes',`${P.text.vsBase} vs the ${P.base} base`],[P.fixCommit,'branch-free carry fix','required with 0008']]
       .map(([v,l,d])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div><div class="d">${d}</div></div>`).join('');
-    $('#p256-left').innerHTML=P.left.map(([f,n])=>`<code>${f}</code> ${n}`).join(', '); })();
+  })();
   (function(){ const s=el('svg',{viewBox:'0 0 520 250',width:520,height:250,role:'img','aria-label':'Bar chart of compression-function sizes in bytes against the 16,384-byte XIP cache'}), x0=200, x1=470, max=30000, sc=v=>x0+(x1-x0)*v/max, R=D.sha512.sizes;
     R.forEach(([n,v,f],i)=>{ const y=8+i*42; el('text',{x:x0-8,y:y+20,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,n);
       el('rect',{x:x0,y:y+6,width:sc(v)-x0,height:20,rx:2,fill:f==='over'?'#b4532a':'#0f766e'},s);
@@ -883,7 +1046,7 @@ table.t.sv code{font-size:11.5px}
   $('#st-pend').innerHTML=D.status.pending.map(x=>`<li>${x}</li>`).join('');
   $('#st-pr').innerHTML=D.status.prs.map(([r,w,b])=>`<li><b>${r}: ${w}.</b> ${b}.</li>`).join('');
 
-  // Slide 19: sources
+  // Slide 22: sources
   const base=D.meta.repo, link=(b,p)=>{ if(!p) return ''; if(p.startsWith('commit/')) return `<a href="${base}/${p}">commit ${p.slice(7)}</a>`; return `<a href="${base}/blob/${b}/${p}"><code>${p}</code></a>`; };
   $('#tb-src').innerHTML = `<tr><th style="width:22%">Topic</th><th style="width:10%">Branch</th><th>Files (github.com/steelhead99x/rind-results)</th></tr>` +
     D.sources.map(([t,b,a,x])=>`<tr><td>${t}</td><td><code>${b}</code></td><td>${[a,...x.split('|')].filter(Boolean).map(p=>link(b,p)).join(' · ')}</td></tr>`).join('') +
