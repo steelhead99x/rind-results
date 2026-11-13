@@ -161,3 +161,12 @@ OLED demo (SSD1306 128x64 on I2C)
 - When the source of truth is a Python file built with comprehensions (rind's `SECTIONS`), snapshot its evaluated tables into JSON stamped with the file's sha256, and make every command refuse a stale snapshot.
 - Write through the destination's filesystem: `rename` out of the system temp dir fails across filesystems (`EXDEV`), so copy.
 - A serial capture can be checked offline: rebuild each run's `.jsonl` from its `.log` (`capture --replay`) and compare with what was published.
+
+## Lessons learned (RP2040, Cortex-M0+ / no CAS)
+
+- Cortex-M0+ (`thumbv6m-none-eabi`) has no pointer-sized atomics, so `AtomicU8::compare_exchange` and `fetch_max` do not exist. For rind's `ReuseCache`, a `Cell` path under `cfg(not(target_has_atomic = "ptr"))` is the least invasive fallback: no new dependency, and it matches the existing "one execution context on `target_os = "none"`" assumption already used by the DIT guards. A `critical-section` or `portable-atomic` crate would add a dependency without changing that assumption. Do not disable the cache if the same state machine can run without CAS. The atomic path, including its memory ordering, stays unchanged; gate the threaded test on `target_has_atomic = "ptr"`.
+- Cortex-M0+ also has no DWT `CYCCNT`. Time with SysTick at the CPU clock (1 cycle resolution). SysTick is 24 bits (134.2 ms at 125 MHz); extend it in software to 32 bits (34.4 s). Use the RP2040 1 MHz TIMER only as a boot cross-check: 1 µs is too coarse for short rows. Document the resolution and wrap.
+- ring 0.17's Arm assembly uses NEON (`vpush` in `x25519-asm-arm.S`) and does not assemble for ARMv6-M. Leave ring rows and known-answer checks out in the port's `build.rs`, not by a rind patch, and say so in the results. aws-lc-rs already stays out on `target_os = "none"`.
+- `static_cell` uses `portable-atomic` CAS and has no critical-section feature of its own. On M0+, depend on `portable-atomic` with the `critical-section` feature (feature unification) and provide a `critical-section` impl (embassy-rp does).
+- There is no official QEMU machine for the RP2040 with enough RAM to run these images. Ship a UF2 build (family `0xE48BFF56`, XIP at `0x10000000`, boot2 first) and run known-answer checks on hardware. Need a Pico or compatible with a 12 MHz crystal and W25Q080 (or a matching `boot2-*` / `ClockConfig` rebuild).
+- The RP2040 has no TRNG. A seeded SplitMix64 is the same work for every library, not entropy; record `rng` in the start JSON.

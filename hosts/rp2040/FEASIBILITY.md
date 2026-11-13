@@ -1,3 +1,15 @@
+# rind on RP2040 (thumbv6m-none-eabi): builds (2026-11-12)
+
+**Update:** with rind-bench `patches/0003` (no_std, M-profile portable
+backend) and `patches/0005` (`ReuseCache` without CAS, a `Cell` path on
+`cfg(not(target_has_atomic = "ptr"))`, no new dependency),
+`cargo xtask build-images rp2040` produces UF2 images for every bench
+file. ring 0.17.14 is still left out (its Arm assembly uses NEON). The
+images have not been run on hardware. The original compile-only notes at
+rind a4759c48 follow.
+
+---
+
 # rind on RP2040 (thumbv6m-none-eabi): not buildable at rind a4759c48 (2026-11-12)
 
 Command: RUSTFLAGS='--cfg getrandom_backend="custom"' cargo build -p rind --release --target thumbv6m-none-eabi (rustc 1.99.1)
