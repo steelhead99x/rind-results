@@ -11,7 +11,7 @@
 //! - aggregated criterion tables (`id | mode | runs | median | min | max | spread`)
 //! - a parent of those, including a compare-*.md over board subdirectories
 
-use super::{Report, check_board_at, check_host_at, check_summary, glob_at, load_hw_map, med};
+use super::{Report, check_board_at, check_host_at, check_summary, load_hw_map, med};
 use regex::Regex;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -113,6 +113,13 @@ fn walk(dir: &Path, rep: &mut Report) -> bool {
     }
 
     if !found {
+        if jsonl_files(dir).next().is_some() {
+            rep.note(
+                &label,
+                "raw runs only; no RESULTS.md or host JSON to check".into(),
+            );
+            return true;
+        }
         rep.bad(
             &label,
             "no host runs, board runs, summary, ab-v1 JSON, or aggregated table".into(),
@@ -177,8 +184,52 @@ fn board_raw(dir: &Path) -> Option<PathBuf> {
     None
 }
 
+/// A bench folder is `<bench>/run-*.jsonl` and nothing nested under it.
+fn is_flat_bench(dir: &Path) -> bool {
+    let mut jsonl = false;
+    let mut nested = false;
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    for e in rd.flatten() {
+        if e.path().is_dir() {
+            nested = true;
+        } else {
+            let n = e.file_name().to_string_lossy().into_owned();
+            if n.starts_with("run-") && n.ends_with(".jsonl") {
+                jsonl = true;
+            }
+        }
+    }
+    jsonl && !nested
+}
+
+/// `dir` is one capture (`raw/<bench>/run-*.jsonl`) and not a parent of several
+/// result trees. A directory such as `results/diag` holds many experiments;
+/// folding them into one board mixes clocks, pins, and the parent's RESULTS.md.
 fn has_benches(dir: &Path) -> bool {
-    !glob_at(dir, "run-", ".jsonl").is_empty()
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    let mut any = false;
+    for e in rd.flatten() {
+        let p = e.path();
+        if !p.is_dir() || e.file_name().to_string_lossy().starts_with('.') {
+            continue;
+        }
+        if p.join("RESULTS.md").is_file()
+            || p.join("summary.md").is_file()
+            || p.join("raw").is_dir()
+        {
+            return false;
+        }
+        if is_flat_bench(&p) {
+            any = true;
+        } else if jsonl_files(&p).next().is_some() {
+            return false;
+        }
+    }
+    any
 }
 
 fn jsonl_files(dir: &Path) -> impl Iterator<Item = PathBuf> {
@@ -193,11 +244,15 @@ fn jsonl_files(dir: &Path) -> impl Iterator<Item = PathBuf> {
 }
 
 fn results_md(dir: &Path, raw: &Path) -> Option<PathBuf> {
-    let mut cands = vec![dir.join("RESULTS.md"), raw.join("RESULTS.md")];
-    if let Some(parent) = raw.parent() {
-        cands.push(parent.join("RESULTS.md"));
-        if let Some(name) = raw.file_name().and_then(|n| n.to_str()) {
-            if let Some(board) = name.strip_prefix("raw-") {
+    let mut cands = vec![dir.join("RESULTS.md")];
+    if raw != dir {
+        cands.push(raw.join("RESULTS.md"));
+    }
+    // `raw-<board>/` sits beside `<board>/RESULTS.md`. The parent of the
+    // directory being checked has its own report; don't attach that here.
+    if let Some(name) = raw.file_name().and_then(|n| n.to_str()) {
+        if let Some(board) = name.strip_prefix("raw-") {
+            if let Some(parent) = raw.parent() {
                 cands.push(parent.join(board).join("RESULTS.md"));
             }
         }
@@ -1176,6 +1231,34 @@ Known-answer checks: board-1 1/1, board-2 1/1. Runs: 1 and 1. Rows: 1 in both.
         let mut rep = Report::default();
         assert!(verify_dir(&dir, &mut rep));
         assert!(rep.problems.is_empty(), "{}", rep.problems.join("\n"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_parent_of_experiments_is_not_one_board() {
+        let dir = scratch();
+        std::fs::create_dir_all(dir.join("exp-a")).unwrap();
+        std::fs::write(dir.join("exp-a/run-1.jsonl"), "{}\n").unwrap();
+        std::fs::create_dir_all(dir.join("exp-b/raw/aes")).unwrap();
+        std::fs::write(dir.join("exp-b/raw/aes/run-1.jsonl"), "{}\n").unwrap();
+        std::fs::write(dir.join("exp-b/RESULTS.md"), "# one experiment\n").unwrap();
+        std::fs::write(
+            dir.join("RESULTS.md"),
+            "\
+| Operation | rind | fastest other Rust library | ratio | spread |
+|---|---|---|---|---|
+| aes128-gcm/…/{lib}/32B | 1 ns | missing: 2 ns | 0.50× | 0% |
+",
+        )
+        .unwrap();
+        assert!(board_raw(&dir).is_none());
+        let mut rep = Report::default();
+        assert!(verify_dir(&dir, &mut rep));
+        assert!(
+            rep.problems.iter().all(|p| !p.contains("fastest shown")),
+            "parent report was checked against mixed runs: {}",
+            rep.problems.join("\n")
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
