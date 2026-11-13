@@ -686,7 +686,24 @@ fn check_markdown(board: &str, md: &Path, table: &Ordered<Ordered<Agg>>, rep: &m
         let t = table.get(&op).unwrap_or(&empty);
         let pairs: Vec<(String, String)> =
             if hdr.len() >= 3 && hdr[1] == "rind" && hdr[2] == "fastest other Rust library" {
-                let (fl, fl_ns) = fastest(t, is_rival).expect("a rival");
+                if f.len() < 5 {
+                    rep.bad(board, format!("{op}: short fastest-other row"));
+                    continue;
+                }
+                let Some((fl, fl_ns)) = fastest(t, is_rival) else {
+                    rep.bad(
+                        board,
+                        format!("{op}: RESULTS names another library, raw has no rival"),
+                    );
+                    continue;
+                };
+                let Some(rind) = t.get("rind").cloned() else {
+                    rep.bad(
+                        board,
+                        format!("{op}: RESULTS names rind, raw has no rind row"),
+                    );
+                    continue;
+                };
                 let shown_lib = f[2].split(':').next().unwrap_or("");
                 if shown_lib != fl {
                     rep.bad(
@@ -694,7 +711,6 @@ fn check_markdown(board: &str, md: &Path, table: &Ordered<Ordered<Agg>>, rep: &m
                         format!("{op}: fastest shown {shown_lib}, raw says {fl}"),
                     );
                 }
-                let rind = t.get("rind").expect("rind row").clone();
                 let ratio = rind.ns / fl_ns;
                 let (r, rt) =
                     num_with_precision(f[3].trim_end_matches('×')).unwrap_or((f64::NAN, 0.0));
@@ -782,8 +798,18 @@ fn check_chart(board: &str, svg_path: &Path, table: &Ordered<Ordered<Agg>>, rep:
             rep.bad(board, format!("chart label {a} not found in raw"));
             continue;
         };
-        let (fl, fl_ns) = fastest(t, is_rival).expect("a rival");
-        let r = t.get("rind").expect("rind").ns / fl_ns;
+        let Some((fl, fl_ns)) = fastest(t, is_rival) else {
+            rep.bad(
+                board,
+                format!("chart {a}: no other Rust library in the raw runs"),
+            );
+            continue;
+        };
+        let Some(rind) = t.get("rind") else {
+            rep.bad(board, format!("chart {a}: no rind row in the raw runs"));
+            continue;
+        };
+        let r = rind.ns / fl_ns;
         n += 1;
         let shown: f64 = m[1].parse().unwrap_or(f64::NAN);
         if &m[2] != fl || (shown - r).abs() > 0.005 + 1e-9 {
@@ -931,8 +957,20 @@ fn check_summary(name: &str, json_path: &Path, summary: &Path, rep: &mut Report)
                 best = Some((l, *v));
             }
         }
-        let (fl, fl_ns) = best.expect("a rival");
-        let rind = *t.get("rind").expect("rind");
+        let Some((fl, fl_ns)) = best else {
+            rep.bad(
+                name,
+                format!("{shown_op}: summary names another library, raw has no rival"),
+            );
+            continue;
+        };
+        let Some(rind) = t.get("rind").copied() else {
+            rep.bad(
+                name,
+                format!("{shown_op}: summary names rind, raw has no rind row"),
+            );
+            continue;
+        };
         let ratio = rind / fl_ns;
         let p = parse_cell(&m[2], &cell_re).expect("a time");
         n += 1;
