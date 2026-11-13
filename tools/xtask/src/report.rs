@@ -91,10 +91,10 @@ const ESP32S3: Board = Board {
              `diag/layout-relink-2026-11-12/` and, at this pin, the three-layout table in \
              `diag/esp32s3-relink-fixed-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.",
     repro: &[
-        "git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware",
+        "git clone --recursive https://github.com/steelhead99x/rind-hardware   # the firmware port",
         "git clone https://github.com/steelhead99x/rind-results",
         "rind-results/tools/setup-toolchain.sh rind-hardware   # espup, espflash, ldproxy, at these versions",
-        "cargo xtask apply-patches && cargo xtask vendor-ring",
+        "cd rind-hardware && cargo xtask apply-patches && cargo xtask vendor-ring",
         "cargo xtask build-images esp   # esp32/images/<bench>.elf; check sha256 against images.sha256",
         "cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... cargo xtask run-all ../rind-hardware/esp32/images",
         "cargo xtask report --raw results/raw --rind ../rind-hardware/rind --firmware ../rind-hardware/esp32 \
@@ -1186,6 +1186,11 @@ impl Ctx<'_> {
             w(line.to_string());
         }
         w("```".into());
+        w(String::new());
+        w(
+            "The published images were built from `steelhead99x/rind-bench` (private, now archived).              The `rind-bench` commit IDs in `images.json` and the provenance table refer to that history.              The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware);              its first commit (`8d9c1bb`) is a squash of that history. Build new images from rind-hardware."
+                .into(),
+        );
         w(String::new());
         if let Some(notes) = self.meta.get("markdown_notes").filter(|v| truthy(v)) {
             w(py_str(notes));

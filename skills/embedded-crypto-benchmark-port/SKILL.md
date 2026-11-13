@@ -28,6 +28,7 @@ description: >-
 - Keep any UI or display work out of timed regions.
 
 ## 4. Structure for upstream
+- For this work the firmware repo is [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware) (public; formerly the private `steelhead99x/rind-bench`, archived). Old provenance SHAs in rind-results refer to that private history, which `8d9c1bb` on rind-hardware squashed. Never open upstream PRs or issues without the user's go-ahead.
 - Follow the upstream project's contribution rules: license, fmt, clippy, tests, commit style, unsafe/asm policy, and report rules.
 - Keep custom glue and patches small and in a clearly separate place, and note what an upstream PR would contain. Never open upstream PRs or issues without the user's go-ahead.
 - Firmware port and results/tools can live in separate repos that link to each other. Match upstream's license and keep attribution for anything copied.

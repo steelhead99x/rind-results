@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 //! `cargo xtask relink`: rind's time over the fastest other Rust library on
-//! each report operation, across builds that differ only in layout (rind-bench's
+//! each report operation, across builds that differ only in layout (rind-hardware's
 //! `--pad` relinks), with the median over layouts.
 //!
 //! Each `LABEL=RAW` holds `<bench>/run-*.jsonl`; a row's value in one layout
