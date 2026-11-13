@@ -46,7 +46,8 @@ pub enum Board {
 
 #[derive(clap::Args)]
 pub struct Args {
-    /// default <PORT> (ESP32-S3) or the rind-bench CDC port (nRF52840)
+    /// required for the ESP32-S3 (`run-all` reads PORT); default the
+    /// rind-bench CDC port (nRF52840)
     #[arg(long)]
     port: Option<String>,
     #[arg(long, default_value_t = 3)]
@@ -310,6 +311,18 @@ fn replay(log: &Path) -> Result<String, String> {
     Ok(out)
 }
 
+const ESP_PORT_MISSING: &str = "no ESP32-S3 serial port: pass --port (run-all: or set PORT), \
+     e.g. PORT=/dev/serial/by-id/usb-Espressif_...";
+
+/// The ESP32-S3's serial port: there is no default, since the device node
+/// depends on the host and on what else is plugged in.
+pub fn esp_port(given: Option<&str>) -> Result<String, String> {
+    match given {
+        Some(p) if !p.is_empty() => Ok(p.to_string()),
+        _ => Err(ESP_PORT_MISSING.to_string()),
+    }
+}
+
 /// Captures `runs` runs; returns whether every one was ok.
 pub fn capture(board: Board, args: Args) -> Result<bool, String> {
     if let Some(log) = &args.replay {
@@ -317,10 +330,13 @@ pub fn capture(board: Board, args: Args) -> Result<bool, String> {
         return Ok(true);
     }
     let (port, out, timeout) = match board {
-        Board::Esp => ("<PORT>", "results/raw", 5400),
-        Board::Nrf => (NRF_PORT, "results/raw-nrf52840", 7200),
+        Board::Esp => (esp_port(args.port.as_deref())?, "results/raw", 5400),
+        Board::Nrf => (
+            args.port.clone().unwrap_or(NRF_PORT.into()),
+            "results/raw-nrf52840",
+            7200,
+        ),
     };
-    let port = args.port.unwrap_or(port.into());
     let out = args.out.unwrap_or(out.into());
     let timeout = args.timeout.unwrap_or(timeout);
     std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;
