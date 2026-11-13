@@ -730,10 +730,11 @@ fn check_mode_cell(
     }
     let lo = xs.iter().copied().fold(f64::INFINITY, f64::min);
     let hi = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    let raw_spread = if med_ns == 0.0 {
+    // These tables print (max − min) / min, not over the median.
+    let raw_spread = if lo == 0.0 {
         0.0
     } else {
-        (hi - lo) / med_ns * 100.0
+        (hi - lo) / lo * 100.0
     };
     if (spread - raw_spread).abs() > 0.05 + 1e-9 {
         rep.bad(
@@ -767,14 +768,39 @@ fn check_lib_cell(
     }
     let shown: f64 = cell.replace(',', "").parse().unwrap_or(f64::NAN);
     let tol = 0.5 * scale * 10f64.powi(-decimals(cell.trim()));
-    let ok = groups
-        .iter()
-        .any(|xs| super::close(shown * scale, tol, med(xs)));
+    // One number for every mode is the median of every sample of that library.
+    let pooled: Vec<f64> = groups.iter().flat_map(|xs| xs.iter().copied()).collect();
+    let ok = super::close(shown * scale, tol, med(&pooled));
     if !ok {
         rep.bad(
             label,
             format!("{op} {lib}: shows {cell}, no mode median matches"),
         );
+    }
+}
+
+fn library_name(name: &str) -> &str {
+    match name {
+        "aws" => "aws-lc-rs",
+        other => other,
+    }
+}
+
+/// The single library column: the median of every sample of that library.
+fn lib_level(
+    rows: &BTreeMap<(String, String, String), Vec<f64>>,
+    op: &str,
+    lib: &str,
+) -> Option<f64> {
+    let pooled: Vec<f64> = rows
+        .iter()
+        .filter(|((o, l, _), _)| o == op && l == lib)
+        .flat_map(|(_, xs)| xs.iter().copied())
+        .collect();
+    if pooled.is_empty() {
+        None
+    } else {
+        Some(med(&pooled))
     }
 }
 
@@ -788,10 +814,15 @@ fn check_ratio_cell(
     rep: &mut Report,
 ) {
     let dash = cell == "–" || cell == "-" || cell == "—";
-    let (Some(a), Some(b)) = (
-        samples(rows, op, "rind", num).map(med),
-        samples(rows, op, "rind", den).map(med),
-    ) else {
+    let rind_num = samples(rows, op, "rind", num).map(med);
+    let rind_den = samples(rows, op, "rind", den).map(med);
+    let lib_den = lib_level(rows, op, library_name(den));
+    let (a, b) = if let (Some(a), Some(b)) = (rind_num, rind_den) {
+        (a, b)
+    } else if let (Some(a), Some(b)) = (rind_num, lib_den) {
+        // `nist/aws` is rind's nist median over the aws-lc-rs column.
+        (a, b)
+    } else {
         if !dash {
             rep.bad(
                 label,
