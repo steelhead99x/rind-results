@@ -1,0 +1,19 @@
+model: NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super
+l4t: R39.2.1 (nvidia-l4t-core 39.2.1-20260806224157)
+os: Ubuntu 24.04.5 LTS
+kernel: 6.8.12-1021-tegra aarch64
+cpu: 6x Arm Cortex-A78AE r0p1 (part 0xd42); cpu0-3 cluster 0, cpu4-5 cluster 1
+caches: L1 64 KB I + 64 KB D and L2 256 KB per core, L3 2 MB per cluster
+features: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp uscat ilrcpc flagm paca pacg (no sha3, sha512, dit)
+rind cpuid: aes=1 pmull=1 sha2=1 sha3=0 neon=1 dit=0
+memory: 7546 MB LPDDR5 (shared with the GPU), EMC max 3199 MHz
+nvpmodel: MAXN_SUPER (mode 2), left unchanged
+cpufreq: tegra194 driver, governor schedutil, 729.6-1728 MHz, left unchanged
+thp: always
+openssl: system 3.0.13 (libssl3t64 3.0.13-0ubuntu3.16), headers from libssl-dev of the same version
+rustc: rustc 1.98.1 (48a229cea 2026-09-01), standalone aarch64 tarball
+cargo: cargo 1.98.1 (797e8a9bc 2026-08-05)
+rind: 985683329fb98aebfaae6c493f205f20070a8fca (git archive, unpatched)
+criterion: --noplot --warm-up-time 1 --measurement-time 3
+wall clock: board clock reads 1970 (no network); bench binaries ran under libfaketime FAKETIME=+1794532962s, monotonic clock untouched
+services running throughout: orin-web, ollama, whisper-server, jtop, nvargus-daemon and the usual system services (not stopped); cloudflared was in a start-timeout loop before and during the runs
