@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: 1.98.1
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: test
+        run: cargo test --workspace
+      - name: verify published trees
+        run: cargo verify
+      # Each published host tree. `results/` as a whole also contains diagnostic
+      # compare-*.md files whose side names are not directories (pad0 is stored
+      # as pad0-control). Those files stay as history and are not rewritten.
+      - name: verify --dir on published trees
+        run: |
+          cargo verify --dir results/jetson-orin-nano
+          cargo verify --dir results/nrf52840
+          cargo verify --dir results/host
+          cargo verify --dir results/esp32s3
