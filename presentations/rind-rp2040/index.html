@@ -92,6 +92,7 @@ const DATA = {
   /* Measurement plan, rind-bench team, 2026-11-12 (plan, not results).
      SysTick wrap at 125 MHz: hosts/rp2040/NOTES.md (134.2 ms). */
   methods: {
+    systick32: "34.4 s",   /* hosts/rp2040/NOTES.md, commit 2cb88c3 */
     timers: [
       ["SysTick", "core clock, 125 MHz", "24 bits: safe up to about 134 ms", "cycles", "short operations"],
       ["TIMERAWH / TIMERAWL", "1 MHz", "64 bits", "µs; cycles = µs × 125", "longer operations"]
@@ -121,7 +122,11 @@ const DATA = {
       { bench: "x25519",            op: "", unit: "us",     rind: null, best: null, bestLib: "" },
       { bench: "ed25519",           op: "", unit: "us",     rind: null, best: null, bestLib: "" },
       { bench: "p256",              op: "", unit: "us",     rind: null, best: null, bestLib: "" },
-      { bench: "mlkem768",          op: "", unit: "us",     rind: null, best: null, bestLib: "" }
+      { bench: "mlkem768",          op: "", unit: "us",     rind: null, best: null, bestLib: "" },
+      { bench: "cipher",            op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
+      { bench: "hkdf",              op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
+      { bench: "sha3",              op: "", unit: "cycles", rind: null, best: null, bestLib: "" },
+      { bench: "xchacha20poly1305", op: "", unit: "cycles", rind: null, best: null, bestLib: "" }
     ]
   },
 
@@ -263,6 +268,10 @@ table.sv td.bad{color:var(--bad);font-weight:700}
 .mut{color:var(--mute);font-style:italic}
 a{color:var(--accent2);text-decoration:none}
 table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
 </style>
 </head>
 <body>
@@ -437,7 +446,8 @@ table.sv td:first-child{white-space:nowrap}
     <div>
       <div class="chart-title">Two clocks, because the M0+ has no cycle counter</div>
       <table class="t" id="tb-timers"></table>
-      <p class="small">Larger Cortex-M cores have a DWT cycle counter; the M0+ does not. The 1 MHz timer is 64 bits wide and read as two 32-bit halves: RAWH, RAWL, then RAWH again. If the two RAWH values differ, the low half wrapped in between, so the read is repeated. This avoids a torn read.</p>
+      <p class="small">Larger Cortex-M cores have a DWT cycle counter; the M0+ does not. The 1 MHz timer is read as RAWH, RAWL, RAWH, repeating if the high half changed, to avoid a torn read.</p>
+      <p class="small"><b>In the images built so far</b> (commit 2cb88c3): SysTick is extended in software to 32 bits, wrapping about every <span data-k="methods.systick32"></span> at 125 MHz, and the 1 MHz TIMERAW timer is used only as a startup cross-check.</p>
       <div class="chart-title" style="margin-top:12px">Each reported number</div>
       <ul class="b sm" id="m-sample"></ul>
     </div>
@@ -451,7 +461,7 @@ table.sv td:first-child{white-space:nowrap}
       </ul>
     </div>
   </div>
-  <div class="foot"><span class="src">Measurement plan from the rind-bench team, 2026-11-12 · RP2040 clock and SysTick wrap: hosts/rp2040/NOTES.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Measurement plan from the rind-bench team, 2026-11-12 · built images: hosts/rp2040/NOTES.md (commit 2cb88c3)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 11. LIVE RESULTS ============ -->
@@ -559,7 +569,7 @@ table.sv td:first-child{white-space:nowrap}
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
   slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
   let cur=0;
-  function fit(){ const k=Math.min(innerWidth/1280, innerHeight/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
   function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
   addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
   $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
