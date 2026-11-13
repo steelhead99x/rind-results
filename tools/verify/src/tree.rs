@@ -412,8 +412,28 @@ fn looks_like_tree(dir: &Path) -> bool {
         || dir.join("summary.md").is_file()
         || dir.join("RESULTS.md").is_file()
         || ab_jsons(dir).next().is_some()
-        || agg_mds(dir).next().is_some()
+        || has_agg_table(dir)
         || compare_mds(dir).next().is_some()
+}
+
+/// An aggregated criterion table, not every Markdown file. A README next to
+/// logs is a note, not a result tree.
+fn has_agg_table(dir: &Path) -> bool {
+    for path in [dir.to_path_buf(), dir.join("raw")] {
+        let Ok(rd) = std::fs::read_dir(&path) else {
+            continue;
+        };
+        for e in rd.flatten() {
+            if e.path().extension().and_then(|s| s.to_str()) != Some("md") {
+                continue;
+            }
+            let text = super::read(&e.path());
+            if text.contains("| id |") && text.contains("| mode |") && text.contains("| spread |") {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn read_json(path: &Path) -> Result<Value, String> {
@@ -956,7 +976,7 @@ fn check_compare(dir: &Path, path: &Path, rep: &mut Report) {
         let rows_claimed: usize = m[9].parse().unwrap_or(0);
         let mut stats = vec![];
         for (name, pass, total, runs) in &boards {
-            let bench = dir.join(name).join(&section);
+            let bench = side_dir(dir, path, name, &section);
             let st = bench_stat(&bench);
             stats.push(st.clone());
             if st.runs != *runs {
@@ -1049,6 +1069,10 @@ fn bench_stat(bench: &Path) -> BenchStat {
             match r.get("type").and_then(|v| v.as_str()) {
                 Some("result") => {
                     let id = r["id"].as_str().unwrap_or("").to_string();
+                    // `cargo xtask compare` leaves harness/* out of the row count.
+                    if id.starts_with("harness/") {
+                        continue;
+                    }
                     let e = st.rows.entry(id).or_default();
                     e.0.push(super::fv(&r["ns"]));
                     e.1.push(super::fv(&r["cycles"]["median"]));
@@ -1073,23 +1097,76 @@ fn bench_stat(bench: &Path) -> BenchStat {
 
 fn moved_rows(a: &BenchStat, b: &BenchStat) -> usize {
     let mut n = 0;
-    for (id, (ns_a, cyc_a)) in &a.rows {
-        let Some((ns_b, cyc_b)) = b.rows.get(id) else {
+    for (id, (_, cyc_a)) in &a.rows {
+        let Some((_, cyc_b)) = b.rows.get(id) else {
             continue;
         };
         if cyc_a.is_empty() || cyc_b.is_empty() {
             continue;
         }
+        // Same rule as `cargo xtask compare`: cycle medians, threshold
+        // max(1%, either side's cycle spread).
         let ratio = med(cyc_b) / med(cyc_a);
-        let spread = spread_of(ns_a)
-            .max(spread_of(ns_b))
-            .max(spread_of(cyc_a))
-            .max(spread_of(cyc_b));
+        let spread = spread_of(cyc_a).max(spread_of(cyc_b));
         if (ratio - 1.0).abs() > spread.max(0.01) + 1e-12 {
             n += 1;
         }
     }
     n
+}
+
+/// Where a compare side's `<bench>/run-*.jsonl` actually lives.
+///
+/// The files name the sides. The directories often use another name:
+/// `published` and an ESP `pad0` are `results/raw/<bench>` (an nRF `published`
+/// is `results/raw-nrf52840/<bench>`); `icache32` is `<dir>/<bench>/`;
+/// `pad0-head` is `<dir>/pad0/<bench>/`; the side `pad0-control` in
+/// `compare-pad0-control-mod16.md` is `<dir>/pad0-control-mod16/<bench>/`.
+fn side_dir(compare_dir: &Path, compare_file: &Path, side: &str, section: &str) -> PathBuf {
+    let file = compare_file
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    if file == "compare-pad0-control-mod16.md" && side == "pad0-control" {
+        let alt = compare_dir.join("pad0-control-mod16").join(section);
+        if jsonl_files(&alt).next().is_some() {
+            return alt;
+        }
+    }
+    let direct = compare_dir.join(side).join(section);
+    if jsonl_files(&direct).next().is_some() {
+        return direct;
+    }
+    if side == "icache32" {
+        let here = compare_dir.join(section);
+        if jsonl_files(&here).next().is_some() {
+            return here;
+        }
+    }
+    if side == "pad0-head" {
+        let head = compare_dir.join("pad0").join(section);
+        if jsonl_files(&head).next().is_some() {
+            return head;
+        }
+    }
+    if side == "published" || side == "pad0" {
+        let published = published_raw(compare_dir).join(section);
+        if jsonl_files(&published).next().is_some() {
+            return published;
+        }
+    }
+    direct
+}
+
+fn published_raw(dir: &Path) -> PathBuf {
+    let nrf = dir
+        .components()
+        .any(|c| c.as_os_str().to_string_lossy().contains("nrf52840"));
+    super::root().join(if nrf {
+        "results/raw-nrf52840"
+    } else {
+        "results/raw"
+    })
 }
 
 fn spread_of(xs: &[f64]) -> f64 {
@@ -1400,5 +1477,27 @@ Known-answer checks: board-1 1/1, board-2 1/1. Runs: 1 and 1. Rows: 1 in both.
 
         let _ = std::fs::remove_dir_all(&dir);
         let _ = std::fs::remove_dir_all(&only);
+    }
+
+    #[test]
+    fn published_compare_files_resolve_their_side_directories() {
+        let root = super::super::root();
+        let files = [
+            "results/diag/esp32s3-icache32-80mhz-98568332/compare-p256.md",
+            "results/diag/esp32s3-relink-fixed-98568332/compare-pad1039.md",
+            "results/diag/esp32s3-relink-fixed-98568332/compare-pad0-control-mod16.md",
+            "results/diag/nrf52840-relink-fixed-98568332/compare-published-pad0.md",
+        ];
+        for rel in files {
+            let path = root.join(rel);
+            let dir = path.parent().unwrap();
+            let mut rep = Report::default();
+            check_compare(dir, &path, &mut rep);
+            assert!(
+                rep.problems.is_empty(),
+                "{rel}: {}",
+                rep.problems.join("\n")
+            );
+        }
     }
 }
