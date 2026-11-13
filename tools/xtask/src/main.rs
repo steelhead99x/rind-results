@@ -75,26 +75,26 @@ enum Cmd {
     },
     /// Measure one board: host, Android capture, or bare-metal images.
     Bench(bench::Args),
-    /// `scripts/orin-setup.sh`: unpack the staged toolchain under ~/rind-bench-orin.
+    /// Unpack the staged Jetson toolchain under ~/rind-bench-orin.
     OrinSetup {
         #[arg(long)]
         home: Option<PathBuf>,
     },
-    /// `scripts/orin-run.sh <n> [core]`.
+    /// One Jetson run. `n` is the run number; `core` pins that CPU, or the quietest of cpu1..cpu5.
     OrinRun {
         n: u32,
         core: Option<u32>,
         #[arg(long)]
         home: Option<PathBuf>,
     },
-    /// `scripts/orin-runs.sh`: three runs, reusing run 1's core.
+    /// Three Jetson runs. Run 1 picks the core unless `--core` is set; runs 2 and 3 reuse it.
     OrinRuns {
         #[arg(long)]
         core: Option<u32>,
         #[arg(long)]
         home: Option<PathBuf>,
     },
-    /// `scripts/pixel-run.sh`: adb the benches, then pull the capture.
+    /// Push the Pixel benches with adb, then pull the capture. `--serial` is required.
     PixelRun {
         #[arg(long)]
         serial: String,
@@ -104,25 +104,25 @@ enum Cmd {
         #[arg(long)]
         no_wait: bool,
     },
-    /// `scripts/pixel-run2.sh`: the rustls second pass.
+    /// Pixel rustls second pass. `--serial` is required.
     PixelRun2 {
         #[arg(long)]
         serial: String,
         #[arg(long)]
         home: Option<PathBuf>,
     },
-    /// `scripts/mac-run.sh`: M1 Pro run with the free-space watchdog.
-    /// `--commit` defaults to the comparable-set pin. The published b6651423
-    /// numbers used `boards::HOST_COMMIT`.
+    /// M1 Pro run with the free-space watchdog.
+    /// `--commit` defaults to the comparable-set pin. The published numbers are
+    /// `--commit b66514238d449fc211d75fd14554301bb690e421`.
     MacRun {
         #[arg(long)]
         home: Option<PathBuf>,
         #[arg(long, default_value = layout::COMPARABLE_PIN)]
         commit: String,
     },
-    /// `scripts/pi-run.sh`: Pi 5 run, unpacking libssl-dev locally if needed.
-    /// `--commit` defaults to the comparable-set pin. The published b6651423
-    /// numbers used `boards::HOST_COMMIT`.
+    /// Pi 5 run, unpacking libssl-dev locally if pkg-config cannot see it.
+    /// `--commit` defaults to the comparable-set pin. The published numbers are
+    /// `--commit b66514238d449fc211d75fd14554301bb690e421`.
     PiRun {
         #[arg(long)]
         home: Option<PathBuf>,
