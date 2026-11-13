@@ -258,16 +258,18 @@ Bytes of code and read-only data, summed over symbols across every image, each c
 
 Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `esp32s3.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. Relinking an image moves its short-input rows far more than that: see `diag/layout-relink-2026-11-12/`, and read short-input ratios with the README's layout caveat.
 
+The `rind-bench` column and the recorded `rind_bench` commit IDs are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Those commit IDs are not in the public history and are left as recorded. The Python tools in the commands below produced this set and have since been replaced by `cargo xtask`. To rebuild today, follow the current RESULTS.md using `rind-hardware`.
+
 ## Reproduce
 
 ```sh
-git clone --recursive https://github.com/steelhead99x/rind-bench   # private; the port
+git clone --recursive https://github.com/steelhead99x/rind-hardware   # then called rind-bench; public as rind-hardware
 git clone https://github.com/steelhead99x/rind-results
-rind-results/tools/setup-toolchain.sh rind-bench   # espup, espflash, ldproxy, at these versions
-cd rind-bench && scripts/apply-patches.sh && scripts/vendor-ring.sh
+rind-results/tools/setup-toolchain.sh rind-hardware   # espup, espflash, ldproxy, at these versions
+cd rind-hardware && scripts/apply-patches.sh && scripts/vendor-ring.sh
 (cd esp32 && ./build-images.sh)   # images/<bench>.elf; check sha256 against images.sha256
-cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... tools/run-all.sh ../rind-bench/esp32/images
-python3 tools/report.py --raw results/raw --rind ../rind-bench/rind --firmware ../rind-bench/esp32 --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results
+cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... tools/run-all.sh ../rind-hardware/esp32/images
+python3 tools/report.py --raw results/raw --rind ../rind-hardware/rind --firmware ../rind-hardware/esp32 --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results
 python3 tools/verify.py   # recomputes every published number from raw
 ```
 

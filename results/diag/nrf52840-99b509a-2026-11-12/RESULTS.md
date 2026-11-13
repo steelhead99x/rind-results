@@ -240,13 +240,15 @@ Run on the board before any timing, every run. A library failing an operation's 
 
 Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `nrf52840.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. No relinked build has been run on this board, so layout sensitivity here is unmeasured.
 
+The `rind-bench` column and the recorded `rind_bench` commit IDs are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Those commit IDs are not in the public history and are left as recorded. The Python tools in the commands below produced this set and have since been replaced by `cargo xtask`. To rebuild today, follow the current RESULTS.md using `rind-hardware`.
+
 ## Reproduce
 
 ```sh
-git clone --recursive https://github.com/steelhead99x/rind-bench && cd rind-bench
+git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware
 scripts/apply-patches.sh && scripts/vendor-ring.sh && (cd nrf52840 && ./build-images.sh)
-cd ../rind-results && tools/run-all-nrf.sh ../rind-bench/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
-python3 tools/report.py --board nrf52840 --raw results/raw-nrf52840 --firmware ../rind-bench/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
+cd ../rind-results && tools/run-all-nrf.sh ../rind-hardware/nrf52840/images   # double-tap reset for the UF2 drive; back up the board's firmware first
+python3 tools/report.py --board nrf52840 --raw results/raw-nrf52840 --firmware ../rind-hardware/nrf52840 --gaps results/nrf52840/gaps.toml --images results/nrf52840/images.json --out results/nrf52840
 python3 tools/verify.py
 ```
 

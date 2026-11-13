@@ -296,16 +296,18 @@ Bytes of code and read-only data, summed over symbols across every image, each c
 
 Each run is a fresh boot of the same image. With 3 runs the lowest and highest run medians bound the board's median with probability 75% (distribution-free: each run median falls on either side with probability one half); `ns_low` and `ns_high` in `esp32s3.json` are that interval, and `RUNS.md` lists every run. That interval covers run-to-run noise only. Relinking an image moves its short-input rows far more than that: see `diag/layout-relink-2026-11-12/` and, at this pin, the three-layout table in `diag/esp32s3-relink-fixed-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.
 
+The `rind-bench` column and the recorded `rind_bench` commit IDs are provenance from the private `steelhead99x/rind-bench` history that built these images. That repository was archived on 2026-11-12 and published as [`steelhead99x/rind-hardware`](https://github.com/steelhead99x/rind-hardware) (squash root `8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3`). Those commit IDs are not in the public history and are left as recorded. Clone `rind-hardware` to rebuild.
+
 ## Reproduce
 
 ```sh
-git clone --recursive https://github.com/steelhead99x/rind-bench   # private; the port
+git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware
 git clone https://github.com/steelhead99x/rind-results
-rind-results/tools/setup-toolchain.sh rind-bench   # espup, espflash, ldproxy, at these versions
-cd rind-bench && cargo xtask apply-patches && cargo xtask vendor-ring
+rind-results/tools/setup-toolchain.sh rind-hardware   # espup, espflash, ldproxy, at these versions
+cargo xtask apply-patches && cargo xtask vendor-ring
 cargo xtask build-images esp   # esp32/images/<bench>.elf; check sha256 against images.sha256
-cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... cargo xtask run-all ../rind-bench/esp32/images
-cargo xtask report --raw results/raw --rind ../rind-bench/rind --firmware ../rind-bench/esp32 --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results
+cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... cargo xtask run-all ../rind-hardware/esp32/images
+cargo xtask report --raw results/raw --rind ../rind-hardware/rind --firmware ../rind-hardware/esp32 --sizes results/sizes.json --images results/images.json --meta results/meta-esp32s3.json --out results
 cargo verify   # recomputes every published number from raw
 ```
 
