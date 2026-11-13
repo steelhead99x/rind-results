@@ -1,36 +1,72 @@
 #!/usr/bin/env python3
 """Render the three 128x64 1-bit OLED frames.
 
-Fetches the source SVGs into ../assets/ (see SOURCES.md) if they are missing,
-then writes ../oled_demo/frames.h and ../preview*.png.
+The rind wordmark is vendored at ../vendor/wordmark-light.svg. The moq.dev
+favicon is not redistributed; it is downloaded into ../assets/ only when its
+SHA-256 matches the pin below. A mismatch exits before any frame is drawn.
+Writes ../oled_demo/frames.h and ../preview*.png.
 """
-import io, os, urllib.request
+import hashlib
+import io
+import os
+import urllib.request
+
 import cairosvg
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 A = os.path.join(HERE, "..", "assets")
 OUT = os.path.join(HERE, "..")
+WORDMARK = os.path.join(HERE, "..", "vendor", "wordmark-light.svg")
 W, H = 128, 64
 SANS_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 SANS = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
-SOURCES = {
-    "moqdev-layout_favicon.svg": "https://moq.dev/layout/favicon.svg",
-    "wordmark-light.svg": "https://raw.githubusercontent.com/moq-dev/rind/main/admin/wordmark-light.svg",
-}
+# SHA-256 of the official SVG bytes.
+WORDMARK_SHA256 = "8a16e64f1e13df5e03b2312315cfa6270443dc130e9ebcb973cb72f8afc96111"
+FAVICON_SHA256 = "241bd5a8c3291315d7a617a4ac0c869c9cc5e4a34f6342ff91ae999c3d3dc8f1"
+FAVICON_URL = "https://moq.dev/layout/favicon.svg"
+FAVICON_NAME = "moqdev-layout_favicon.svg"
 
-def fetch_assets():
+
+def sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def require_digest(path, digest):
+    if not os.path.isfile(path) or sha256_file(path) != digest:
+        raise SystemExit(os.path.basename(path) + ": sha256 mismatch")
+
+
+def ensure_favicon():
     os.makedirs(A, exist_ok=True)
-    for name, url in SOURCES.items():
-        dest = os.path.join(A, name)
-        if os.path.isfile(dest):
-            continue
-        with urllib.request.urlopen(url) as r:
-            open(dest, "wb").write(r.read())
+    dest = os.path.join(A, FAVICON_NAME)
+    if os.path.isfile(dest):
+        if sha256_file(dest) != FAVICON_SHA256:
+            os.remove(dest)
+            raise SystemExit(FAVICON_NAME + ": sha256 mismatch")
+        return dest
+    tmp = dest + ".part"
+    try:
+        with urllib.request.urlopen(FAVICON_URL, timeout=60) as r:
+            data = r.read()
+        if hashlib.sha256(data).hexdigest() != FAVICON_SHA256:
+            raise SystemExit(FAVICON_NAME + ": sha256 mismatch")
+        with open(tmp, "wb") as f:
+            f.write(data)
+        os.replace(tmp, dest)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    return dest
 
-def svg_rgba(name, px_w=None, px_h=None):
-    png = cairosvg.svg2png(url=os.path.join(A, name), output_width=px_w, output_height=px_h)
+
+def svg_rgba(path, px_w=None, px_h=None):
+    png = cairosvg.svg2png(url=path, output_width=px_w, output_height=px_h)
     return Image.open(io.BytesIO(png)).convert("RGBA")
 
 def to_bits(img, lit):
@@ -56,11 +92,12 @@ def center_text(d, y, s, font, size, x0=0, x1=W):
     d.fontmode = "1"
     d.text((x0 + (x1 - x0 - w) // 2, y), s, fill=255, font=f)
 
-fetch_assets()
+require_digest(WORDMARK, WORDMARK_SHA256)
+favicon = ensure_favicon()
 frames = []
 
 # 1. moq.dev mark (favicon; drop background: white letters + green arrow lit)
-icon = svg_rgba("moqdev-layout_favicon.svg", 512, 512)
+icon = svg_rgba(favicon, 512, 512)
 lum = lambda r, g, b, a: a > 128 and (0.299 * r + 0.587 * g + 0.114 * b) > 90
 mark = downsample(to_bits(icon, lum), (60, 60))
 f1 = Image.new("L", (W, H), 0)
@@ -72,7 +109,7 @@ center_text(d, 42, "QUIC", SANS_B, 10, 64, 128)
 frames.append(("moq", f1))
 
 # 2. rind wordmark (cream highlight left dark as a gap)
-wm = svg_rgba("wordmark-light.svg", 1000)
+wm = svg_rgba(WORDMARK, 1000)
 lum2 = lambda r, g, b, a: a > 128 and (0.299 * r + 0.587 * g + 0.114 * b) < 225
 wmask = to_bits(wm, lum2)
 wmask = wmask.crop(wmask.getbbox())
