@@ -4,7 +4,9 @@
 Index of every machine this repository publishes numbers for. The four
 `admin/bench-report` hosts live under `hosts/<name>/`. Later board and SBC
 sets use rind-results' own `cargo xtask` / rind-bench host harness and live
-under `results/`.
+under `results/`. New publishes use
+[`results/<host>/<upstream-sha>/`](../results/README.md). The trees named
+below stay where they are; they are the historical sets.
 
 ## `admin/bench-report` hosts (rind `b6651423`)
 
