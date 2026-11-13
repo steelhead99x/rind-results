@@ -36,3 +36,14 @@ These stay in the layout they were published in. They are not the new per-commit
 | [`diag/`](diag/) | Diagnostics and relinks. Each directory says what it varied. |
 
 `cargo verify` with no arguments still checks the published ESP32-S3 set, the nRF52840 set, msi-001's summary, and `results/jetson-orin-nano/`. `cargo verify --dir <tree>` checks any other directory, including one of these.
+
+## Comparable set
+
+Compare hosts at upstream [kixel-ai/rind](https://github.com/kixel-ai/rind) `0b1f1469` (`0b1f1469c8e17e361e3353432bc7fceee9e04214`). In a result, `commit` is that upstream SHA. A patched checkout also records `fork_commit` and `patches` as `{name, sha256}` objects. An optional set is named `patches/<set>/0001-....patch` (the ring vendor patch is included the same way). `images.*.rind` on those documents is the fork commit, not the pin.
+
+Schema 1 may also carry `upstream_commit`, `hardware_commit`, `harness_commit`, `firmware_sha256`, `runs`, `warmup`, `iterations`, `metric_units`, `cycles`, `cycles_per_byte`, `run_spread_pct`, `runs_ns`, and `spread_is`. `spread_is` is `"runs"` when `ns_low` and `ns_high` are the minimum and maximum of the run estimates and `ns` is their median.
+
+These are not that set:
+
+- msi-001 at rind `99b509a` ([`host/`](host/README.md)) was noisy (`noisy: true`). Do not read a gap off it without a quiet rerun.
+- The ESP32-S3 set at 40 MHz ([`diag/esp32s3-40mhz-2026-11-11/`](diag/esp32s3-40mhz-2026-11-11/README.md)) is not comparable with the 80 MHz set. Cache-missing rows slow down with the flash clock.
