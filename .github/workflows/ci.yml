@@ -17,7 +17,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -28,30 +28,5 @@ jobs:
           toolchain: 1.98.1
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-      - name: fmt
-        run: cargo fmt --all --check
-      - name: clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: test
-        run: cargo test --workspace
-      - name: verify published trees
-        run: cargo verify
-      - name: verify --dir results
-        run: |
-          cargo verify --dir results
-          cargo verify --dir results/intel-core-ultra-9-275hx
-          cargo verify --dir results/pi5-nofan-1p5ghz
-          cargo verify --dir results/efr32mg24
-          cargo verify --dir results/diag/esp32s3-second-host-2026-11-12
-          cargo verify --dir hosts/pi5/ab-narrow-mul
-          cargo verify --dir hosts/m1pro/ab-narrow-mul
-          cargo verify --dir results/argon2
-          cargo verify --dir results/argon2-interleave
-          cargo verify --dir results/argon2-scalar-rider
-          cargo verify --dir results/m1pro-8feee30e
-          cargo verify --dir results/pr33-pi5
-      - name: cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
-        with:
-          command: check
-          arguments: --locked
+      - name: cargo xtask ci
+        run: cargo xtask ci
