@@ -20,6 +20,6 @@ BOOTSEL can be entered with a 1200-baud touch on the CDC-ACM port; exit with `pi
 
 ## What's here
 
-- `builds/` — cargo workspace that compiles rind and comparison crates for this target and nearby ones. Run `./build-matrix.sh thumbv6m-none-eabi`.
+- `builds/` — cargo workspace that compiles rind and comparison crates for this target and nearby ones. Run `cargo xtask build-matrix thumbv6m-none-eabi`.
 - `COMPETITOR-BUILDS.md` — results (compile only, 2026-11-12, rustc 1.99.1).
 - `TARGET-SURVEY.md` — other MCUs with the same limits, CI targets, and timing caveats.

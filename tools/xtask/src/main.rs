@@ -6,6 +6,7 @@
 
 mod bench;
 mod boards;
+mod build_matrix;
 mod capture;
 mod charts;
 mod compare;
@@ -145,6 +146,8 @@ enum Cmd {
     AbPmuSum(crit::AbPmuArgs),
     /// `perf stat` CSVs (stat-<binary>-<op>-<run>.csv in the current directory) as a table
     AbPerfSum,
+    /// Build each baremetal/rp2040/builds crate for a target, one TSV line per crate
+    BuildMatrix(build_matrix::Args),
     /// Re-check a result tree. With no flags, the published set.
     Verify {
         #[arg(long)]
@@ -294,6 +297,7 @@ fn main() -> ExitCode {
         Cmd::AbPmuSum(a) => crit::ab_pmu_sum(a),
         Cmd::AbPerfSum => crit::ab_perf_sum(),
         Cmd::RenderOurs(a) => render_ours::run(a),
+        Cmd::BuildMatrix(a) => build_matrix::run(a),
         Cmd::Verify { dir, board } => run_verify(&dir, &board),
         Cmd::AndroidConvert {
             rind,
