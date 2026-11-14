@@ -80,7 +80,8 @@ enum Cmd {
         #[arg(long)]
         rind: PathBuf,
     },
-    /// Measure one board: host, Android capture, or bare-metal images.
+    /// Measure one board: a filesystem-safe host id (default: this CPU's slug),
+    /// an Android capture, or bare-metal images.
     Bench(bench::Args),
     /// Install the ESP32-S3 toolchain rind-hardware's images were built with
     /// (espup, espflash, ldproxy), without root, into RIND_HARDWARE_DIR/.tools
