@@ -24,6 +24,7 @@ results/<host>/<upstream-sha>-<label>/
 Published in this layout:
 
 - [`pi2b-bench` at `a6577cb4`](pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 2 Model B, armv7, five rounds).
+- [`pi5-nofan-1p5ghz` at `a6577cb4`](pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 5 Model B Rev 1.0, BCM2712 Cortex-A76, no fan, held at 1.5 GHz, aarch64, five rounds).
 - [`intel-core-ultra-9-275hx` at `d6ca9a75`](intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md) (Intel Core Ultra 9 275HX laptop, x86_64, three runs). The laptop was on battery (power-saving governor) for run 1 and part of run 2, then on AC. See [NOTES.md](intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/NOTES.md).
 
 ## Historical trees
