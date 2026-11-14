@@ -13,7 +13,7 @@ RSA products on Cortex-A72/A76/Neoverse N1. Its results table said "not measured
   on every aarch64 core). Same binary, so only the schedule differs.
 - `admin/bench-report`'s criterion arguments (`--warm-up-time 1 --measurement-time 3`), the report's operation names,
   rind and aws-lc-rs only, `taskset -c 3`, 3 interleaved rounds (narrow, wide, narrow, wide, …), estimate = slope or
-  mean as the harness parses it (`scripts/pi5-pr33-ab.sh`, `scripts/crit-parse.py`).
+  mean as the harness parses it (`scripts/pi5-pr33-ab.sh`, `scripts/crit-parse.py`, now `cargo xtask crit-parse`).
 - 2026-11-12 11:39–11:58 PST, under the shared bench lock, after another agent's dudect run on core 1 finished.
   Load average ~1.0 (the benchmark alone) except at the start of round 1 (3.5), which produced the few
   13–25% spreads in round-1 `narrow` rows; every other row's spread is ≤0.4%.

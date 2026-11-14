@@ -21,7 +21,11 @@ results/<host>/<upstream-sha>-<label>/
 
 `cargo xtask bench` writes that directory. `cargo verify --dir` checks it before it is published. Nothing here moves a number that was already published.
 
-Published in this layout: [`pi2b-bench` at `a6577cb4`](pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 2 Model B, armv7, five rounds); [`pi5-nofan-1p5ghz` at `a6577cb4`](pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 5, aarch64, no fan, held at 1.5 GHz, five rounds).
+Published in this layout:
+
+- [`pi2b-bench` at `a6577cb4`](pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 2 Model B, armv7, five rounds).
+- [`pi5-nofan-1p5ghz` at `a6577cb4`](pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 5 Model B Rev 1.0, BCM2712 Cortex-A76, no fan, held at 1.5 GHz, aarch64, five rounds).
+- [`intel-core-ultra-9-275hx` at `d6ca9a75`](intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md) (Intel Core Ultra 9 275HX laptop, x86_64, three runs). The laptop was on battery (power-saving governor) for run 1 and part of run 2, then on AC. See [NOTES.md](intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/NOTES.md).
 
 ## Historical trees
 
@@ -41,7 +45,7 @@ These stay in the layout they were published in. They are not the new per-commit
 
 ## Comparable set
 
-Compare hosts at upstream [kixel-ai/rind](https://github.com/kixel-ai/rind) `d6ca9a75` (`d6ca9a756d3d1e71489e61e44c04f33c3c893589`, [OPRF #705](https://github.com/kixel-ai/rind/commit/d6ca9a756d3d1e71489e61e44c04f33c3c893589)). In a result, `commit` is that upstream SHA. A patched checkout also records `fork_commit` and `patches` as `{name, sha256}` objects. An optional set is named `patches/<set>/0001-....patch` (the ring vendor patch is included the same way). `images.*.rind` on those documents is the fork commit, not the pin.
+Compare hosts at upstream [kixel-ai/rind](https://github.com/kixel-ai/rind) `d6ca9a75` (`d6ca9a756d3d1e71489e61e44c04f33c3c893589`, [OPRF #705](https://github.com/kixel-ai/rind/commit/d6ca9a756d3d1e71489e61e44c04f33c3c893589)). The host set at this pin is [`intel-core-ultra-9-275hx`](intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md). The laptop was on battery (power-saving governor) for run 1 and part of run 2, then on AC. In a result, `commit` is that upstream SHA. A patched checkout also records `fork_commit` and `patches` as `{name, sha256}` objects. An optional set is named `patches/<set>/0001-....patch` (the ring vendor patch is included the same way). `images.*.rind` on those documents is the fork commit, not the pin.
 
 `0b1f1469` (`0b1f1469c8e17e361e3353432bc7fceee9e04214`) was the previous comparable set. Its `results/<host>/0b1f1469c8e17e361e3353432bc7fceee9e04214/` directories are history. Do not delete them, overwrite them, or mix their numbers into `d6ca9a75` tables. A host that has both sets is tabulated from `d6ca9a75` only; the older set is listed as history.
 

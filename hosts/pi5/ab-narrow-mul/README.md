@@ -38,8 +38,8 @@ suggests that report ran under the same cap. That isn't verified here.
   per variant (`run-*.log`). Load was ~1.0 before each round: another agent's single-threaded job on core 1.
 - "wide" = the PR #33 binary with `RIND_CPU_FORCE_wide_mul=1`, i.e. the `_alt` code main runs. It reproduces the
   published `hosts/pi5/pi5.json` main numbers within 0.1% (x25519 252.7 vs 252.9 µs, p256-ecdh 326.5 vs 326.6 µs).
-- Tables: median of the rounds, spread = max/min - 1 (`scripts/cmp.py`). JSON: one row per id, variant and round
-  with criterion's slope (or mean) and its 95% interval (`scripts/collect.py`, schema `rind-results/ab-v1`).
+- Tables: median of the rounds, spread = max/min - 1 (`cargo xtask ab-cmp`, formerly `scripts/cmp.py`; `cargo xtask ab-min` is the min-of-rounds table). JSON: one row per id, variant and round
+  with criterion's slope (or mean) and its 95% interval (`cargo xtask ab-collect`, formerly `scripts/collect.py`, schema `rind-results/ab-v1`).
 
 ## Results
 
