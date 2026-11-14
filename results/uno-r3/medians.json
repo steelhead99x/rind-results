@@ -1,0 +1,245 @@
+{
+  "schema": 1,
+  "host": "uno-r3",
+  "board": "arduino-uno-r3",
+  "mcu": "ATmega328P",
+  "clock_hz": 16000000,
+  "commit": "c08c91ea",
+  "note": "no_std port of rind's portable/generic SHA-256, rolled SHA-512, ChaCha20, and 64-bit-limb Poly1305 from c08c91ea (origin/rp2040/armv6m-no-std). Not the full rind crate. AVR SHA-512 compress uses 32-bit limbs of that same rolled loop. Not the comparable set at d6ca9a75.",
+  "started": "2026-11-13T21:54:14Z",
+  "finished": "2026-11-13T21:54:48Z",
+  "cpu": "ATmega328P @ 16 MHz",
+  "os": "none (bare metal, no_std)",
+  "firmware_flash_bytes": 26880,
+  "firmware_flash_capacity": 32256,
+  "firmware_sram_data_bss": 1013,
+  "firmware_sram_capacity": 2048,
+  "timing": "Timer1 no prescale, 1 tick = 1 CPU cycle, overflow accounted in software. \u00b5s = cycles/16 exactly. Medians of 5 runs after a prime call.",
+  "kats": [
+    [
+      "s256-empty",
+      "PASS"
+    ],
+    [
+      "s256-abc",
+      "PASS"
+    ],
+    [
+      "s512-abc",
+      "PASS"
+    ],
+    [
+      "chacha-rfc",
+      "PASS"
+    ],
+    [
+      "poly-rfc",
+      "PASS"
+    ]
+  ],
+  "skipped": {
+    "x25519": "does not fit (2 KB SRAM / 32 KB flash; rind TARGET-SURVEY lists AVR out of scope)",
+    "p256": "does not fit",
+    "ed25519": "does not fit",
+    "mlkem": "does not fit",
+    "aes-gcm": "does not fit",
+    "sha3": "does not fit"
+  },
+  "ops": {
+    "sha256/32B": {
+      "n": 5,
+      "cycles_all": [
+        61048,
+        61048,
+        61048,
+        61048,
+        61048
+      ],
+      "cycles_median": 61048,
+      "cycles_min": 61048,
+      "cycles_max": 61048,
+      "us_median": 3815,
+      "digest": "630dcd2966c4336691125448bbb25b4ff412a49c732db2c8abc1b8581bd710dd",
+      "digest_verified": true
+    },
+    "sha256/1350B": {
+      "n": 5,
+      "cycles_all": [
+        1267012,
+        1266969,
+        1266969,
+        1266969,
+        1266969
+      ],
+      "cycles_median": 1266969,
+      "cycles_min": 1266969,
+      "cycles_max": 1267012,
+      "us_median": 79185,
+      "digest": "62321a91a4688356ea0649f25cd5dca2dba13cc5e1c05e53bf3ab21d862614d2",
+      "digest_verified": true
+    },
+    "sha256/16KB": {
+      "n": 5,
+      "cycles_all": [
+        14771379,
+        14771336,
+        14771336,
+        14771336,
+        14771336
+      ],
+      "cycles_median": 14771336,
+      "cycles_min": 14771336,
+      "cycles_max": 14771379,
+      "us_median": 923208,
+      "digest": "a1f259d4365ed4320c377ce26f5c8c56dcdc9a89e7b641bfd8eabfbbeac86654",
+      "digest_verified": true
+    },
+    "sha512/32B": {
+      "n": 5,
+      "cycles_all": [
+        216452,
+        216452,
+        216452,
+        216452,
+        216452
+      ],
+      "cycles_median": 216452,
+      "cycles_min": 216452,
+      "cycles_max": 216452,
+      "us_median": 13528,
+      "digest": "3d94eea49c580aef816935762be049559d6d1440dede12e6a125f1841fff8e6fa9d71862a3e5746b571be3d187b0041046f52ebd850c7cbd5fde8ee38473b649",
+      "digest_verified": true
+    },
+    "sha512/1350B": {
+      "n": 5,
+      "cycles_all": [
+        2317472,
+        2317472,
+        2317472,
+        2317472,
+        2317515
+      ],
+      "cycles_median": 2317472,
+      "cycles_min": 2317472,
+      "cycles_max": 2317515,
+      "us_median": 144842,
+      "digest": "78c7ba319caa4be4fc5b307b044d6c4c34e9a5b6f27c0a04285f49851e9bcda2237c0c1b2346a4c8d2a6fa574754d6271bdddfc4cf0bef0b87651fff41bd1690",
+      "digest_verified": true
+    },
+    "sha512/16KB": {
+      "n": 5,
+      "cycles_all": [
+        27108699,
+        27108699,
+        27108699,
+        27108699,
+        27108699
+      ],
+      "cycles_median": 27108699,
+      "cycles_min": 27108699,
+      "cycles_max": 27108699,
+      "us_median": 1694293,
+      "digest": "ff7edc268d5a977ca9956f6600dec7de1d8aaad9193bb58f7587bde223d4315a03cb18da51058a2c535d4f5e680068beaa70cb2a1f2e4cd984e6ac363bb7eabe",
+      "digest_verified": true
+    },
+    "poly1305/16B": {
+      "n": 5,
+      "cycles_all": [
+        16509,
+        16509,
+        16509,
+        16509,
+        16509
+      ],
+      "cycles_median": 16509,
+      "cycles_min": 16509,
+      "cycles_max": 16509,
+      "us_median": 1031,
+      "digest": "75759b271925466c9b7f67f32bb42eec",
+      "digest_verified": true
+    },
+    "poly1305/1350B": {
+      "n": 5,
+      "cycles_all": [
+        1249725,
+        1249725,
+        1249725,
+        1249725,
+        1249725
+      ],
+      "cycles_median": 1249725,
+      "cycles_min": 1249725,
+      "cycles_max": 1249725,
+      "us_median": 78107,
+      "digest": "c502a707021a00fe889b38efcc94aaa2",
+      "digest_verified": true
+    }
+  },
+  "omitted_unreliable": {
+    "chacha20/64B": {
+      "reason": "RFC 8439 KAT passed, but the pattern-stream checksum was not stable across the 5 runs and 2/5 cycle counts wrapped near 2^32. Timed rows omitted; not guessed.",
+      "cycles_all": [
+        34911,
+        4294936671,
+        4294936671,
+        34911,
+        34911
+      ],
+      "checksums_le_hex": [
+        "441e0000",
+        "441e0000",
+        "441e0000",
+        "05230000",
+        "431e0000"
+      ]
+    },
+    "chacha20/1350B": {
+      "reason": "Same as chacha20/64B: unstable checksums and some wrapped cycle counts. The non-wrap readings (32,382) are also lower than chacha20/64B, which is not a believable length scaling, so they are omitted too.",
+      "cycles_all": [
+        32382,
+        32382,
+        32382,
+        4294934099,
+        4294934099
+      ],
+      "checksums_le_hex": [
+        "e0940200",
+        "dc940200",
+        "dc940200",
+        "e1940200",
+        "559a0200"
+      ]
+    },
+    "chacha20+poly1305/1350B": {
+      "reason": "Not the RFC 8439 AEAD (cipher then MAC of the same length only). All 5 cycle counts wrapped near 2^32; chacha checksum nibble varied. Omitted.",
+      "cycles_all": [
+        4294937268,
+        4294937268,
+        4294937268,
+        4294937268,
+        4294937268
+      ],
+      "digests": [
+        "d69402002ea286b724cc1ce0b5625b26698adc0a",
+        "a29402002ea286b724cc1ce0b5625b26698adc0a",
+        "d69402002ea286b724cc1ce0b5625b26698adc0a",
+        "d69402002ea286b724cc1ce0b5625b26698adc0a",
+        "d69402002ea286b724cc1ce0b5625b26698adc0a"
+      ]
+    }
+  },
+  "other_boards_cited": {
+    "efr32mg24_sha256_1350B_rind_cycles": 73798,
+    "efr32mg24_sha256_16KB_rind_cycles": 830578,
+    "efr32mg24_sha512_1350B_rind_cycles": 190122,
+    "efr32mg24_sha512_16KB_rind_cycles": 2203643,
+    "esp32s3_sha256_1350B_rind_cycles": 127866,
+    "esp32s3_sha256_16KB_rind_cycles": 1305093,
+    "esp32s3_sha512_1350B_rind_cycles": 8421487,
+    "esp32s3_sha512_16KB_rind_cycles": 98198722,
+    "sources": [
+      "results/efr32mg24/RUNS.md (rind 98568332, 78 MHz)",
+      "results/esp32s3/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RUNS.md (comparable set d6ca9a75, 240 MHz, flash 80 MHz)"
+    ]
+  }
+}

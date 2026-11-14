@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+[build]
+target = "avr-none"
+
+[unstable]
+build-std = ["core"]
+
+[target.avr-none]
+linker = "avr-gcc"
+rustflags = [
+    "-C", "target-cpu=atmega328p",
+    "-C", "link-arg=-mmcu=atmega328p",
+    "-C", "link-arg=-Wl,--gc-sections",
+    "-C", "link-arg=-Wl,-Map=rind-uno-r3-bench.map",
+]
