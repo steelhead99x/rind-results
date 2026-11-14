@@ -21,7 +21,7 @@ C compilers, needed only by ring and aws-lc-rs:
 ## Run
 
 ```
-./build-matrix.sh thumbv6m-none-eabi          # one target, all crates
+cargo xtask build-matrix thumbv6m-none-eabi   # one target, all crates
 cargo build --release --target thumbv6m-none-eabi -p tv-sha2
 
 # crates that pull getrandom 0.4
@@ -29,13 +29,13 @@ RUSTFLAGS='--cfg getrandom_backend="custom"' cargo build --release \
   --target thumbv6m-none-eabi -p tv-rind-portable-deps
 
 nix shell nixpkgs#gcc-arm-embedded nixpkgs#llvmPackages.clang-unwrapped \
-  --command ./build-matrix.sh thumbv6m-none-eabi
+  --command cargo xtask build-matrix thumbv6m-none-eabi
 
 CC_riscv32imac_unknown_none_elf=clang AR_riscv32imac_unknown_none_elf=llvm-ar \
-  ./build-matrix.sh riscv32imac-unknown-none-elf
+  cargo xtask build-matrix riscv32imac-unknown-none-elf
 ```
 
-`build-matrix.sh` retries with the getrandom custom-backend cfg if the first build fails there. It prints `crate`, `PASS`/`FAIL`, the cfg used, and the first error. Logs go to `logs/<target>/`, which git ignores, as does `target/`.
+`cargo xtask build-matrix` (formerly `build-matrix.sh`; run it from anywhere in this repository) retries with the getrandom custom-backend cfg if the first build fails there. It prints `crate`, `PASS`/`FAIL`, the cfg used, and the first error. Logs go to `logs/<target>/`, which git ignores, as does `target/`.
 
 ## Crates
 

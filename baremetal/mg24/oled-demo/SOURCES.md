@@ -1,8 +1,8 @@
 # Logo sources
 
-`vendor/wordmark-light.svg` is committed. `tools/gen_frames.py` checks its SHA-256 (`8a16e64f1e13df5e03b2312315cfa6270443dc130e9ebcb973cb72f8afc96111`) and exits before drawing if the bytes differ.
+`vendor/wordmark-light.svg` is committed (the same bytes are the gen-frames test fixture). `cargo xtask gen-frames` checks its SHA-256 (`8a16e64f1e13df5e03b2312315cfa6270443dc130e9ebcb973cb72f8afc96111`) and exits before drawing if the bytes differ.
 
-The moq.dev favicon is not redistributed. The script downloads it into gitignored `assets/` and exits before use unless the bytes match SHA-256 `241bd5a8c3291315d7a617a4ac0c869c9cc5e4a34f6342ff91ae999c3d3dc8f1`.
+The moq.dev favicon is not redistributed. The command downloads it into gitignored `assets/` and exits before use unless the bytes match SHA-256 `241bd5a8c3291315d7a617a4ac0c869c9cc5e4a34f6342ff91ae999c3d3dc8f1`.
 
 | File | URL | License |
 |---|---|---|

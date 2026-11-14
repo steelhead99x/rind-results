@@ -303,7 +303,7 @@ The `legacy rind-bench` column and the `legacy_rind_bench` field are provenance 
 ```sh
 git clone --recursive https://github.com/steelhead99x/rind-hardware   # the firmware port
 git clone https://github.com/steelhead99x/rind-results
-rind-results/tools/setup-toolchain.sh rind-hardware   # espup, espflash, ldproxy, at these versions
+(cd rind-results && cargo xtask setup-toolchain ../rind-hardware)   # espup, espflash, ldproxy, at these versions
 cd rind-hardware && cargo xtask apply-patches && cargo xtask vendor-ring
 cargo xtask build-images esp   # esp32/images/<bench>.elf; check sha256 against images.sha256
 cd ../rind-results && PORT=/dev/serial/by-id/usb-Espressif_... cargo xtask run-all ../rind-hardware/esp32/images
