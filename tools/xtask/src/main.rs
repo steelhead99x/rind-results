@@ -3,6 +3,7 @@
 //! `.cargo/config.toml`). Every published table, JSON file, chart, OLED page
 //! table and screenshot comes from one of these commands; `cargo verify`, a
 //! separate crate that shares no code with this one, re-checks them.
+//! `cargo xtask ci` is the local gate.
 
 mod bench;
 mod boards;
@@ -74,6 +75,8 @@ enum Cmd {
     HostRun(host_run::Args),
     /// rustfmt --check, clippy -D warnings and the tests, for this workspace
     Check,
+    /// The local gate: fmt, clippy -D warnings, tests, cargo-deny, and verify
+    Ci,
     /// Rewrite tools/bench-tables.json from a rind checkout, for review.
     /// Report commands evaluate the checkout they are given and do not need this.
     BenchTables {
@@ -234,6 +237,7 @@ fn main() -> ExitCode {
         Cmd::HostReport(a) => host_report::run(a),
         Cmd::HostRun(a) => host_run::run(a),
         Cmd::Check => check(),
+        Cmd::Ci => ci(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
         Cmd::Bench(a) => bench::run(a),
         Cmd::SetupToolchain(a) => setup_toolchain::run(a),
@@ -442,17 +446,101 @@ fn check() -> Result<(), String> {
         ],
         &["test", "-q", "--release"],
     ] {
-        let st = Command::new(std::env::var("CARGO").unwrap_or("cargo".into()))
-            .args(args)
-            .current_dir(root())
-            .status()
-            .map_err(|e| format!("cargo: {e}"))?;
-        if !st.success() {
-            return Err(format!("cargo {} failed", args.join(" ")));
-        }
-        println!("cargo {}: ok", args[0]);
+        cargo_ok(args)?;
     }
     Ok(())
+}
+
+// Trees `cargo verify --dir` checks. The same set the old CI workflow named:
+// `results` is walked, and the other paths are trees that walk can miss or
+// that live outside `results/`.
+const RESULT_DIRS: &[&str] = &[
+    "results",
+    "results/efr32mg24",
+    "results/diag/esp32s3-second-host-2026-11-12",
+    "hosts/pi5/ab-narrow-mul",
+    "hosts/m1pro/ab-narrow-mul",
+    "results/argon2",
+    "results/argon2-interleave",
+    "results/argon2-scalar-rider",
+    "results/m1pro-8feee30e",
+    "results/pr33-pi5",
+];
+
+// Version the previous CI action installed (EmbarkStudios/cargo-deny-action v2.1.1).
+const CARGO_DENY_VERSION: &str = "0.20.2";
+
+fn ci() -> Result<(), String> {
+    for args in [
+        &["fmt", "--all", "--check"][..],
+        &[
+            "clippy",
+            "--workspace",
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ],
+        &["test", "--workspace"],
+    ] {
+        cargo_ok(args)?;
+    }
+    // Published trees and provenance, then every results directory.
+    run_verify(&[], &[])?;
+    run_verify(&result_dirs()?, &[])?;
+    cargo_deny()
+}
+
+fn result_dirs() -> Result<Vec<PathBuf>, String> {
+    let root = root();
+    let mut dirs = Vec::with_capacity(RESULT_DIRS.len());
+    for rel in RESULT_DIRS {
+        let path = root.join(rel);
+        if !path.is_dir() {
+            return Err(format!("results directory {rel} is missing"));
+        }
+        dirs.push(path);
+    }
+    Ok(dirs)
+}
+
+fn cargo_bin() -> String {
+    std::env::var("CARGO").unwrap_or_else(|_| "cargo".into())
+}
+
+fn cargo_ok(args: &[&str]) -> Result<(), String> {
+    let st = Command::new(cargo_bin())
+        .args(args)
+        .current_dir(root())
+        .status()
+        .map_err(|e| format!("cargo: {e}"))?;
+    if !st.success() {
+        return Err(format!("cargo {} failed", args.join(" ")));
+    }
+    println!("cargo {}: ok", args[0]);
+    Ok(())
+}
+
+fn cargo_deny() -> Result<(), String> {
+    if !deny_present() {
+        println!("cargo deny: installing cargo-deny {CARGO_DENY_VERSION}");
+        cargo_ok(&[
+            "install",
+            "cargo-deny",
+            "--version",
+            CARGO_DENY_VERSION,
+            "--locked",
+        ])?;
+    }
+    // `--locked` is a global flag, the same place the old cargo-deny action put it.
+    cargo_ok(&["deny", "--locked", "check"])
+}
+
+fn deny_present() -> bool {
+    Command::new(cargo_bin())
+        .args(["deny", "--version"])
+        .output()
+        .is_ok_and(|out| out.status.success())
 }
 
 /// The repository root.
@@ -513,4 +601,18 @@ pub fn utc_now() -> String {
         rem % 3600 / 60,
         rem % 60
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ci_names_every_results_tree_the_workflow_checked() {
+        let root = root();
+        assert!(!RESULT_DIRS.is_empty());
+        for rel in RESULT_DIRS {
+            assert!(root.join(rel).is_dir(), "{rel} is not a directory");
+        }
+    }
 }
