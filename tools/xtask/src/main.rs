@@ -23,6 +23,7 @@ mod render_ours;
 mod report;
 mod run_all;
 mod script2cast;
+mod setup_toolchain;
 mod sizes;
 mod tables;
 mod upstream_run;
@@ -78,6 +79,9 @@ enum Cmd {
     },
     /// Measure one board: host, Android capture, or bare-metal images.
     Bench(bench::Args),
+    /// Install the ESP32-S3 toolchain rind-hardware's images were built with
+    /// (espup, espflash, ldproxy), without root, into RIND_HARDWARE_DIR/.tools
+    SetupToolchain(setup_toolchain::Args),
     /// Unpack the staged Jetson toolchain under ~/rind-bench-orin.
     OrinSetup {
         #[arg(long)]
@@ -228,6 +232,7 @@ fn main() -> ExitCode {
         Cmd::Check => check(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
         Cmd::Bench(a) => bench::run(a),
+        Cmd::SetupToolchain(a) => setup_toolchain::run(a),
         Cmd::OrinSetup { home } => (|| {
             let home = match home {
                 Some(h) => h,
