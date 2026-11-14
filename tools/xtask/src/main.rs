@@ -199,7 +199,8 @@ enum Cmd {
         note: Vec<String>,
         json: Vec<PathBuf>,
     },
-    /// The side report for xeon-vm, m1pro, pi5 and pixel9pro (STATS.md, SVGs, summary.json)
+    /// Side report for every host JSON in `--res` (STATS.md, SVGs, summary.json).
+    /// The four published hosts stay first. A CPU slug is a normal host id.
     RenderOurs(render_ours::Args),
     /// Stage a results tree from host JSON. Remaining arguments are stage-repo's.
     Stage {

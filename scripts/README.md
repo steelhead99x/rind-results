@@ -17,3 +17,8 @@ against the scripts' output):
 
 `cargo xtask` runs from inside this repository. Relative paths are taken
 from the directory the command runs in, as the scripts took them.
+
+`scripts/render-ours.py` is `cargo xtask render-ours`. It draws every
+filesystem-safe host id in the results directory. A CPU slug such as
+`intel-core-ultra-9-275hx` is a normal host id. The four hosts published
+first stay first, and `box/` is still xeon-vm's directory.

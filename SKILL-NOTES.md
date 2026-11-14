@@ -26,16 +26,20 @@ suggestions for whoever updates it.
    operations, filter regex, and `--warm-up-time 1 --measurement-time 3` live in
    `admin/bench-report` (`OPERATIONS`, `CRITERION_ARGS`); the skill should point at
    `admin/bench-report run` (or `summary`) instead.
-2. **`admin/bench-report collect` only works for the maintainer's six hosts.** `HOSTS` is
-   hard-coded (`nixos`, `desktop`, `nixos2`, `kixtop`, `ovh-iad`, `ovh-sea`); `collect --host X`
-   refuses any other name. It also wraps each run in `nix shell github:…quest… --command quest gate`
+2. **`admin/bench-report collect` only works for the maintainer's six hosts.** `COLLECT_HOSTS` is
+   that ssh list (`nixos`, `desktop`, `nixos2`, `kixtop`, `ovh-iad`, `ovh-sea`); `collect --host X`
+   refuses any other name and points it at `run`. It also wraps each run in `nix shell github:…quest… --command quest gate`
    and `nix develop` on the remote, so a host needs Nix + flakes + network to GitHub.
+   `run`, `summary`, `render --from`, and a `gaps.toml` `on` accept any filesystem-safe host, including
+   a CPU slug. `tiers.json` is the nightly tiers, not a host.
 3. **`admin/bench-report render --from DIR` rewrites the repo's BENCHMARKS.md** and
-   `benchmarks/*.svg`, renders only `HOSTS`, and *fails* on any gap over 10% that
-   `benchmarks/gaps.toml` lacks a decision for. A new host almost always has such gaps (here: ChaCha20
-   vs OpenSSL on an AVX-512 Xeon), so render cannot be used as-is for a side report. This run imported
-   the renderer as a module and called `report()` / `overview_svg()` / `host_svg()` with its own host
-   table and output dir (`render-ours.py`, now `cargo xtask render-ours`).
+   `benchmarks/*.svg`, draws every host JSON in the directory (the six collect machines stay first),
+   and *fails* on any gap over 10% that `benchmarks/gaps.toml` lacks a decision for. A new host almost
+   always has such gaps (here: ChaCha20 vs OpenSSL on an AVX-512 Xeon), so render cannot be used as-is
+   for a side report. This run imported the renderer as a module and called `report()` /
+   `overview_svg()` / `host_svg()` with its own host dict and output dir (`render-ours.py`, now
+   `cargo xtask render-ours`). Notes for a side host live on the host JSON. There is no `HOSTS`
+   table to assign.
 
 ## Left out
 

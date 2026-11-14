@@ -69,4 +69,4 @@ These operations are gaps here but are outside the DIT entry. They are per-byte,
 
 The SHA-256 16 KB gap is the largest of these. It needs a profile on this core before it gets a reason or a quest.
 
-rind's `benchmarks/gaps.toml` cannot list `m1pro` until `admin/bench-report`'s `HOSTS` has it: `load_gaps` fails with "no host or tier m1pro". Its data would also have to be in `benchmarks/data` at the report's commit. Until then, this note is the decision record for this host.
+rind's `benchmarks/gaps.toml` can name any host that has a result, including a CPU slug. It does not have to be one of the six machines `collect` reaches. This host's JSON is not in the report's `benchmarks/data`, so this note remains the decision record.

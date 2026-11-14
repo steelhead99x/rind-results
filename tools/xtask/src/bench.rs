@@ -494,6 +494,30 @@ mod tests {
         );
         assert_eq!(cpu_slug("Apple M3 Max"), "apple-m3-max");
         assert_eq!(cpu_slug("Intel(R) Xeon(R) CPU @ 2.50GHz"), "intel-xeon");
+        // The same brand strings admin/bench-report's cpu_slug test uses.
+        assert_eq!(
+            cpu_slug("Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz"),
+            "intel-core-i7-8700"
+        );
+        assert_eq!(
+            cpu_slug("AMD Ryzen 9 5900XT 16-Core Processor"),
+            "amd-ryzen-9-5900xt"
+        );
+        assert_eq!(cpu_slug("Apple M4"), "apple-m4");
+        assert_eq!(
+            cpu_slug("Intel Core Processor (Haswell, no TSX)"),
+            "intel-core-haswell-no-tsx"
+        );
+        assert_eq!(
+            cpu_slug("Intel(R) Core(TM) Ultra 7 270K Plus"),
+            "intel-core-ultra-7-270k-plus"
+        );
+        assert_eq!(cpu_slug("Intel® Core™ i9-13900K"), "intel-core-i9-13900k");
+        assert_eq!(cpu_slug("CPU"), "unknown");
+        let long = cpu_slug(&"word ".repeat(40));
+        assert!(long.len() <= 80, "{long}");
+        assert!(!long.ends_with('-'), "{long}");
+        assert!(layout::is_filesystem_safe_host(&long), "{long}");
         let info =
             "processor\t: 0\nmodel\t\t: 207\nmodel name\t: Intel(R) Core(TM) Ultra 9 275HX\n";
         assert_eq!(
