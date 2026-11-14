@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rind on real hardware: benchmarks and what is verified</title>
+<!--
+  HOW THIS FILE IS ORGANISED (for whoever refreshes it next)
+  1. DATA block (first <script>, id="deck-data"): every number used by tables, charts and the matrix.
+     Edit numbers only there. Derived values (µs from cycles, cycles from ns, ratios) are computed by the
+     render script and labelled "computed" on the slides.
+  2. STYLE: one <style> block, the same palette and layout as presentations/rind-aarch64-perf.
+  3. SLIDES: one <section class="slide"> per slide. Slide numbers and footers are generated.
+  4. RENDER + NAVIGATION script at the end. No network access; no external libraries.
+  Rule: never invent or estimate a number. Missing ones are "pending". Run counts and conditions for every
+  number are in DATA (n, cond) and in README.md.
+-->
+<script id="deck-data">
+/* ===================== DATA (edit here) ===================== */
+const DATA = {
+  meta: {
+    title: "rind on real hardware",
+    subtitle: "Benchmarks on nine kinds of device, and what has been verified on each",
+    asOf: "2026-11-14"
+  },
+
+  /* Devices at a glance. ram/clock as recorded by each lane; "—" = not recorded. */
+  devices: [
+    // name, core, clock, memory, what ran
+    ["Apple M1 Pro", "8P + 2E arm64", "not fixed", "32 GB", "Full rind · tests + criterion"],
+    ["Raspberry Pi 5 (3 lanes)", "4× Cortex-A76", "1.5 GHz cap*", "8–16 GB", "Full rind · tests + criterion + A/B"],
+    ["Raspberry Pi 2 Model B", "4× Cortex-A7 (armv7)", "900 MHz", "920 MiB", "Full rind · tests + criterion"],
+    ["Seeed XIAO MG24", "Cortex-M33F", "78 MHz", "256 KB RAM", "rind-hardware images · KATs + cycles"],
+    ["ESP32-S3 (2 boards)", "Xtensa LX7, 2 cores", "240 MHz", "8 MB PSRAM", "rind-hardware images · KATs + cycles"],
+    ["RP2040: Pico + Pico W", "Cortex-M0+", "125 MHz", "264 KB RAM", "rind-hardware images · KATs + cycles"],
+    ["Arduino Uno R3", "ATmega328P (8-bit AVR)", "16 MHz", "2 KB SRAM", "no_std port of 3 primitives · KATs + cycles"],
+    ["Arduino Nano 33 BLE", "nRF52840, Cortex-M4F", "64 MHz", "—", "Images built · board never enumerated"],
+    ["iPad Pro 13-inch (M4)", "Apple M4", "—", "—", "Bench binaries cross-built · parked"]
+  ],
+
+  /* Verification matrix. s: ok | pend | prog | na. t: short detail. */
+  matrixCols: ["Build", "Tests / KATs", "Timed medians", "Public-key ops", "In rind-results"],
+  matrix: [
+    { d: "Apple M1 Pro", c: [
+      {s:"ok", t:"full crate"}, {s:"ok", t:"705 lib tests · wide + narrow"}, {s:"ok", t:"1 criterion run · busy host"}, {s:"ok"}, {s:"ok", t:"main"} ] },
+    { d: "Pi 5 · lane 1 (A/B)", c: [
+      {s:"ok", t:"full crate"}, {s:"ok", t:"703 lib tests · 3 modes"}, {s:"ok", t:"A/B 5 runs · host set 1 run"}, {s:"ok"}, {s:"ok", t:"main + PR #82"} ] },
+    { d: "Pi 5 · lane 2", c: [
+      {s:"ok", t:"full crate"}, {s:"ok", t:"1,269 passed · 0 failed"}, {s:"pend"}, {s:"pend"}, {s:"pend", t:"not yet"} ] },
+    { d: "Pi 5 · lane 3", c: [
+      {s:"ok", t:"full crate"}, {s:"ok", t:"1,239 passed · 0 failed"}, {s:"prog", t:"2 of 5 rounds"}, {s:"pend"}, {s:"pend", t:"not yet"} ] },
+    { d: "Pi 2 Model B", c: [
+      {s:"ok", t:"full crate"}, {s:"ok", t:"1,023 passed × 2 tiers"}, {s:"ok", t:"5 rounds · 345 results"}, {s:"ok"}, {s:"ok", t:"main"} ] },
+    { d: "XIAO MG24", c: [
+      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"main"} ] },
+    { d: "ESP32-S3 × 2", c: [
+      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures · both"}, {s:"ok", t:"5 runs per board"}, {s:"ok"}, {s:"ok", t:"main"} ] },
+    { d: "RP2040 Pico", c: [
+      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"main (deck)"} ] },
+    { d: "RP2040 Pico W", c: [
+      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"main (deck)"} ] },
+    { d: "Arduino Uno R3", c: [
+      {s:"ok", t:"no_std port"}, {s:"ok", t:"5 / 5 KATs"}, {s:"ok", t:"5 runs · 3 primitives"}, {s:"na", t:"does not fit"}, {s:"ok", t:"main"} ] },
+    { d: "Arduino Nano 33 BLE", c: [
+      {s:"ok", t:"images built"}, {s:"pend", t:"not enumerated"}, {s:"pend"}, {s:"pend"}, {s:"pend", t:"none"} ] },
+    { d: "iPad Pro (M4)", c: [
+      {s:"ok", t:"cross-built"}, {s:"pend", t:"parked"}, {s:"pend"}, {s:"pend"}, {s:"pend", t:"none"} ] }
+  ],
+
+  /* Cross-device shared ops, rind only.
+     kind "cyc": published cycle counts (MCUs).  kind "ns": published wall time (Linux/macOS).
+     mhz: clock recorded during the run (used for computed columns); null = not fixed / not recorded. */
+  cross: {
+    devices: [
+      { k:"m1",   n:"M1 Pro",     mhz:null, color:"#6b5ca5" },
+      { k:"pi5",  n:"Pi 5",       mhz:1500, color:"#0f766e" },
+      { k:"pi2",  n:"Pi 2",       mhz:900,  color:"#2b6cb0" },
+      { k:"mg24", n:"MG24",       mhz:78,   color:"#5aa9a0" },
+      { k:"esp",  n:"ESP32-S3",   mhz:240,  color:"#b4532a" },
+      { k:"rp",   n:"RP2040",     mhz:125,  color:"#8a6d0b" },
+      { k:"uno",  n:"Uno R3",     mhz:16,   color:"#465467" }
+    ],
+    ops: {
+      "SHA-256 · 16 KB": {
+        m1:  { ns: 10940.9, n:1 }, pi5: { ns: 17207.2, n:1, clockUnchecked:true }, pi2: { ns: 518945.2, n:5 },
+        mg24:{ cyc: 830578, n:5 }, esp: { cyc: 1317306, n:5 }, rp: { cyc: 1667357, n:5 }, uno: { cyc: 14771336, n:5 } },
+      "SHA-512 · 16 KB": {
+        m1:  { ns: 12020.0, n:1 }, pi5: { ns: 66332.7, n:1, clockUnchecked:true }, pi2: { ns: 582712.4, n:5 },
+        mg24:{ cyc: 2203643, n:5 }, esp: { cyc: 98199751, n:5, odd:true }, rp: { cyc: 36057712, n:5, odd:true }, uno: { cyc: 27108699, n:5 } },
+      "X25519 ECDH": {
+        m1:  { ns: 25007.2, n:1 }, pi5: { ns: 107700, n:5, note:"narrow (PR #82)" }, pi2: { ns: 1680064.9, n:5 },
+        mg24:{ cyc: 2361571, n:5 }, esp: { cyc: 6790042, n:5 }, rp: { cyc: 22900797, n:5 }, uno: { na:"does not fit" } },
+      "P-256 ECDSA sign": {
+        m1:  { ns: 10684.3, n:1 }, pi5: { ns: 45300, n:5, note:"narrow (PR #82)" }, pi2: { ns: 1109563.4, n:5 },
+        mg24:{ cyc: 1336385, n:5 }, esp: { cyc: 5865304, n:5 }, rp: { cyc: 8581554, n:5 }, uno: { na:"does not fit" } }
+    }
+  },
+
+  /* Microcontrollers, rind rows, cycles. MG24 + ESP32-S3: median of 5 run medians. RP2040: median of 5 rounds. */
+  mcu: {
+    cols: ["MG24 @ 78 MHz", "ESP32-S3 @ 240 MHz", "Pico @ 125 MHz", "Pico W @ 125 MHz"],
+    rows: [
+      ["SHA-256 · 16 KB",           830578,  1317306,  1667357,  1667457],
+      ["SHA-512 · 16 KB",           2203643, 98199751, 36057712, 36061484],
+      ["SHA3-256 · 16 KB",          1962415, 2474130,  3518017,  3518016],
+      ["AES-128-GCM · 16 KB",       3649596, 4789248,  16553255, 16553410],
+      ["ChaCha20-Poly1305 · 16 KB", 759689,  1610382,  3233348,  3233346],
+      ["X25519 ECDH",               2361571, 6790042,  22900797, 22898833],
+      ["Ed25519 sign",              770188,  3803195,  7877602,  7878426],
+      ["P-256 ECDH",                4447495, 11814200, 21801917, 21801105],
+      ["P-256 ECDSA sign",          1336385, 5865304,  8581554,  8580660],
+      ["ML-KEM-768 encaps",         1126131, 1826413,  2324689,  2324734]
+    ],
+    agree: "ESP32-S3 board 1 vs board 2 within 0.3%; Pico vs Pico W within 0.10% (lane tables)"
+  },
+
+  /* Arduino Uno R3: Timer1, 1 tick = 1 cycle, medians of 5 runs after one priming call. */
+  uno: {
+    rows: [
+      // op, median cycles, min, max
+      ["SHA-256 · 32 B",     61048,    61048,    61048],
+      ["SHA-256 · 1350 B",   1266969,  1266969,  1267012],
+      ["SHA-256 · 16 KB",    14771336, 14771336, 14771379],
+      ["SHA-512 · 32 B",     216452,   216452,   216452],
+      ["SHA-512 · 1350 B",   2317472,  2317472,  2317515],
+      ["SHA-512 · 16 KB",    27108699, 27108699, 27108699],
+      ["Poly1305 · 16 B",    16509,    16509,    16509],
+      ["Poly1305 · 1350 B",  1249725,  1249725,  1249725]
+    ],
+    kats: ["SHA-256 empty", "SHA-256 abc", "SHA-512 abc", "ChaCha20 RFC 8439", "Poly1305 RFC 8439"],
+    image: "26,880 / 32,256 B flash · 1,013 / 2,048 B SRAM",
+    skipped: ["X25519", "P-256", "Ed25519", "ML-KEM", "AES-GCM", "SHA-3"]
+  },
+
+  /* Linux boards and laptop: rind rows, µs (criterion estimates). */
+  hosts: {
+    cols: ["M1 Pro", "Pi 5", "Pi 2"],
+    rows: [
+      ["SHA-256 · 1350 B",   0.7081, 1.5324, 45.5056],
+      ["SHA-512 · 1350 B",   1.3565, 5.7326, 50.8601],
+      ["X25519 ECDH",        25.0072, 252.8676, 1680.0649],
+      ["Ed25519 sign",       6.1348, 51.4220, 666.6206],
+      ["P-256 ECDH",         41.7201, 326.6212, 3768.4258],
+      ["P-256 ECDSA sign",   10.6843, 60.8036, 1109.5634],
+      ["ML-KEM-768 encaps",  9.0742, 45.1206, 639.9793]
+    ]
+  },
+
+  /* Pi 5, rind PR #82 A/B: medians of 5 interleaved runs, 1.5 GHz, core 3. µs. */
+  pi5ab: [
+    // op, wide, narrow
+    ["X25519 ECDH",      252.8,  107.7],
+    ["RSA-2048 sign",    5209.2, 3071.6],
+    ["P-256 keygen",     52.1,   36.6],
+    ["P-256 ECDSA sign", 60.8,   45.3],
+    ["P-256 ECDH",       326.7,  200.2],
+    ["P-256 verify",     303.5,  273.9]
+  ],
+  pi5tests: "703 lib tests passed in default, wide and narrow modes (37 ignored), plus integration and wipe tests",
+
+  pending: [
+    ["Pi 5 · lane 2", "Timed medians", "Tests done and the board idle by 13:07 PST; it then went offline. No timed rounds on file yet."],
+    ["Pi 5 · lane 3", "Timed medians", "2 of 5 rounds complete; round 3 lost to a power loss (kept, marked invalid); rounds 3–5 rerunning."],
+    ["Arduino Nano 33 BLE", "Everything", "Never enumerated on USB (no app or bootloader ID). Images are built; needs a double-tap reset, then a flash backup."],
+    ["iPad Pro (M4)", "Tests, timing", "Bench binaries cross-built. Parked: install needs a newer macOS / Xcode for signing and device support."],
+    ["Arduino Uno R3", "ChaCha20 timing", "RFC 8439 KAT passed, but the timed rows were unstable and some cycle counts wrapped. Dropped, not guessed."],
+    ["RP2040 Pico W", "Re-verify", "The 13 Nov re-verify ran on the Pico only; the Pico W was off USB."],
+    ["RP2040", "results/rp2040/", "The deck and hosts/rp2040 notes are on main. There is still no results/rp2040/ timing tree."]
+  ],
+
+  /* Where the numbers live (rind-results paths unless noted). */
+  where: [
+    ["Apple M1 Pro", "main", "hosts/m1pro/ · results/m1pro-8feee30e/"],
+    ["Pi 5 · lane 1", "main", "hosts/pi5/ · hosts/pi5/ab-narrow-mul/ · results/pr33-pi5/"],
+    ["Pi 5 · PR #82 A/B", "rind fork", "PR #82 description"],
+    ["Pi 5 · lanes 2, 3", "—", "not yet in rind-results"],
+    ["Pi 2 Model B", "main", "results/pi2b-bench/a6577cb4…/RESULTS.md"],
+    ["XIAO MG24", "main", "results/efr32mg24/"],
+    ["ESP32-S3 × 2", "main", "results/diag/esp32s3-second-host-2026-11-12/ · results/RESULTS.md"],
+    ["RP2040 Pico / Pico W", "main", "presentations/rind-rp2040/ · hosts/rp2040/"],
+    ["Arduino Uno R3", "main", "results/uno-r3/"],
+    ["Nano 33 BLE · iPad", "—", "no results yet"]
+  ]
+};
+</script>
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"⚑ ";}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.neutral{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* additions for this deck */
+.slide h2{font-size:36px}
+table.t.big{font-size:15px}
+table.t.big td{padding:7px 10px}
+table.t.big th{padding:7px 10px}
+table.mx{border-collapse:collapse;width:100%;font-size:14.5px}
+table.mx th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2);text-align:left;padding:6px 8px;border-bottom:2px solid var(--navy)}
+table.mx td{padding:6.5px 8px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+table.mx td.dev{font-weight:600;color:var(--navy)}
+.st{display:inline-flex;align-items:center;gap:6px}
+.st b{display:inline-block;min-width:22px;text-align:center;padding:1px 7px;border-radius:999px;font-size:12px;font-weight:700}
+.st.ok b{background:var(--good-bg);color:var(--accent)}
+.st.pend b{background:var(--pend-bg);color:#8a6d0b}
+.st.prog b{background:#e8f0fa;color:var(--accent2)}
+.st.na b{background:var(--split-bg);color:#4a5578}
+.st i{font-style:normal;color:var(--ink2);font-size:13.5px}
+sup{line-height:0;font-size:.7em;color:var(--mute)}
+.u{text-transform:none}
+.keyrow{display:flex;gap:18px;font-size:12.5px;color:var(--ink2);margin:0 0 10px}
+.oddcell{background:var(--bad-bg)}
+.chartbox{background:#fff}
+.note{font-size:12.5px;color:var(--ink2);line-height:1.45}
+.big-num{font-size:44px;font-weight:700;color:var(--navy);letter-spacing:-.02em}
+.dim{color:var(--mute)}
+.pill{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 10px;margin:0 6px 6px 0;font-size:13px}
+.pill.x{background:var(--split-bg);color:#4a5578}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- 1. TITLE -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · hardware benchmarks</div>
+    <h1 data-k="meta.title"></h1>
+    <div class="sub" data-k="meta.subtitle"></div>
+  </div>
+  <div class="meta">rind fork · rind-results<br>As of <span data-k="meta.asOf"></span></div>
+  <div class="foot"><span class="src">Every number comes from rind-results, rind PR #82, or the lane status logs named in README.md. Nothing is estimated; missing numbers say “pending”.</span><span class="num"></span></div>
+</section>
+
+<!-- 2. DEVICES -->
+<section class="slide" data-section="Devices">
+  <div class="kicker">The devices</div>
+  <h2>From a laptop to an 8-bit Arduino</h2>
+  <p class="lede">Same library, very different machines.</p>
+  <table class="t big" id="tb-devices"></table>
+  <div class="foot"><span class="src">* Pi 5 lanes 1 and 3 run at a fixed 1.5 GHz (passively cooled boards, boot-time cap); lane 2's clock is not recorded in its notes. Memory as recorded by each lane; “—” = not recorded.</span><span class="num"></span></div>
+</section>
+
+<!-- 3. MATRIX -->
+<section class="slide" data-section="Verified">
+  <div class="kicker">Verification</div>
+  <h2>What has been verified, device by device</h2>
+  <div class="keyrow"><span class="st ok"><b>✓</b> done</span><span class="st prog"><b>…</b> in progress</span><span class="st pend"><b>pending</b></span><span class="st na"><b>n/a</b> not supported</span></div>
+  <table class="mx" id="tb-matrix"></table>
+  <div class="foot"><span class="src">Tests = rind's own test suite on the device (Linux/macOS). KATs = known-answer checks run on the board before timing (microcontrollers). Public-key ops = X25519 / Ed25519 / P-256 timed. “main” = published on rind-results main.</span><span class="num"></span></div>
+</section>
+
+<!-- 4. HASHES ACROSS DEVICES -->
+<section class="slide" data-section="Compare">
+  <div class="kicker">Across devices · hashing 16 KB</div>
+  <h2>SHA-256 and SHA-512 on every device</h2>
+  <div class="cols">
+    <div><div class="chart-title">SHA-256 · 16 KB · µs (log scale)</div><div id="ch-sha256"></div></div>
+    <div><div class="chart-title">SHA-512 · 16 KB · µs (log scale)</div><div id="ch-sha512"></div></div>
+  </div>
+  <table class="t" id="tb-hash" style="margin-top:6px"></table>
+  <div class="pi-note" style="bottom:56px">SHA-512 oddity: ESP32-S3 and RP2040 publish more cycles than the 8-bit Uno. Shown as published. The Uno port uses the rolled SHA-512 loop from the RP2040 branch (c08c91ea); the ESP32-S3 and RP2040 rows are the base build. That rolled loop measured 3.42 M cycles on RP2040 in one unrepeated run (n=1), not used here.</div>
+  <div class="foot"><span class="src">rind rows only. Cycles: published for microcontrollers; for Pi 2 computed = ns × 0.9 GHz (clock recorded every round). µs: published for M1 Pro, Pi 5, Pi 2; computed = cycles ÷ MHz for microcontrollers. Pi 5 SHA rows: 1 run, clock probably 1.5 GHz but not checked then, so no cycles. Runs: README.md.</span><span class="num"></span></div>
+</section>
+
+<!-- 5. PUBLIC KEY ACROSS DEVICES -->
+<section class="slide" data-section="Compare">
+  <div class="kicker">Across devices · public key</div>
+  <h2>X25519 and P-256 signing on every device that fits them</h2>
+  <div class="cols">
+    <div><div class="chart-title">X25519 ECDH · µs (log scale)</div><div id="ch-x25519"></div></div>
+    <div><div class="chart-title">P-256 ECDSA sign · µs (log scale)</div><div id="ch-p256"></div></div>
+  </div>
+  <table class="t" id="tb-pk" style="margin-top:6px"></table>
+  <div class="foot"><span class="src">rind rows only. Pi 5 = narrow-multiplier build from PR #82 (median of 5 interleaved runs at 1.5 GHz; cycles computed = µs × 1.5 GHz). Pi 2 cycles computed = ns × 0.9 GHz. Microcontroller µs computed = cycles ÷ MHz. Uno R3: does not fit in 2 KB SRAM. Runs: README.md.</span><span class="num"></span></div>
+</section>
+
+<!-- 6. MICROCONTROLLERS -->
+<section class="slide" data-section="Microcontrollers">
+  <div class="kicker">Microcontrollers · 32-bit</div>
+  <h2>MG24, ESP32-S3 and RP2040, in cycles</h2>
+  <p class="lede">All 12 bench images ran and passed their KATs on every board. Fewer cycles is better.</p>
+  <table class="t big" id="tb-mcu"></table>
+  <div class="foot"><span class="src">rind rows, CPU cycles. MG24, ESP32-S3: median of 5 run medians (ESP32-S3 = board 1). RP2040: median of 5 rounds on each board, SysTick wrap fix applied. <span data-k="mcu.agree"></span>. Sources: results/efr32mg24/, results/diag/esp32s3-second-host-2026-11-12/, presentations/rind-rp2040/ on main.</span><span class="num"></span></div>
+</section>
+
+<!-- 7. UNO -->
+<section class="slide" data-section="Arduino Uno R3">
+  <div class="kicker">8-bit · ATmega328P at 16 MHz · 2 KB SRAM</div>
+  <h2>Arduino Uno R3: three primitives fit</h2>
+  <div class="cols c64">
+    <div>
+      <table class="t big" id="tb-uno"></table>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px"><h3>What ran</h3>
+        <div class="note">A <code>no_std</code> port of rind's generic SHA-256, SHA-512 and Poly1305 (plus ChaCha20, KAT only). Not the full crate. Image: <span data-k="uno.image"></span>.</div></div>
+      <div class="card" style="margin-bottom:14px"><h3>KATs on the board · all pass</h3><div id="uno-kats"></div></div>
+      <div class="card" style="margin-bottom:14px"><h3>Does not fit in 2 KB SRAM</h3><div id="uno-skip"></div></div>
+      <div class="card"><h3>Dropped</h3><div class="note">ChaCha20 timings: unstable checksums and wrapped cycle counts across the 5 runs. Omitted, not guessed.</div></div>
+    </div>
+  </div>
+  <div class="foot"><span class="src">Timer1, no prescale (1 tick = 1 cycle); one priming call, then median of 5 runs. µs computed = cycles ÷ 16. Every timed digest matched a host hashlib / RFC 8439 check. Source: results/uno-r3/ on main.</span><span class="num"></span></div>
+</section>
+
+<!-- 8. LINUX + MAC -->
+<section class="slide" data-section="Linux and macOS">
+  <div class="kicker">Application processors</div>
+  <h2>M1 Pro, Raspberry Pi 5 and Raspberry Pi 2, in µs</h2>
+  <div class="cols c46">
+    <table class="t big" id="tb-hosts"></table>
+    <div><div class="chart-title">µs, log scale</div><div id="ch-hosts"></div><div class="legend" id="lg-hosts"></div></div>
+  </div>
+  <div class="foot"><span class="src">rind rows, criterion estimates. M1 Pro and Pi 5: published host sets at rind b6651423, 1 run each (M1 Pro flagged busy: treat &lt; 10–15% as noise; Pi 5 public-key rows are the old wide-multiplier build, see next slide). Pi 2: median of 5 rounds at rind a6577cb4, 900 MHz, no throttling. Sources: hosts/m1pro/, hosts/pi5/, results/pi2b-bench/ on main (host id pi2b-bench).</span><span class="num"></span></div>
+</section>
+
+<!-- 9. PI 5 NARROW -->
+<section class="slide" data-section="Pi 5">
+  <div class="kicker">Raspberry Pi 5 · Cortex-A76 at 1.5 GHz</div>
+  <h2>The narrow multiplier path: up to 2.3× faster public key</h2>
+  <p class="lede">PR #82 picks the narrow-multiplier code on the A76 instead of the routines tuned for Apple's wide cores.</p>
+  <div class="cols c64">
+    <div><div class="legend"><span><i style="background:#a8b3c1"></i>wide (before)</span><span><i style="background:#0f766e"></i>narrow (PR #82)</span></div><div id="ch-pi5ab"></div></div>
+    <div><table class="t big" id="tb-pi5ab"></table>
+      <div class="callout" style="margin-top:16px">✓ <span data-k="pi5tests"></span>.</div></div>
+  </div>
+  <div class="foot"><span class="src">Medians of 5 interleaved runs, pinned to core 3, 1.5 GHz, 64.8–71.9 °C, no live throttling. narrow/wide computed from the medians shown. Source: rind fork PR #82; earlier PR #33 A/B in hosts/pi5/ab-narrow-mul/.</span><span class="num"></span></div>
+</section>
+
+<!-- 10. PENDING -->
+<section class="slide" data-section="Pending">
+  <div class="kicker">Not done yet</div>
+  <h2>What is still pending</h2>
+  <table class="t big" id="tb-pending"></table>
+  <div class="foot"><span class="src">Status from each lane's log as of the date on the title slide.</span><span class="num"></span></div>
+</section>
+
+<!-- 11. WHERE -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Sources</div>
+  <h2>Where the numbers live</h2>
+  <p class="lede">Paths in rind-results unless noted.</p>
+  <table class="t big" id="tb-where"></table>
+  <div class="foot"><span class="src">Run counts: presentations/rind-hardware-bench/README.md. Also on main, outside this deck: results/nrf52840, results/jetson-orin-nano, hosts/pixel9pro, hosts/xeon-vm, results/intel-core-ultra-9-275hx, results/host.</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const D = DATA, $ = (s,r=document)=>r.querySelector(s), NS="http://www.w3.org/2000/svg";
+  const get = p => p.split('.').reduce((o,k)=>o&&o[k], D);
+  document.querySelectorAll('[data-k]').forEach(e=>{ e.textContent = get(e.dataset.k); });
+  const nf = (v,d=0)=>Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+  // µs with sensible precision
+  const us = v => v>=1000 ? nf(v,0) : v>=100 ? nf(v,1) : v>=10 ? nf(v,2) : nf(v,3);
+  function el(tag, attrs, parent, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; if(parent) parent.appendChild(e); return e; }
+  const ab = t => t>=1e6 ? (t/1e6)+'M' : t>=1e3 ? (t/1e3)+'k' : String(t);
+  function svg(w,h){ return el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img'}); }
+
+  // Horizontal bars on a log10 axis. rows: [label, value, color, text]
+  function logbars(target, rows, {w=560, labelW=96, rowH=24, lo=null, hi=null}={}){
+    const vals = rows.filter(r=>r[1]!=null).map(r=>r[1]);
+    const L = lo ?? Math.pow(10, Math.floor(Math.log10(Math.min(...vals)))), H = hi ?? Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
+    const h = rows.length*rowH + 28, s = svg(w,h), x0=labelW, x1=w-92;
+    const sc = v => x0 + (x1-x0)*(Math.log10(v)-Math.log10(L))/(Math.log10(H)-Math.log10(L));
+    for(let t=L; t<=H*1.0001; t*=10){ el('line',{x1:sc(t),x2:sc(t),y1:2,y2:h-20,stroke:'#e6eaef'},s);
+      el('text',{x:sc(t),y:h-5,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s, ab(t)); }
+    rows.forEach((r,i)=>{ const y=4+i*rowH;
+      el('text',{x:x0-8,y:y+rowH*0.62,'font-size':12.5,'text-anchor':'end',fill:'#16202e','font-weight':600},s,r[0]);
+      if(r[1]==null){ el('text',{x:x0+4,y:y+rowH*0.62,'font-size':12,fill:'#7b8797','font-style':'italic'},s,r[3]); return; }
+      el('rect',{x:x0,y:y+4,width:Math.max(2,sc(r[1])-x0),height:rowH-9,rx:2,fill:r[2]},s);
+      el('text',{class:'v',x:sc(r[1])+6,y:y+rowH*0.62,'font-size':12,fill:'#465467','font-weight':600},s,r[3]); });
+    $(target).appendChild(s);
+  }
+
+  // Slide 2: devices
+  $('#tb-devices').innerHTML = `<tr><th>Device</th><th>Core</th><th>Clock</th><th>Memory</th><th>What ran</th></tr>` +
+    D.devices.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('');
+
+  // Slide 3: matrix
+  const SYM = {ok:'✓', pend:'pending', prog:'…', na:'n/a'};
+  $('#tb-matrix').innerHTML = `<tr><th>Device</th>${D.matrixCols.map(c=>`<th>${c}</th>`).join('')}</tr>` +
+    D.matrix.map(r=>`<tr><td class="dev">${r.d}</td>${r.c.map(c=>`<td><span class="st ${c.s}"><b>${SYM[c.s]}</b>${c.t?`<i>${c.t}</i>`:''}</span></td>`).join('')}</tr>`).join('');
+
+  // Cross-device: per device µs (published or computed) and cycles (published or computed)
+  const X = D.cross;
+  function cell(dev, v){
+    if(!v || v.na) return {us:null, cyc:null, usSrc:'', cycSrc:'', na:v&&v.na};
+    if(v.cyc!=null) return {us: v.cyc/dev.mhz, cyc: v.cyc, usSrc:'c', cycSrc:''};
+    const u = v.ns/1000;
+    const cyc = (dev.mhz && !v.clockUnchecked) ? Math.round(v.ns*dev.mhz/1000) : null;
+    return {us:u, cyc, usSrc:'', cycSrc: cyc!=null?'c':''};
+  }
+  function crossChart(target, op){
+    const rows = X.devices.map(d=>{ const c=cell(d, X.ops[op][d.k]); return [d.n, c.us, d.color, c.us==null ? (c.na||'pending') : us(c.us)+' µs']; });
+    logbars(target, rows, {w:560, rowH:27});
+  }
+  function crossTable(target, ops){
+    let hd = `<tr><th>rind</th>${X.devices.map(d=>`<th class="n">${d.n}</th>`).join('')}</tr>`;
+    let body = ops.map(op=>{
+      const cs = X.devices.map(d=>[d, X.ops[op][d.k], cell(d, X.ops[op][d.k])]);
+      const cyc = `<tr><td><b>${op}</b> · cycles</td>${cs.map(([d,v,c])=>`<td class="n${v&&v.odd?' oddcell':''}">${c.na?'n/a':c.cyc==null?'<span class="dim">—</span>':nf(c.cyc)+(c.cycSrc?'<sup>c</sup>':'')}</td>`).join('')}</tr>`;
+      const u = `<tr><td><span class="dim">${op} · µs</span></td>${cs.map(([d,v,c])=>`<td class="n">${c.na?'n/a':c.us==null?'—':us(c.us)+(c.usSrc?'<sup>c</sup>':'')}</td>`).join('')}</tr>`;
+      return cyc+u; }).join('');
+    $(target).innerHTML = hd + body + `<tr><td colspan="${X.devices.length+1}" class="note"><sup>c</sup> computed from the published value and the recorded clock. Runs per cell: M1 Pro 1, Pi 5 SHA 1, Pi 5 public key 5, all others 5.</td></tr>`;
+  }
+  crossChart('#ch-sha256', 'SHA-256 · 16 KB'); crossChart('#ch-sha512', 'SHA-512 · 16 KB');
+  crossTable('#tb-hash', ['SHA-256 · 16 KB','SHA-512 · 16 KB']);
+  crossChart('#ch-x25519', 'X25519 ECDH'); crossChart('#ch-p256', 'P-256 ECDSA sign');
+  crossTable('#tb-pk', ['X25519 ECDH','P-256 ECDSA sign']);
+
+  // Slide 6: MCU table
+  $('#tb-mcu').innerHTML = `<tr><th>rind · cycles</th>${D.mcu.cols.map(c=>`<th class="n">${c}</th>`).join('')}</tr>` +
+    D.mcu.rows.map(r=>`<tr><td><b>${r[0]}</b></td>${r.slice(1).map((v,i)=>`<td class="n${r[0].startsWith('SHA-512')&&i>0?' oddcell':''}">${nf(v)}</td>`).join('')}</tr>`).join('');
+
+  // Slide 7: Uno
+  $('#tb-uno').innerHTML = `<tr><th>rind port</th><th class="n">cycles (n=5)</th><th class="n">range</th><th class="n"><span class="u">µs</span><sup>c</sup></th></tr>` +
+    D.uno.rows.map(r=>`<tr><td><b>${r[0]}</b></td><td class="n">${nf(r[1])}</td><td class="n dim">${r[2]===r[3]?'exact':'+'+nf(r[3]-r[2])}</td><td class="n">${nf(r[1]/16,0)}</td></tr>`).join('');
+  $('#uno-kats').innerHTML = D.uno.kats.map(k=>`<span class="pill">✓ ${k}</span>`).join('');
+  $('#uno-skip').innerHTML = D.uno.skipped.map(k=>`<span class="pill x">${k}</span>`).join('');
+
+  // Slide 8: hosts
+  const HC = ['#6b5ca5','#0f766e','#2b6cb0'];
+  $('#tb-hosts').innerHTML = `<tr><th>rind · <span class="u">µs</span></th>${D.hosts.cols.map(c=>`<th class="n">${c}</th>`).join('')}</tr>` +
+    D.hosts.rows.map(r=>`<tr><td><b>${r[0]}</b></td>${r.slice(1).map(v=>`<td class="n">${us(v)}</td>`).join('')}</tr>`).join('');
+  (function(){
+    const w=600, labelW=150, bh=11, gap=12, G=D.hosts.rows.length, n=D.hosts.cols.length, gh=n*(bh+2)+gap, h=G*gh+26, s=svg(w,h), x0=labelW, x1=w-60;
+    const L=0.1, H=10000, sc=v=>x0+(x1-x0)*(Math.log10(v)-Math.log10(L))/(Math.log10(H)-Math.log10(L));
+    for(let t=L;t<=H*1.0001;t*=10){ el('line',{x1:sc(t),x2:sc(t),y1:2,y2:h-20,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-5,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,ab(Math.round(t*10)/10)); }
+    D.hosts.rows.forEach((r,g)=>{ const y0=4+g*gh;
+      el('text',{x:x0-8,y:y0+(n*(bh+2))/2+4,'font-size':12.5,'text-anchor':'end',fill:'#16202e','font-weight':600},s,r[0]);
+      r.slice(1).forEach((v,i)=>{ const y=y0+i*(bh+2); el('rect',{x:x0,y:y,width:Math.max(2,sc(v)-x0),height:bh,rx:2,fill:HC[i]},s);
+        el('text',{class:'v',x:sc(v)+5,y:y+bh-1.5,'font-size':10.5,fill:'#465467'},s,us(v)); }); });
+    $('#ch-hosts').appendChild(s);
+    $('#lg-hosts').innerHTML = D.hosts.cols.map((c,i)=>`<span><i style="background:${HC[i]}"></i>${c}</span>`).join('');
+  })();
+
+  // Slide 9: Pi 5 A/B
+  (function(){
+    const rows=[]; D.pi5ab.forEach(r=>{ rows.push([r[0], r[1], '#a8b3c1', nf(r[1],1)+' µs']); rows.push(['', r[2], '#0f766e', nf(r[2],1)+' µs']); });
+    logbars('#ch-pi5ab', rows, {w:640, labelW:130, rowH:21, lo:10, hi:10000});
+    $('#tb-pi5ab').innerHTML = `<tr><th><span class="u">µs</span></th><th class="n">wide</th><th class="n">narrow</th><th class="n">narrow / wide<sup>c</sup></th></tr>` +
+      D.pi5ab.map(r=>`<tr><td><b>${r[0]}</b></td><td class="n">${nf(r[1],1)}</td><td class="n">${nf(r[2],1)}</td><td class="n"><b>${(r[2]/r[1]).toFixed(2)}</b></td></tr>`).join('');
+  })();
+
+  // Slide 10, 11
+  $('#tb-pending').innerHTML = `<tr><th>Device</th><th>What</th><th>Why</th></tr>` + D.pending.map(r=>`<tr><td><b>${r[0]}</b></td><td><span class="tag pending">${r[1]}</span></td><td>${r[2]}</td></tr>`).join('');
+  $('#tb-where').innerHTML = `<tr><th>Device</th><th>Where</th><th>Path</th></tr>` + D.where.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td><code>${r[2]}</code></td></tr>`).join('');
+
+  // Navigation (same as rind-aarch64-perf)
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, innerHeight/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>
