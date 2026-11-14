@@ -278,6 +278,20 @@ pub fn run(a: Args) -> Result<(), String> {
         || pjoin(&res, "render"),
         |o| o.to_string_lossy().into_owned(),
     );
+    let output = render_side::resolve_path(std::path::Path::new(&out))?;
+    let input = render_side::resolve_path(std::path::Path::new(&res))?;
+    let checkout = render_side::resolve_path(std::path::Path::new(&rind))?;
+    let overlaps_host = FILES.iter().any(|(_, file)| {
+        let host = input.join(file);
+        host.starts_with(&output) || output.starts_with(host)
+    });
+    if input.starts_with(&output)
+        || checkout.starts_with(&output)
+        || output.starts_with(&checkout)
+        || overlaps_host
+    {
+        return Err("render-ours: --out overlaps an input directory or the rind checkout".into());
+    }
     let _ = fs::remove_dir_all(&out);
     let data = format!("{rind}/benchmarks/data");
     let our_names: Vec<String> = OURS.iter().map(|(n, _)| n.to_string()).collect();
