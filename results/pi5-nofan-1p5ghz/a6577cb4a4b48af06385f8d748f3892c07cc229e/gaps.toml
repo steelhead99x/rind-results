@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the pi5-nofan-1p5ghz host: each report
+# operation where another library (OpenSSL included) beats rind by more than
+# 10%, in rind's benchmarks/gaps.toml format. `cargo xtask host-report`
+# refuses a gap without an entry and an entry that covers no gap.
+
+[[gap]]
+operations = [
+  "x25519-ecdh/{lib}",
+  "ed25519-sign/{lib}",
+  "ed25519-verify/{lib}",
+  "p256-ecdh/{lib}",
+  "p384-ecdh/{lib}",
+  "p521-ecdh/{lib}",
+]
+on = ["pi5-nofan-1p5ghz"]
+reason = "On aarch64, rind a6577cb4 runs s2n-bignum's _alt (wide-multiplier) schedules, which suit cores with fast high multiplies; the Cortex-A76 is not one. aws-lc-rs picks its schedule per core. The narrow-multiplier A/B on a Pi 5 at the same 1.5 GHz cap (hosts/pi5/ab-narrow-mul/) closes these to 0.93-0.99x of aws-lc-rs with the narrow schedules (steelhead99x/rind PR #33), which are not in a6577cb4."
+
+[[gap]]
+operations = [
+  "p256-ecdsa-verify/{lib}",
+  "p384-ecdsa-verify/{lib}",
+  "p521-ecdsa-verify/{lib}",
+]
+on = ["pi5-nofan-1p5ghz"]
+reason = "The same wide-multiplier schedules as the ECDH rows, plus the P-curve field and point routines used by verification. hosts/pi5/ab-narrow-mul/ shows the narrow schedules plus the NIST series (perf/pi5-narrow-nist) taking P-256 and P-384 verify ahead of aws-lc-rs on this core; none of that is in a6577cb4."
+
+[[gap]]
+operations = [
+  "rsa2048-pkcs1-sha256-sign/{lib}",
+  "rsa2048-pss-sha256-sign/{lib}",
+  "rsa2048-pkcs1-sha256-verify/{lib}",
+  "rsa2048-pss-sha256-verify/{lib}",
+]
+on = ["pi5-nofan-1p5ghz"]
+reason = "RSA-2048 uses the same wide-multiplier bignum schedules on aarch64. PR #33 adds a narrow RSA-2048 schedule for A72/A76/N1 cores (hosts/pi5/ab-narrow-mul/); it is not in a6577cb4."
+
+[[gap]]
+operations = [
+  "rustls-full-handshake-group/secp256r1/{lib}",
+  "rustls-full-handshake-group/x25519/{lib}",
+  "rustls-full-handshake-group/x25519mlkem768/{lib}",
+  "rustls-full-handshake-key/ed25519/{lib}",
+  "rustls-full-handshake-key/rsa-2048/{lib}",
+  "rustls-resumed-handshake/x25519/{lib}",
+]
+on = ["pi5-nofan-1p5ghz"]
+reason = "Handshake time is dominated by the key exchange and signature operations above (X25519, P-256, Ed25519, RSA-2048), so these rows carry the same wide-multiplier gap."
