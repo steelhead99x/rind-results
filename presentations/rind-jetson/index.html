@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>rind on the Jetson Orin Nano: 14 November 2026</title>
+<title>Jetson Orin Nano, rind 98568332</title>
 <!--
   Self-contained deck: no network access, no external libraries.
   STYLE: the CSS of presentations/rind-rp2040, via presentations/rind-hardware-today.
@@ -160,151 +160,65 @@ p.small{font-size:13.5px;line-height:1.4;color:var(--ink2);margin:8px 0 0}
 <body>
 <div id="deck">
 
-<!-- 1 TITLE -->
 <section class="slide title" data-section="Title">
   <div class="bar"></div>
   <div class="inner">
-    <div class="kicker">rind · NVIDIA Jetson Orin Nano · aarch64 Tegra</div>
-    <h1>What today's rind work means on the Jetson, and what was actually measured there</h1>
-    <div class="sub">The published set is rind 98568332. #82's narrow schedules do not select this Cortex-A78AE. #79's cache-line table applies and has not been timed here.</div>
+    <div class="kicker">rind · Jetson Orin Nano · Cortex-A78AE</div>
+    <h1>Published set, rind 98568332. #82 and #79 are not measured here.</h1>
+    <div class="sub">6× Cortex-A78AE r0p1, part 0xd42. schedutil 729.6–1728 MHz, left as found. Three runs pinned to cpu5, 12 Nov 19:18–21:05 PT. rustc 1.98.1.</div>
   </div>
-  <div class="meta">steelhead99x/rind-results · results/jetson-orin-nano<br>14 November 2026 · America/Los_Angeles</div>
-  <div class="foot"><span class="src">Board facts: results/jetson-orin-nano/facts.txt. Published times: RESULTS.md. Today's pulls: steelhead99x/rind #82 and #79. No number on this deck was estimated.</span><span class="num"></span></div>
+  <div class="meta">steelhead99x/rind-results · results/jetson-orin-nano<br>Services were left running. A control moved rind and aws-lc-rs by at most 0.15%.</div>
+  <div class="foot"><span class="src">results/jetson-orin-nano/facts.txt · NOTES.md</span><span class="num"></span></div>
 </section>
 
-<!-- 2 BOARD -->
-<section class="slide" data-section="Board">
-  <div class="kicker">The machine the published set ran on</div>
-  <h2 class="s28">Six Cortex-A78AE cores, schedutil 729.6–1728 MHz, services left running</h2>
-  <div class="board">
-    <div class="cell"><div class="k">SoC</div><div class="v" style="font-size:18px">Orin Nano Super</div></div>
-    <div class="cell"><div class="k">CPU</div><div class="v" style="font-size:18px">6× A78AE r0p1</div></div>
-    <div class="cell"><div class="k">Part</div><div class="v" style="font-size:18px">0xd42</div></div>
-    <div class="cell"><div class="k">Memory</div><div class="v" style="font-size:18px">7546 MB LPDDR5</div></div>
-  </div>
-  <ul class="b sm">
-    <li>L4T R39.2.1, Ubuntu 24.04.5, kernel 6.8.12-1021-tegra. nvpmodel MAXN_SUPER, left unchanged. cpufreq tegra194, governor schedutil, 729.6–1728 MHz.</li>
-    <li>L1 64 KB I + 64 KB D and L2 256 KB per core, L3 2 MB per cluster. AES, PMULL, SHA-1, SHA-256, NEON. No SHA-3, no SHA-512 instructions, no DIT.</li>
-    <li>cpu0–3 are cluster 0, cpu4–5 are cluster 1. All three runs pinned to cpu5, 2026-11-13 03:18–05:05 UTC (12 Nov 19:18–21:05 PT). rustc 1.98.1. rind <code>98568332</code>, unpatched.</li>
-    <li>Live services were not stopped. rustls benches ran under libfaketime with the monotonic clock untouched. A control moved rind and aws-lc-rs by at most 0.15%.</li>
-  </ul>
-  <div class="foot"><span class="src">results/jetson-orin-nano/facts.txt · NOTES.md · RESULTS.md header. rind commit 985683329fb98aebfaae6c493f205f20070a8fca.</span><span class="num"></span></div>
-</section>
-
-<!-- 3 BASELINE -->
 <section class="slide" data-section="Baseline">
-  <div class="kicker">Published baseline · rind 98568332 · not a 14 November A/B</div>
-  <h2 class="s28">Rind is fastest on 65 of 68 shared operations. These are the rows #82 would have touched</h2>
-  <p class="lede s15">Median of three criterion runs. Below 1.00× rind is faster than the fastest other library. There is no p256-keygen row in RESULTS.md.</p>
+  <div class="kicker">rind 985683329fb98aebfaae6c493f205f20070a8fca · median of 3 criterion runs · cpu5</div>
+  <h2 class="s28">Fastest on 65 of 68 shared operations. No gap over 10%.</h2>
+  <p class="lede s15">Below 1.00× rind is faster than the fastest other library. These are the public-key rows, plus the two rows above 1.00×. There is no p256-keygen row in RESULTS.md.</p>
   <table class="t d14">
-    <tr><th>Operation</th><th class="n">rind</th><th>Fastest other</th><th class="n">ratio</th></tr>
-    <tr><td>x25519-ecdh</td><td class="n">65.87 µs</td><td>graviola, 65.78 µs</td><td class="n">1.00×</td></tr>
-    <tr><td>rsa2048-pkcs1-sha256-sign</td><td class="n">1.21 ms</td><td>ring, 1.43 ms</td><td class="n">0.85×</td></tr>
-    <tr><td>rsa2048-pkcs1-sha256-verify</td><td class="n">37.72 µs</td><td>ring, 46.28 µs</td><td class="n">0.82×</td></tr>
-    <tr><td>p256-ecdh</td><td class="n">109.47 µs</td><td>ring, 117.13 µs</td><td class="n">0.93×</td></tr>
-    <tr><td>p256-ecdsa-sign</td><td class="n">26.38 µs</td><td>graviola, 31.80 µs</td><td class="n">0.83×</td></tr>
-    <tr><td>p256-ecdsa-verify</td><td class="n">103.79 µs</td><td>aws-lc-rs, 104.36 µs</td><td class="n">0.99×</td></tr>
-    <tr><td>ed25519-sign</td><td class="n">15.23 µs</td><td>graviola, 15.55 µs</td><td class="n">0.98×</td></tr>
-    <tr><td>ed25519-verify</td><td class="n">70.73 µs</td><td>graviola, 70.92 µs</td><td class="n">1.00×</td></tr>
+    <tr><th>operation</th><th class="n">rind</th><th class="n">fastest other</th><th class="n">ratio</th></tr>
+    <tr><td>x25519-ecdh</td><td class="n">65.87 µs</td><td class="n">graviola, 65.78 µs</td><td class="n">1.00×</td></tr>
+    <tr><td>rsa2048 sign</td><td class="n">1.21 ms</td><td class="n">ring, 1.43 ms</td><td class="n">0.85×</td></tr>
+    <tr><td>rsa2048 verify</td><td class="n">37.72 µs</td><td class="n">ring, 46.28 µs</td><td class="n">0.82×</td></tr>
+    <tr><td>p256-ecdh</td><td class="n">109.47 µs</td><td class="n">ring, 117.13 µs</td><td class="n">0.93×</td></tr>
+    <tr><td>p256-ecdsa-sign</td><td class="n">26.38 µs</td><td class="n">graviola, 31.80 µs</td><td class="n">0.83×</td></tr>
+    <tr><td>p256-ecdsa-verify</td><td class="n">103.79 µs</td><td class="n">aws-lc-rs, 104.36 µs</td><td class="n">0.99×</td></tr>
+    <tr><td>ed25519-sign</td><td class="n">15.23 µs</td><td class="n">graviola, 15.55 µs</td><td class="n">0.98×</td></tr>
+    <tr><td>ed25519-verify</td><td class="n">70.73 µs</td><td class="n">graviola, 70.92 µs</td><td class="n">1.00×</td></tr>
+    <tr><td>sha256 64 B</td><td class="n">150 ns</td><td class="n">RustCrypto + dalek, 140 ns</td><td class="n">1.07×</td></tr>
+    <tr><td>xchacha20poly1305 32 B</td><td class="n">1.34 µs</td><td class="n">aws-lc-rs, 1.33 µs</td><td class="n">1.01×</td></tr>
   </table>
-  <p class="small">The two ratios in that report above 1.00× are sha256/64B at 1.07× (150 ns vs RustCrypto 140 ns) and xchacha20poly1305/32B at 1.01× (1.34 µs vs aws-lc-rs 1.33 µs). Host known-answer checks: 91 of 91. rind's own suite at this commit: 778 passed, 0 failed, 33 ignored.</p>
-  <div class="foot"><span class="src">results/jetson-orin-nano/RESULTS.md (the "rind against the fastest other library" table, and the 65 of 68 sentence) · NOTES.md (91/91 and 778 tests)</span><span class="num"></span></div>
+  <p class="small">Those two rows are the only ratios above 1.00×. The gaps section (another library more than 10% faster) is empty. Host known-answer checks: 91 of 91. rind tests: 778 passed, 0 failed, 33 ignored.</p>
+  <div class="foot"><span class="src">results/jetson-orin-nano/RESULTS.md · NOTES.md. This is not an A/B of #82 or #79.</span><span class="num"></span></div>
 </section>
 
-<!-- 4 #82 -->
-<section class="slide" data-section="#82">
-  <div class="kicker">14 November · <a href="https://github.com/steelhead99x/rind/pull/82">steelhead99x/rind#82</a> · head ece9afa7</div>
-  <h2 class="s28">This board keeps the wide schedules. #82 is not measured on the Jetson</h2>
-  <div class="callout warn">Linux selects the narrow (non-<code>_alt</code>) schedules only when every online core is Cortex-A72, Cortex-A76, or Neoverse N1. Cortex-A78AE is not in that list. An unrecognised part keeps <code>_alt</code>, the code this board already runs.</div>
-  <div class="cols" style="gap:16px;margin-top:14px">
-    <div class="card"><h3>Measured, on a Pi 5, not here</h3>
-      <p class="small" style="margin:0">Cortex-A76, 1.5 GHz cap, median of 5. X25519 252.8 → 107.7 µs (0.426×). RSA-2048 sign 5209.2 → 3071.6 µs (0.590×). P-256 keygen 52.1 → 36.6 µs (0.703×). Those commits do not change which schedule an A76 selects, and the table was not re-measured on <code>ece9afa7</code>. The full table is on the aarch64 deck.</p></div>
-    <div class="card"><h3>Not measured</h3>
-      <ul class="b sm">
-        <li>Jetson Orin Nano: not measured yet.</li>
-        <li>Cortex-A72 and Neoverse N1: selected by the same rule, not measured yet.</li>
-        <li>Forcing narrow on an M1 Pro is slower on every public-key row. The PR does not print those per-op times. Default detection keeps <code>_alt</code>.</li>
-      </ul></div>
-  </div>
-  <div class="foot"><span class="src">steelhead99x/rind#82 body. Jetson CPU: results/jetson-orin-nano/facts.txt (Cortex-A78AE r0p1, part 0xd42).</span><span class="num"></span></div>
-</section>
-
-<!-- 5 #79 -->
-<section class="slide" data-section="#79">
-  <div class="kicker">14 November · <a href="https://github.com/steelhead99x/rind/pull/79">steelhead99x/rind#79</a> · head 54d339e7</div>
-  <h2 class="s28">The P-256 table alignment applies on this aarch64 core. It is not measured here</h2>
-  <ul class="b">
-    <li>The non-x86_64 generator table is <code>#[repr(C, align(64))] AlignedTable</code>. The array is 88,064 bytes, with no trailing padding. Placement padding is less than 64 bytes. Jetson is non-x86_64, so the layout applies.</li>
-    <li>The measured 2.5–3% effect was 16-byte loads of 64-byte points on a Cortex-A76. No speedup was measured on arm or portable.</li>
-    <li>The original Pi 5 timings were not rerun for the accessor refactor or this merge. Head <code>54d339e7</code> has no new Pi 5 number, and no Jetson number.</li>
-    <li>The published Jetson p256-ecdsa-sign time, 26.38 µs, is rind <code>98568332</code>. It is not an A/B of this alignment.</li>
-  </ul>
-  <div class="callout" style="margin-top:8px"><a href="https://github.com/steelhead99x/rind/pull/76">#76</a> changes portable <code>mul_add</code> only. aarch64 Montgomery stays on assembly, so this board's RSA path is outside that pull. The portable result is an unnamed host, within about 1%, and is not a Jetson measurement.</div>
-  <div class="foot"><span class="src">#79 body and comment 6859469361 · #76 comment 6874901551 · RESULTS.md p256-ecdsa-sign row</span><span class="num"></span></div>
-</section>
-
-<!-- 6 OTHER -->
-<section class="slide" data-section="Other">
-  <div class="kicker">14 November · pulls that do not target this board</div>
-  <h2 class="s28">ESP32 IRAM, Poly1305, and bare metal are other machines</h2>
+<section class="slide" data-section="Not measured">
+  <div class="kicker">14 November · steelhead99x/rind #82 head ece9afa7 · #79 head 54d339e7</div>
+  <h2 class="s28">This core keeps the wide schedules. Neither pull has a Jetson time.</h2>
   <table class="t d14">
-    <tr><th>Pull</th><th>Where it was measured</th><th>On this Jetson</th></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/69">#69</a> rolled SHA-512</td><td>XIAO ESP32-S3, 0.033× main at <code>ef58672f</code></td><td>Not measured. This core has no SHA-512 instruction; the published SHA-512 rows are the 98568332 baseline.</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/96">#96</a> / <a href="https://github.com/steelhead99x/rind/pull/98">#98</a> IRAM SHA-256</td><td>#96 on the XIAO at <code>28837e94</code>. #98 is 1,478 bytes of IRAM and was not run on a board.</td><td>Xtensa ESP-IDF only. Not this board.</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/87">#87</a> 26-bit Poly1305</td><td>Earlier ESP32-S3 and nRF52840 images. Not re-measured on <code>6f2866d9</code>.</td><td>64-bit path is unchanged. Not measured as an A/B here.</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/84">#84</a> bare-metal no_std</td><td>Host tests, 764 passed. No board timing.</td><td>Hosted Linux is unchanged.</td></tr>
+    <tr><th>pull</th><th>on this board</th></tr>
+    <tr><td>#82 narrow schedules</td><td>Linux selects narrow only when every online core is Cortex-A72, Cortex-A76, or Neoverse N1. Part 0xd42 is none of those, so detection keeps _alt. Not measured here. The Pi 5 measurement is in the aarch64 deck.</td></tr>
+    <tr><td>#79 64-byte P-256 table</td><td>The layout applies on non-x86_64, including this core. No Jetson timing. The published p256-ecdsa-sign time, 26.38 µs, is rind 98568332.</td></tr>
+    <tr><td>Clock</td><td>The published runs left schedutil and the live services as found. There is no pinned-clock rerun.</td></tr>
   </table>
-  <p class="small">Published SHA-256 on this board, rind 98568332: 64 B is 150 ns (1.07× RustCrypto), 1350 B is 1.32 µs (0.98× ring), 16 KB is 14.92 µs (1.00× ring). Those are not #96.</p>
-  <div class="foot"><span class="src">#69 comment 6875774312 · #96 comment 6876711215 · #98 body · #87 body · #84 body · RESULTS.md sha256 rows</span><span class="num"></span></div>
-</section>
-
-<!-- 7 UNMEASURED -->
-<section class="slide" data-section="Open">
-  <div class="kicker">Still open on this board</div>
-  <h2 class="s28">Not measured yet on the Jetson Orin Nano</h2>
-  <ul class="b">
-    <li>#82 narrow vs <code>_alt</code>. Detection keeps <code>_alt</code> on Cortex-A78AE, and nobody has forced the other schedule here.</li>
-    <li>#79's 64-byte P-256 table, including head <code>54d339e7</code>.</li>
-    <li>#76, #69, #96, #98, #87, and #84. None of them has a Jetson time.</li>
-    <li>A rerun of the published 98568332 set at a pinned clock. The published runs left schedutil and the live services as found.</li>
-  </ul>
-  <div class="callout">The 65-of-68 table is the measurement this board does have. It is rind <code>98568332</code> on 12 November, three runs, cpu5.</div>
-  <div class="foot"><span class="src">steelhead99x/rind#82, #79, #76, #69, #96, #98, #87, #84 · results/jetson-orin-nano/NOTES.md</span><span class="num"></span></div>
-</section>
-
-<!-- 8 SOURCES -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources</div>
-  <h2 class="s28">Every number is from a pull request or from the published Jetson set</h2>
-  <table class="t" style="font-size:14px">
-    <tr><th>Slide</th><th>Source</th></tr>
-    <tr><td>Board</td><td><code>results/jetson-orin-nano/facts.txt</code>, <code>NOTES.md</code></td></tr>
-    <tr><td>Baseline</td><td><code>results/jetson-orin-nano/RESULTS.md</code>, generated from the three runs at rind <code>98568332</code></td></tr>
-    <tr><td>#82</td><td><a href="https://github.com/steelhead99x/rind/pull/82">steelhead99x/rind#82</a> body, head <code>ece9afa7</code></td></tr>
-    <tr><td>#79 and #76</td><td><a href="https://github.com/steelhead99x/rind/pull/79">#79</a> body and comment 6859469361 · <a href="https://github.com/steelhead99x/rind/pull/76">#76</a> comment 6874901551</td></tr>
-    <tr><td>Other pulls</td><td>#69 comment 6875774312 · #96 via #69 comment 6876711215 · #98, #87, #84 bodies</td></tr>
-  </table>
-  <p class="small">Charts of the same published set: <code>benchmarks/media/charts/jetson-orin-nano-rind-vs-fastest.png</code>. No Jetson directory under <code>hosts/</code>. The aarch64 deck's 12 November status line that said Orin results were pending is updated there.</p>
-  <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind</span><span class="num"></span></div>
+  <div class="foot"><span class="src">#82 body · #79 body · results/jetson-orin-nano/facts.txt · RESULTS.md p256-ecdsa-sign row</span><span class="num"></span></div>
 </section>
 
 </div>
 <div id="hud"></div>
 <script>
-
 (function(){
   const $=s=>document.querySelector(s);
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
   slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
   let cur=0;
   function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
-  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N}`; }
   addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
   $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
   addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
   fit(); show((parseInt(location.hash.slice(1))||1)-1);
 })();
-
 </script>
 </body>
 </html>

@@ -20,6 +20,12 @@ Each refresh reworks the whole deck into one story; this log records what change
 - New slides for steelhead99x/rind#82 (Pi 5 narrow-schedule table from the PR body; A72, N1, and Jetson Cortex-A78AE not measured; A78AE keeps `_alt`) and #79 (64-byte P-256 table, 88,064 bytes; the 2.5–3% A76 effect is the earlier measurement; head `54d339e7` was not re-timed).
 - The 12 November status slide still records that evening's check. A following slide says the Orin set is now on main at `results/jetson-orin-nano` (rind `98568332`) and is not a remeasure of #79 or #82. Deck: `presentations/rind-jetson/`.
 
+## 2026-11-14 cleanup
+
+- The deck is 8 slides. The DATA block is gone. Each table is static HTML, and the footer names the file.
+- Removed the phase essays, the verification notes that are not in this repo, the early M1 fusion times, and the llvm-mca prediction.
+- The follow-up slide uses the ratios printed in `hosts/pi5/ab-narrow-mul/README.md`.
+
 ## Earlier
 
 - 2026-11-12 14:05: first version, phase by phase.
