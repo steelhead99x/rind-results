@@ -6,6 +6,14 @@ The notes below were written against a host-side skill path
 (`skills/rind-bench-and-verify/SKILL.md`) that is not in this tree; they remain
 as suggestions for that host workflow.
 
+`cargo xtask bench` does not keep a fixed host list. Any filesystem-safe host
+id is a host (lowercase letters, digits, `.`, `_` and `-`). Omit `--board` and
+the id is a slug of this machine's CPU, for example `intel-core-ultra-9-275hx`.
+`pixel9pro` stays Android, and `esp32s3`, `nrf52840`, `efr32mg24` and `rp2040`
+stay bare metal. rind's `admin/bench-report run` (steelhead99x/rind#83) names a
+machine the same way. `collect --host` still only reaches the six ssh hosts in
+item 2; that refusal is collect's, not `run`'s and not `cargo xtask bench`'s.
+
 
 Run: rind `b6651423` (moq-dev/rind main), hosts: xeon-vm (x86_64 Xeon VM), m1pro
 (Apple M1 Pro), Raspberry Pi 5 (`pi5`). Read-only on the skill; these are

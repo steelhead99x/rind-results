@@ -111,9 +111,25 @@ pub fn relaxations_value(upstream: &Path, relax: &Relax) -> Value {
     let mut obj = Map::new();
     obj.insert("schema".into(), json!(1));
     obj.insert("mutated_upstream".into(), json!(false));
-    obj.insert("upstream".into(), json!(upstream.display().to_string()));
+    obj.insert("upstream".into(), json!(published_upstream(upstream)));
     obj.insert("relaxations".into(), Value::Array(applied));
     Value::Object(obj)
+}
+
+/// The script that was read, as a repo-relative path. An absolute checkout
+/// path would publish a home directory.
+fn published_upstream(upstream: &Path) -> String {
+    match (
+        upstream.file_name().and_then(|s| s.to_str()),
+        upstream
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str()),
+    ) {
+        (Some("bench-report"), Some("admin")) => "admin/bench-report".into(),
+        (Some(name), _) if !name.is_empty() => name.to_string(),
+        _ => "bench-report".into(),
+    }
 }
 
 pub fn write_relaxations(path: &Path, upstream: &Path, relax: &Relax) -> Result<(), String> {
@@ -315,6 +331,17 @@ pub fn sample_least_busy_core() -> Result<u32, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn relaxations_record_a_repo_relative_bench_report() {
+        let upstream = Path::new("/opt/checkout/rind/admin/bench-report");
+        let v = relaxations_value(upstream, &Relax::default());
+        assert_eq!(v["upstream"], "admin/bench-report");
+        assert_eq!(v["mutated_upstream"], false);
+        let text = v.to_string();
+        assert!(!text.contains("/opt/"));
+        assert!(!text.contains(upstream.to_str().unwrap()));
+    }
 
     #[test]
     fn loader_relaxes_in_memory_and_leaves_the_file() {

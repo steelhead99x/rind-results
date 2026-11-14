@@ -8,16 +8,38 @@
 
 use std::path::{Path, PathBuf};
 
+/// A host id is one results-directory component: the lowercase form of a
+/// filesystem-safe name (letters, digits, `.`, `_` and `-`), 1 to 81
+/// characters, starting with a letter or digit. Upper case is refused so two
+/// ids cannot differ only by case. This is the same shape as rind's
+/// `check_host_name`, restricted to lower case for the directory.
+pub fn is_filesystem_safe_host(host: &str) -> bool {
+    let mut chars = host.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !first.is_ascii_lowercase() && !first.is_ascii_digit() {
+        return false;
+    }
+    let mut n = 1usize;
+    for c in chars {
+        if !(c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '.' | '_' | '-')) {
+            return false;
+        }
+        n += 1;
+        if n > 81 {
+            return false;
+        }
+    }
+    true
+}
+
 pub fn host_id(host: &str) -> Result<String, String> {
-    if host.is_empty()
-        || !host
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
-        || host.starts_with('-')
-        || host.ends_with('-')
-    {
+    if !is_filesystem_safe_host(host) {
         return Err(format!(
-            "host id {host:?} is not a lowercase results directory name"
+            "host id {host:?} is not a filesystem-safe results directory name \
+             (lowercase letters, digits, '.', '_' and '-', at most 81 characters, \
+             starting with a letter or digit)"
         ));
     }
     Ok(host.to_string())
@@ -205,6 +227,21 @@ mod tests {
         assert!(publish_dir(Path::new("."), "Jetson", "0b1f1469", None).is_err());
         assert!(publish_dir(Path::new("."), "pi5", "0b1f1469", Some("../x")).is_err());
         assert!(publish_dir(Path::new("."), "pi5", "HEAD", None).is_err());
+    }
+
+    #[test]
+    fn host_id_accepts_a_cpu_slug_and_refuses_a_path() {
+        assert!(host_id("intel-core-ultra-9-275hx").is_ok());
+        assert!(host_id("amd-ryzen-9-7950x").is_ok());
+        assert!(host_id("my_host").is_ok());
+        assert!(host_id("cpu.rev").is_ok());
+        assert!(host_id(&"a".repeat(81)).is_ok());
+        assert!(host_id("Jetson").is_err());
+        assert!(host_id("../x").is_err());
+        assert!(host_id("foo/bar").is_err());
+        assert!(host_id("-x").is_err());
+        assert!(host_id("").is_err());
+        assert!(host_id(&"a".repeat(82)).is_err());
     }
 
     #[test]
