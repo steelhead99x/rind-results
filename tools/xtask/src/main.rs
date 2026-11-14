@@ -9,6 +9,7 @@ mod boards;
 mod capture;
 mod charts;
 mod compare;
+mod crit;
 mod demo_tsv;
 mod host_report;
 mod host_run;
@@ -129,6 +130,20 @@ enum Cmd {
         #[arg(long, default_value = layout::COMPARABLE_PIN)]
         commit: String,
     },
+    /// Per id and mode, criterion's runs under ROOT/<mode>-r<N>: median, min, max, spread
+    CritParse(crit::ParseArgs),
+    /// A/B table: rind's median per mode, ratios to BASE and to aws-lc-rs
+    AbCmp(crit::CmpArgs),
+    /// A/B table from the fastest round of each mode, for noisy hosts
+    AbMin(crit::MinArgs),
+    /// An A/B run's criterion homes as one rind-results/ab-v1 JSON, on stdout
+    AbCollect(crit::CollectArgs),
+    /// Argon2id wall time and PMU per block, per size and variant, from a TSV log
+    Argon2PmuSum(crit::Argon2PmuArgs),
+    /// Harness PMU medians per op and variant, from a tab-separated log
+    AbPmuSum(crit::AbPmuArgs),
+    /// `perf stat` CSVs (stat-<binary>-<op>-<run>.csv in the current directory) as a table
+    AbPerfSum,
     /// Re-check a result tree. With no flags, the published set.
     Verify {
         #[arg(long)]
@@ -268,6 +283,13 @@ fn main() -> ExitCode {
             let home = home.unwrap_or(boards::home_dir()?.join("rind-bench-run"));
             boards::pi_run(&home, &commit)
         })(),
+        Cmd::CritParse(a) => crit::parse(a),
+        Cmd::AbCmp(a) => crit::cmp(a),
+        Cmd::AbMin(a) => crit::min_rounds(a),
+        Cmd::AbCollect(a) => crit::collect(a),
+        Cmd::Argon2PmuSum(a) => crit::argon2_pmu_sum(a),
+        Cmd::AbPmuSum(a) => crit::ab_pmu_sum(a),
+        Cmd::AbPerfSum => crit::ab_perf_sum(),
         Cmd::Verify { dir, board } => run_verify(&dir, &board),
         Cmd::AndroidConvert {
             rind,

@@ -110,6 +110,6 @@ Every run also asserts rind's and RustCrypto's tags agree (the PMU harness check
 - `scripts/argon2-pmu/`: harness; rind (path dep) and RustCrypto argon2 =0.6.0, interleaved per
   iteration, wall time plus a PMU group on Linux. `scripts/argon2-pmu-build{,-mac}.sh` builds it
   per variant tarball; `scripts/argon2-pmu-ab.sh` alternates variants under `~/rind-work/.bench.lock`;
-  `scripts/argon2-pmu-sum.py` summarises (median of per-alternation medians, spread, ratio).
+  `cargo xtask argon2-pmu-sum` (formerly `scripts/argon2-pmu-sum.py`) summarises (median of per-alternation medians, spread, ratio).
 - Criterion runs: `scripts/argon2-build-variants.sh`, `scripts/argon2-run-ab.sh` (from `results/argon2/`),
   `scripts/pi5-argon2-g1.sh`, `scripts/pi5-argon2-g1-confirm.sh`.
