@@ -20,7 +20,7 @@ continued from `4ad61ae3` (`perf(argon2): rotate with SHA3's xar on aarch64`). M
 - One release binary per variant, all built with `RUSTFLAGS=--cfg rind_cpu_disable` so `RIND_CPU_DISABLE_sha3=1` times the plain-NEON fill (`neon`) next to the SHA3 one (`sha3`) on the M1 Pro. The Pi 5 has no SHA3, so it only runs `neon`.
 - Interleaved: each round runs every variant × fill once; 5 rounds; table cells are the median of 5, with min–max spread. RustCrypto in the same binary is the drift control.
 - Mac: rustc 1.98.1 (rustup), macOS 14.0, not pinned (macOS has no affinity). Pi 5: rustc 1.98.1, `taskset -c 3`.
-- All timed runs under the shared `~/rind-work/.bench.lock`, except Mac round 1 (lock introduced mid-run). Scripts: `scripts/argon2-build-variants.sh`, `scripts/argon2-run-ab.sh`, `scripts/crit-parse.py`. Raw per-variant tables: `raw/`.
+- All timed runs under the shared `~/rind-work/.bench.lock`, except Mac round 1 (lock introduced mid-run). Scripts: `scripts/argon2-build-variants.sh`, `scripts/argon2-run-ab.sh`, `scripts/crit-parse.py` (now `cargo xtask crit-parse`). Raw per-variant tables: `raw/`.
 
 ## Apple M1 Pro (`m1pro`)
 

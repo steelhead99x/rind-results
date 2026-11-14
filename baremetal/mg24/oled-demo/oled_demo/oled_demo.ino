@@ -1,6 +1,6 @@
 /* Cycles the moq.dev mark, the rind wordmark, and one benchmark-headline
  * screen on an SSD1306 (128x64). I2C1 on PC4 (SDA) and PC5 (SCL).
- * Frames come from tools/gen_frames.py (frames.h).
+ * Frames come from `cargo xtask gen-frames` (frames.h).
  * Serial (115200) prints the I2C probe result and each frame change. */
 #include <Arduino.h>
 #include <Wire.h>
