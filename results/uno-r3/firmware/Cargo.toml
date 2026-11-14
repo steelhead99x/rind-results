@@ -1,0 +1,19 @@
+[package]
+name = "rind-uno-r3-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+# Local bench firmware only. Not a rind crate publication.
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+strip = false
+
+[profile.dev]
+panic = "abort"
+opt-level = "s"
+lto = false
