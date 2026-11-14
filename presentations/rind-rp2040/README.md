@@ -1,6 +1,6 @@
 # rind on the RP2040: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 19 slides at 1280×720.
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 20 slides at 1280×720.
 It covers:
 
 1. Title
@@ -21,7 +21,8 @@ It covers:
 16. Which other Rust crypto libraries compile for this and nearby targets (compile only)
 17. Other chips with the same limits, including the EFR32MG24
 18. Status and next steps: verified, pending timing, and the pull requests being prepared (none opened)
-19. Sources
+19. 14 November: #84 bare-metal no_std (764 lib tests, no Pico timing). #69, #87, and #76 are not measured on the Pico
+20. Sources
 
 ## Opening it
 

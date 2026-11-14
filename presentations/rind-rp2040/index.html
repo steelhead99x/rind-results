@@ -776,6 +776,28 @@ table.t.sv code{font-size:11.5px}
   <div class="foot"><span class="src">RP2040 bench lane STATUS · M0+ static-analysis STATUS · no_std lane STATUS and gates log · X25519/Ed25519/Poly1305 lane STATUS · snapshot <span data-k="snap.asOf"></span></span><span class="num"></span></div>
 </section>
 
+<!-- ============ 14 NOV RP2040 ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November 2026 · RP2040 · Cortex-M0+</div>
+  <h2 style="font-size:28px">#84 is the bare-metal no_std pull request. Nothing new has been timed on the Pico</h2>
+  <div class="cols" style="gap:18px">
+    <div class="card"><h3><a href="https://github.com/steelhead99x/rind/pull/84">#84</a> · head 4b4476e4</h3><ul class="b sm">
+      <li>On <code>target_os = "none"</code> rind is <code>no_std</code> with <code>alloc</code>. A hosted target is unchanged.</li>
+      <li><code>cargo test -p rind --lib</code>: 764 passed, 0 failed, 39 ignored. Doctests: 24 passed, 1 ignored, plus 2 compile-fail.</li>
+      <li>Lint targets, debug and release, with and without <code>wipe</code>: <code>thumbv6m-none-eabi</code>, <code>riscv32imc-unknown-none-elf</code>, <code>thumbv7em-none-eabihf</code>, <code>x86_64-unknown-none</code>.</li>
+      <li>This is the upstream form of the no_std patches on the earlier slides. No Pico timing. <code>just ci</code> was not run (no nix).</li>
+    </ul></div>
+    <div class="card"><h3>Targeted here, not measured on the Pico</h3><ul class="b sm">
+      <li><a href="https://github.com/steelhead99x/rind/pull/87">#87</a> Poly1305 in 26-bit limbs is the 32-bit path, including <code>thumbv6m</code> with <code>rind_mul16</code>. The XIAO and nRF ratios are earlier images, and the PR says they were not re-measured on <code>6f2866d9</code>. The Pico is not measured yet.</li>
+      <li><a href="https://github.com/steelhead99x/rind/pull/69">#69</a> rolled SHA-512 is measured on the XIAO (0.033× main). Not measured on the Pico.</li>
+      <li><a href="https://github.com/steelhead99x/rind/pull/76">#76</a> portable <code>mul_add</code>: 2056 tracks 2048 within about 1% on an unnamed host. Not measured on the Pico.</li>
+      <li><a href="https://github.com/steelhead99x/rind/pull/98">#98</a> is Xtensa IRAM only.</li>
+    </ul></div>
+  </div>
+  <div class="callout" style="margin-top:14px">The 12 November SysTick snapshot on the earlier slides stays as measured. EFR32MG24 is a <code>thumbv7em</code> lint target of #84 and has no new timing.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#84 body · #87 body · #69 comment 6875774312 · #76 comment 6874901551 · #98 body</span><span class="num"></span></div>
+</section>
+
 <!-- ============ 19. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>

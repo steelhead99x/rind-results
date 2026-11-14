@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>rind on the boards: 12 November 2026</title>
+<title>rind on the boards: 12 and 14 November 2026</title>
 <!--
   Self-contained deck: no network access, no external libraries.
   STYLE: the CSS of presentations/rind-rp2040. SLIDES: one <section class="slide"> per slide.
@@ -148,6 +148,10 @@ table.sv td:first-child{white-space:nowrap}
 .card.tall ul.b li{margin-bottom:12px}
 .cols3.fixes .card{min-height:330px}
 .cols3.fixes ul.b.sm{font-size:16px}
+
+table.t.d14 th,table.t.d14 td{padding:3px 7px}
+.slide h2.s28{font-size:28px;line-height:1.12}
+.lede.s15{font-size:15px;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -162,7 +166,7 @@ table.sv td:first-child{white-space:nowrap}
     <div class="sub">The Poly1305 patch A/B on the ESP32-S3 and nRF52840, three-alignment relinks, the 32 KB cache check, the flash-clock and watchdog fixes, the RP2040 port, and the move to rind-hardware; and, late on the 12th, an unpublished ESP32-S3 run that closed the I-cache gaps in SHA-512, HMAC/HKDF, ChaCha20-Poly1305 and XChaCha.</div>
   </div>
   <div class="meta">steelhead99x/rind-results · steelhead99x/rind-hardware<br>Times are America/Los_Angeles (PST)</div>
-  <div class="foot"><span class="src">Published figures are from rind-results main (95300f2) or rind-hardware main (7a14b38). The evening I-cache figures are an unpublished ESP32-S3 run at steelhead99x/rind 6aba8055 plus five patches, labelled on those slides. The file is named on each slide; the full list is on the last slide.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Published figures are from rind-results main (95300f2) or rind-hardware main (7a14b38). The evening I-cache figures are an unpublished ESP32-S3 run at steelhead99x/rind 6aba8055 plus five patches, labelled on those slides. The file is named on each slide; the full list is on the last slide. Slides after the timeline are the 14 November pull-request re-runs.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 2. SUMMARY ============ -->
@@ -496,7 +500,196 @@ table.sv td:first-child{white-space:nowrap}
     <tr class="hl"><td>23:49:11</td><td>steelhead99x/rind</td><td><code>fa0ab77c</code></td><td>Rolled HChaCha20 committed (author 23:48:34)</td></tr>
     <tr><td>23:50</td><td>ESP32-S3</td><td><code>compare-hchacha-rolled.txt</code></td><td>3-run compare written: XChaCha 32 B 1.03 ms → 164.07 µs, 6.43× → 1.02× RustCrypto</td></tr>
   </table>
-  <div class="foot"><span class="src">git log --format committer dates of steelhead99x/rind perf/esp32s3-rolled-sha512 (fa0ab77c); mtimes of the compare-*.txt files under <home> on x86-host-c. Not on rind-results main. Flash only /dev/ttyACM1, 80 MHz, no erase.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">git log --format committer dates of steelhead99x/rind perf/esp32s3-rolled-sha512 (fa0ab77c); mtimes of the compare-*.txt files under &lt;home&gt; on x86-host-c. Not on rind-results main. Flash only /dev/ttyACM1, 80 MHz, no erase.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV MAP ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November 2026 · Seeed XIAO ESP32-S3</div>
+  <h2 class="s28">Rolled SHA-512 holds at 0.033× main. SHA-256 is faster only when the block function runs from IRAM</h2>
+  <p class="lede s15">Ratios are this image over fork main <code>8dfb7942</code>. Below 1 is faster. On-device nanoseconds, 240 MHz CPU, 80 MHz flash, 16 KB I-cache, rind-hardware <code>08de2829</code>. These are later board runs than the unpublished evening slides above.</p>
+  <div class="cols" style="gap:14px">
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/69">#69</a> rolled SHA-512 · hold still open</h3>
+      <p class="small" style="margin:0">SHA-512 at 32 B / 1200 B / 16 KB is 0.0332 / 0.0329 / 0.0329×, about 30× faster. SHA-256 is instruction-identical and slower from layout: 1200 B is 1.108×, 16 B updates 1.731×. The board re-run is <code>ef58672f</code>. Current head <code>a01b2b9e</code> is not measured yet.</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/96">#96</a> HACL* SHA-256 in IRAM · hold met</h3>
+      <p class="small" style="margin:0">Every #69 hold row is faster than main. SHA-256 32 B is 0.392×. Cost is about 12.6 KB of IRAM (54.6 KB to 67.4 KB). The passing table is historical head <code>28837e94</code>. Current head <code>966efe08</code> is not measured yet.</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/98">#98</a> pure-Rust IRAM SHA-256 · size only</h3>
+      <p class="small" style="margin:0">Rolled FIPS SHA-256, no libcrux copy, IRAM total <code>0x5c6</code> (1,478 bytes, about 1.4 KiB) against #96's about 12.6 KiB. The PR says there are no timing numbers and this was not run on a board.</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/95">#95</a> and <a href="https://github.com/steelhead99x/rind/pull/97">#97</a> · flash layout fails</h3>
+      <p class="small" style="margin:0">Both build and both fail the hold. #95 is slower than main on every SHA-256 row. #97 misses main's cache set by 12 bytes. The diagnosis: no flash placement of this body beats #96.</p></div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind#69 comment 6875774312 (ef58672f) and comment 6876711215 (#96 at 28837e94) · #98 body (4e551a93) · #95 comment 6880930228 and comment 6881390638 · #97 comment 6881716592</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #69 ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · #69 board re-run · head ef58672f, not a01b2b9e</div>
+  <h2 class="s28">SHA-512 stays at about 30×. The SHA-256 hold fails, and the SHA-256 code did not change</h2>
+  <p class="lede s15">Two images, three fresh boots each, median of the three run medians. Main's spread is 0.0% on these rows. Known-answer checks: 0 failures. Every name-matched SHA-256 function is instruction-identical; the only extra symbol is rolled <code>sha512_compress_block</code>.</p>
+  <table class="t d14">
+    <tr><th>row</th><th class="n">main 8dfb7942</th><th class="n">ef58672f</th><th class="n">ratio</th><th>hold</th></tr>
+    <tr><td>sha256 32 B</td><td class="n">63,594 ns</td><td class="n">42,366 ns</td><td class="n">0.666</td><td>faster</td></tr>
+    <tr><td>sha256 64 B</td><td class="n">84,909 ns</td><td class="n">63,530 ns</td><td class="n">0.748</td><td>faster</td></tr>
+    <tr class="hl"><td>sha256 1200 B</td><td class="n">463,258 ns</td><td class="n">513,166 ns</td><td class="n">1.108</td><td>fail, +10.8%</td></tr>
+    <tr class="hl"><td>sha256 1350 B</td><td class="n">528,547 ns</td><td class="n">577,931 ns</td><td class="n">1.093</td><td>fail, +9.3%</td></tr>
+    <tr><td>sha256 8 KB / 16 KB</td><td class="n">2,774,533 / 5,429,633</td><td class="n">2,809,688 / 5,455,712</td><td class="n">1.013 / 1.005</td><td>outside spread</td></tr>
+    <tr class="hl"><td>sha256-updates 1 B</td><td class="n">2,752,029 ns</td><td class="n">3,846,712 ns</td><td class="n">1.398</td><td>fail, +39.8%</td></tr>
+    <tr class="hl"><td>sha256-updates 16 B</td><td class="n">1,533,067 ns</td><td class="n">2,653,800 ns</td><td class="n">1.731</td><td>fail, +73.1%</td></tr>
+    <tr><td>sha512 32 B</td><td class="n">3,343,396 ns</td><td class="n">111,004 ns</td><td class="n">0.0332</td><td>win holds</td></tr>
+    <tr><td>sha512 1200 B / 16 KB</td><td class="n">31,923,750 / 409,174,288</td><td class="n">1,049,729 / 13,459,654</td><td class="n">0.0329 / 0.0329</td><td>win holds</td></tr>
+  </table>
+  <p class="small">HMAC-SHA256 16 KB is 0.998×. Reused-key 32 B is 0.883×. No HMAC row is slower by more than 0.2%. HKDF extract-expand is 0.728×, so the "matches main" line fails by being faster. A uniform 1,252-byte pad of main moves at most 1.3%, so a plain shift does not reproduce this. Current head <code>a01b2b9e</code> has not been timed on the board.</p>
+  <div class="foot"><span class="src">steelhead99x/rind#69 comment 6875774312 (2026-11-14 01:45–02:16 PT). Poly1305 commits were dropped from this branch onto #87 (comment 6868091378).</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #96 SHA ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · #96 board pass · historical head 28837e94</div>
+  <h2 class="s28">HACL* SHA-256 from IRAM beats main on every hold row, and the SHA-512 win stays</h2>
+  <p class="lede s15">ESP-IDF Xtensa only. Two runs each, fresh alternating flashes, a second build repeated the first to the nanosecond. Spread 0.0% (16 KB rows up to ±0.2% on main). Known-answer checks: 0 failures. Current head <code>966efe08</code> is not measured yet.</p>
+  <table class="t d14">
+    <tr><th>row</th><th class="n">main 8dfb7942</th><th class="n">#96 28837e94</th><th class="n">ratio</th></tr>
+    <tr><td>sha256 32 B</td><td class="n">63,594 ns</td><td class="n">24,924 ns</td><td class="n">0.392</td></tr>
+    <tr><td>sha256 64 B</td><td class="n">84,909 ns</td><td class="n">45,576 ns</td><td class="n">0.537</td></tr>
+    <tr><td>sha256 1200 B</td><td class="n">463,257 ns</td><td class="n">394,240 ns</td><td class="n">0.851</td></tr>
+    <tr><td>sha256 1350 B</td><td class="n">528,380 ns</td><td class="n">455,593 ns</td><td class="n">0.862</td></tr>
+    <tr><td>sha256 8 KB</td><td class="n">2,774,271 ns</td><td class="n">2,648,738 ns</td><td class="n">0.955</td></tr>
+    <tr><td>sha256 16 KB</td><td class="n">5,429,640 ns</td><td class="n">5,276,360 ns</td><td class="n">0.972</td></tr>
+    <tr><td>sha256-updates 1 B</td><td class="n">2,752,285 ns</td><td class="n">2,671,988 ns</td><td class="n">0.971</td></tr>
+    <tr><td>sha256-updates 16 B</td><td class="n">1,533,067 ns</td><td class="n">1,457,188 ns</td><td class="n">0.951</td></tr>
+    <tr><td>sha512 32 B</td><td class="n">3,343,365 ns</td><td class="n">110,991 ns</td><td class="n">0.0332</td></tr>
+    <tr><td>sha512 1200 B</td><td class="n">31,923,775 ns</td><td class="n">1,049,717 ns</td><td class="n">0.0329</td></tr>
+    <tr><td>sha512 16 KB</td><td class="n">409,174,933 ns</td><td class="n">13,459,644 ns</td><td class="n">0.0329</td></tr>
+  </table>
+  <div class="foot"><span class="src">steelhead99x/rind#69 comment 6876711215, the board pass of draft #96 at 28837e94. Same comment: #94 (3ab2f961) fails (sha256 32 B 2.14×); early #95 and #97 did not build.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #96 HMAC ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · same #96 pass · 28837e94</div>
+  <h2 class="s28">HMAC and HKDF move with the IRAM block. The cost is about 12.6 KB of IRAM</h2>
+  <div class="cols c64" style="gap:22px;align-items:start">
+    <table class="t d14">
+      <tr><th>row</th><th class="n">main</th><th class="n">#96</th><th class="n">ratio</th></tr>
+      <tr><td>hmac-sha256 32 B</td><td class="n">447,953</td><td class="n">94,332</td><td class="n">0.211</td></tr>
+      <tr><td>hmac-sha256 64 B</td><td class="n">475,715</td><td class="n">114,901</td><td class="n">0.242</td></tr>
+      <tr><td>reused-key 32 B</td><td class="n">257,287</td><td class="n">46,426</td><td class="n">0.180</td></tr>
+      <tr><td>reused-key 1200 B</td><td class="n">622,140</td><td class="n">415,504</td><td class="n">0.668</td></tr>
+      <tr><td>hmac 16 KB</td><td class="n">5,833,698</td><td class="n">5,345,465</td><td class="n">0.916</td></tr>
+      <tr><td>hkdf expand</td><td class="n">422,490</td><td class="n">49,918</td><td class="n">0.118</td></tr>
+      <tr><td>hkdf extract-expand</td><td class="n">1,451,848</td><td class="n">192,339</td><td class="n">0.132</td></tr>
+    </table>
+    <div>
+      <div class="callout" style="font-size:14.5px"><code>.iram0.text</code> grows by 12.6 KB, from 54.6 KB to 67.4 KB. A later size read of the same image is 54,767 → 67,363 bytes (+12,596 B, about 12.3 KiB less heap) and +1,012 B of flash text.</div>
+      <p class="small">Outside the hold, <code>hkdf-sha1/expand-aes-256-gcm-key</code> is +7%. The SHA-1 code is unchanged, so that row is layout. On #96 the compress body is in IRAM at <code>0x403752a8</code> (12,290 bytes) and <code>nblocks</code> at <code>0x403782ac</code> (33 bytes).</p>
+    </div>
+  </div>
+  <div class="foot"><span class="src">#69 comment 6876711215 (table and 12.6 KB) · #97 comment 6881716592 (54,767 → 67,363 B) · #95 comment 6881390638 (IRAM addresses). Times are nanoseconds.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #95 #97 ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · negative results · #95 8773dac1 and #97 cbd6043a</div>
+  <h2 class="s28">Flash layout alone does not beat #96, and neither head meets the #69 hold</h2>
+  <p class="lede s15">Both images build (KATs 0 failures). #95 restores <code>sha256_update</code> to main's offset <code>0x3e4</code> and is still slower on every SHA-256 row. #97 lands 12 bytes short (<code>0x3d8</code> vs <code>0x3e4</code>) and fails the long rows. Ratios versus main:</p>
+  <table class="t d14">
+    <tr><th>row</th><th class="n">#95 / main</th><th class="n">#95 / #96</th><th class="n">#97 / main</th><th class="n">#97 / #96</th></tr>
+    <tr><td>sha256 32 B</td><td class="n">1.858×</td><td class="n">4.741×</td><td class="n">0.575×</td><td class="n">1.467×</td></tr>
+    <tr><td>sha256 64 B</td><td class="n">1.639×</td><td class="n">3.054×</td><td class="n">2.463×</td><td class="n">4.588×</td></tr>
+    <tr><td>sha256 1200 B</td><td class="n">1.193×</td><td class="n">1.402×</td><td class="n">1.241×</td><td class="n">1.458×</td></tr>
+    <tr><td>sha256 1350 B</td><td class="n">1.163×</td><td class="n">1.349×</td><td class="n">1.205×</td><td class="n">1.398×</td></tr>
+    <tr><td>sha256 8 KB</td><td class="n">1.027×</td><td class="n">1.076×</td><td class="n">1.031×</td><td class="n">1.080×</td></tr>
+    <tr><td>sha256 16 KB</td><td class="n">1.014×</td><td class="n">1.043×</td><td class="n">1.014×</td><td class="n">1.044×</td></tr>
+    <tr><td>updates 1 B</td><td class="n">1.055×</td><td class="n">1.086×</td><td class="n">0.839×</td><td class="n">0.864×</td></tr>
+    <tr><td>updates 16 B</td><td class="n">1.101×</td><td class="n">1.159×</td><td class="n">1.049×</td><td class="n">1.104×</td></tr>
+    <tr><td>sha512, all sizes</td><td class="n">0.033×</td><td class="n">1.000×</td><td class="n">0.034×</td><td class="n">1.035–1.038×</td></tr>
+  </table>
+  <p class="small">#95 HMAC is 0.40–0.98× main; HKDF expand / extract-expand / expand-aes is 0.85 / 0.71 / 0.95×. #97 HMAC is 0.27–0.99×; those HKDF rows are 0.173 / 0.723 / 0.086×. #97 SHA-512 is about 3.7% slower than #96. IRAM on #97 is unchanged (54,767 B); flash text grows 4,048 B. Matching main's sets is the ceiling for a flash layout of this 12.6 KB body.</p>
+  <div class="foot"><span class="src">#95 comment 6880930228 and diagnosis comment 6881390638 · #97 comment 6881716592. Both recommend close as superseded. Neither was closed. #96 column is 28837e94.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #98 ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · #98 · head 4e551a93 · draft, stacked on #96</div>
+  <h2 class="s28">A pure-Rust IRAM SHA-256 is 1,478 bytes. The XIAO bench is not measured yet</h2>
+  <p class="lede s15">Object sections of the <code>sha2</code> image, <code>xtensa-esp32s3-espidf</code>, release, opt-level 3. The 64 round constants sit in <code>.dram1</code>, not IRAM. The PR says a XIAO bench is required before this can replace #96.</p>
+  <div class="cols c64" style="gap:28px">
+    <table class="t">
+      <tr><th>section</th><th class="n">size</th></tr>
+      <tr><td><code>.iram1.rind_sha256_compress_block</code></td><td class="n">0x59d</td></tr>
+      <tr><td>its literal pool</td><td class="n">0x8</td></tr>
+      <tr><td><code>.iram1.rind_sha256_nblocks</code></td><td class="n">0x1d</td></tr>
+      <tr><td>its literal pool</td><td class="n">0x4</td></tr>
+      <tr class="hl"><td>IRAM total</td><td class="n">0x5c6 (1,478 bytes)</td></tr>
+      <tr><td><code>.dram1.rind_sha256_k</code></td><td class="n">0x100, not IRAM</td></tr>
+    </table>
+    <div>
+      <div class="callout warn">No timing numbers. This was not run on a board.</div>
+      <ul class="b sm" style="margin-top:14px">
+        <li>About 1.4 KiB of IRAM, against #96's copied HACL* body at about 12.6 KiB.</li>
+        <li>In <code>sha2.elf</code> the block is at <code>0x4037525c</code> and the driver at <code>0x403757fc</code>. The block makes no calls.</li>
+        <li>x86_64, aarch64, and armv7 keep their existing backends. A non-test portable host build still calls HACL*.</li>
+        <li>A comment claims a board bench. No results comment is on the PR.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind#98 body, head 4e551a93. Hardware patches 0001, 0002, 0004, and 0005 applied for the size build; patch 0003 did not apply and was skipped.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV OTHER ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · Poly1305, portable Montgomery, bare metal</div>
+  <h2 class="s28">#87 reprints earlier board ratios. #76 and #84 have no new board times</h2>
+  <div class="cols3" style="gap:14px">
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/87">#87</a> Poly1305, 26-bit limbs</h3>
+      <p class="small" style="margin:0">32-bit portable, and <code>rind_limb="32"</code>. The PR says the hardware numbers were not re-measured on head <code>6f2866d9</code>. They are the earlier rind-hardware images. ESP32-S3 ChaCha seal 16 KB is 1,610,381 → 1,184,190 cycles (0.735). nRF52840 seal 16 KB is 0.698 of the HACL* image. Re-measure before treating the ratios as current.</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/76">#76</a> portable <code>mul_add</code></h3>
+      <p class="small" style="margin:0">One unnamed host, portable backend, one core, median of five. 2056 calls <code>mul_add</code>; 2048 does not. They moved together. Nothing moves by more than about 1%. x86_64 and aarch64 Montgomery stay on assembly, so the Pi 5, M1, and Jetson assembly paths are outside this change. Not measured on a board.</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/84">#84</a> bare-metal <code>no_std</code></h3>
+      <p class="small" style="margin:0">On <code>target_os = "none"</code> the crate is <code>no_std</code> with <code>alloc</code>. Hosted targets are unchanged. <code>cargo test -p rind --lib</code>: 764 passed, 0 failed, 39 ignored. Lint targets include <code>thumbv6m-none-eabi</code> (the RP2040). No board timing. <code>just ci</code> was not run (no nix).</p></div>
+  </div>
+  <table class="t d14" style="margin-top:12px">
+    <tr><th>#76, ns/op, main 1fca3086 then branch</th><th class="n">2048 verify</th><th class="n">2056 verify</th><th class="n">2048 sign</th><th class="n">2056 sign</th></tr>
+    <tr><td>64-bit limbs</td><td class="n">19,058 → 19,032</td><td class="n">20,199 → 20,267</td><td class="n">839,195 → 833,938</td><td class="n">988,071 → 981,232</td></tr>
+    <tr><td>32-bit limbs, second pass</td><td class="n">57,212 → 57,236</td><td class="n">60,765 → 60,764</td><td class="n">2,347,292 → 2,326,111</td><td class="n">2,759,256 → 2,751,493</td></tr>
+  </table>
+  <div class="foot"><span class="src">#87 body (6f2866d9) · #76 comment 6874901551 (c7e3419b) · #84 body (4b4476e4). ESP32 and nRF Poly1305 figures are the published diag compares, not a re-run of 6f2866d9.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV CORRECTNESS ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · correctness, not a board timing</div>
+  <h2 class="s28">Adapter mutants, the ACVP wrapper, hash-to-curve, and Ed25519 CCTV</h2>
+  <div class="cols" style="gap:14px">
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/23">#23</a> adapter mutants · <code>606813a7</code></h3>
+      <p class="small" style="margin:0"><code>admin/mutants --jobs 2 --file</code>: 319 tested, 259 caught, 60 unviable, 0 missed, 0 timeout. Adapter nextest: 229 passed. <code>just ci</code> passed the modules this diff selects, including 1,467 tests (39 skipped).</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/32">#32</a> ACVP wrapper · <code>6b1e148a</code></h3>
+      <p class="small" style="margin:0"><code>admin/acvp</code>, acvptool pinned <code>5ed12cce</code>: 41 sample and supplemental sets, 16,031 cases passed. <code>cargo test -p rind-acvp</code>: 72 passed. Full <code>just ci</code> passed (nextest 1,545 passed, 39 skipped). A live NIST demo server is still pending.</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/39">#39</a> hash-to-curve · <code>9270b1d0</code></h3>
+      <p class="small" style="margin:0">Native and portable: 33 hash-to-curve tests and 19 OPRF/VOPRF tests each pass. Native ctgrind: those same tests, zero errors. Portable ctgrind: 33 hash-to-curve, 3 identity-boundary, and 4 RFC 9497 tests, zero errors.</p></div>
+    <div class="card" style="padding:12px 14px"><h3><a href="https://github.com/steelhead99x/rind/pull/64">#64</a> Ed25519 CCTV · <code>04d6a9d8</code></h3>
+      <p class="small" style="margin:0"><code>ed25519-verdicts.txt</code> records aws-lc's verdict for 914 CCTV Ed25519 vectors, so wasm has an oracle. Wipe canaries return a result instead of panicking. The upstream replacement of kixel-ai/rind#709 is not opened. A separate FIPS break-test timed out at 10.174 s; the PR says this patch does not affect that binary.</p></div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind pull bodies: #23, #32 (later validation block, 41 sets / 16,031), #39, #64. No board times in these four.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV UNMEASURED ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · still open</div>
+  <h2 class="s28">What is still unmeasured</h2>
+  <table class="t d14">
+    <tr><th style="width:28%">Item</th><th>State</th></tr>
+    <tr><td>#69 head <code>a01b2b9e</code></td><td>Not timed. The hold table is <code>ef58672f</code>.</td></tr>
+    <tr><td>#96 head <code>966efe08</code></td><td>Not timed. The passing table is <code>28837e94</code>.</td></tr>
+    <tr><td>#98 on the XIAO</td><td>Not measured yet. Size only: 1,478 bytes of IRAM.</td></tr>
+    <tr><td>#87 head <code>6f2866d9</code></td><td>ESP32-S3 and nRF52840 ratios are earlier images. Re-measure before treating them as current. RP2040 is a target and is not measured.</td></tr>
+    <tr><td>#76</td><td>One unnamed portable host, within about 1%. No ESP32, RP2040, nRF, Pi 5, or Jetson number.</td></tr>
+    <tr><td>#84</td><td>Builds and tests. No Pico, nRF, or EFR32 timing.</td></tr>
+    <tr><td>#82 on Jetson, A72, N1</td><td>Pi 5 (A76) is measured. Cortex-A78AE keeps <code>_alt</code> and is not measured. A72 and N1 are selected and not measured.</td></tr>
+    <tr><td>#79 on Jetson, and the new head on the Pi 5</td><td>Alignment applies to every non-x86_64 target. The Pi 5 timings were not rerun for the accessor refactor or the merge. Jetson is not measured.</td></tr>
+    <tr><td>#32 live NIST server</td><td>Pending. The 41 sets / 16,031 cases are offline acvptool.</td></tr>
+  </table>
+  <div class="foot"><span class="src">The PR bodies and comments named on the previous slides. Jetson baseline, a separate published set, is in presentations/rind-jetson/.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 11. CAVEATS ============ -->
@@ -514,7 +707,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>RP2040 on-device numbers: on rind-hardware branches only.</li>
       <li>Today's Pi 5 lane: still on results branches, not on main.</li>
       <li>The late-evening I-cache figures (slides after the published Poly1305 A/B) are an unpublished perf-branch run on ESP32-S3 at fork <code>6aba8055</code> plus five patches, not on rind-results main. 64-bit portable paths were not changed.</li>
-      <li>poly1305-32 is in <a href="https://github.com/steelhead99x/rind/pull/69">steelhead99x/rind#69</a> (<code>perf/esp32s3-rolled-sha512</code>), a PR into steelhead99x/rind main. It is not a moq-dev/rind PR.</li>
+      <li>Poly1305 commits were dropped from #69 onto <a href="https://github.com/steelhead99x/rind/pull/87">#87</a> (comment 6868091378). The 14 November slides after the timeline are separate board re-runs. #87 says its hardware ratios were not re-measured on <code>6f2866d9</code>.</li>
       <li>Older provenance SHAs point into the private rind-bench history.</li>
       <li>The RP2040 has no hardware RNG; its images use a seeded placeholder.</li>
     </ul></div>
@@ -537,7 +730,8 @@ table.sv td:first-child{white-space:nowrap}
     <tr><td>Repo move</td><td>rind-results commits 0df7c03, 876586c · rind-hardware 8d9c1bb</td></tr>
     <tr><td>Hosts</td><td><code>README.md</code> host table · <code>hosts/pi5/</code></td></tr>
     <tr><td>Timeline, slides 9–10</td><td><code>git log</code> of both main branches, committer dates in America/Los_Angeles</td></tr>
-    <tr class="hl"><td>Evening I-cache gaps</td><td>Unpublished ESP32-S3 raw jsonl, 3 runs at 80 MHz, on x86-host-c under <code><home></code> (compare-sha512-rolled.txt, compare-sha256-hybrid.txt, compare-poly1305-32.txt, compare-hchacha-rolled.txt). steelhead99x/rind <code>6aba8055</code> plus <code>61570282</code>, <code>9dbb1ed2</code>, <code>e54b7894</code>, <code>a60ee4b8</code>, <code>fa0ab77c</code>. Not on this repo's main.</td></tr>
+    <tr class="hl"><td>Evening I-cache gaps</td><td>Unpublished ESP32-S3 raw jsonl, 3 runs at 80 MHz, on x86-host-c under <code>&lt;home&gt;</code> (compare-sha512-rolled.txt, compare-sha256-hybrid.txt, compare-poly1305-32.txt, compare-hchacha-rolled.txt). steelhead99x/rind <code>6aba8055</code> plus <code>61570282</code>, <code>9dbb1ed2</code>, <code>e54b7894</code>, <code>a60ee4b8</code>, <code>fa0ab77c</code>. Not on this repo's main.</td></tr>
+    <tr><td>14 November board re-runs</td><td>steelhead99x/rind#69 comments 6875774312 and 6876711215; #95 comments 6880930228 and 6881390638; #97 comment 6881716592; #98, #87, #84, #76, #23, #32, #39, #64 bodies. Not a new results/ publish.</td></tr>
   </table>
   <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind-hardware</span><span class="num"></span></div>
 </section>

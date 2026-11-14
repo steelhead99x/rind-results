@@ -1,6 +1,6 @@
 # SysTick and timing across the hardware we bench on: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 15 slides at 1280×720.
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 16 slides at 1280×720.
 
 1. Title
 2. The eight targets rind is benched on and what times each one's published runs
@@ -14,8 +14,9 @@
 10. Recommendations per chip
 11. Recommendations for every chip (methodology)
 12. Harness fixes found on 12 November: the ESP32-S3 flash clock (40 → 80 MHz), the nRF52840 leftover watchdog, and code layout (relinks, 32 KB icache)
-13. Values that still have to be read on the boards
-14. and 15. Sources
+13. 14 November: which counter each new run used (ESP32 CCOUNT, Pi 5 criterion at 1.5 GHz, Jetson criterion, nRF DWT). No new SysTick bug
+14. Values that still have to be read on the boards
+15. and 16. Sources
 
 ## Opening it
 

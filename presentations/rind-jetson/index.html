@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rind on the Jetson Orin Nano: 14 November 2026</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  STYLE: the CSS of presentations/rind-rp2040, via presentations/rind-hardware-today.
+  Every number is typed into the slide with its source in the footer.
+-->
+<style>
+
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+table.t.compact th,table.t.compact td{padding:4px 8px}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions (reused) */
+.flow text{font-family:var(--sans)}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .t1{font-size:15px;fill:var(--ink)}
+.flow .t2{font-size:12.5px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:12px;fill:var(--navy)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board.b2{grid-template-columns:1fr 1fr}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+/* RP2040 deck additions */
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+.err{background:var(--bad-bg);border-left:4px solid var(--bad);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px;color:var(--bad)}
+.cons{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.con{position:relative;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--bad);border-radius:0 0 10px 10px;padding:16px 14px 64px;min-height:330px}
+.con .ix{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.con .ck{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:12px}
+.con .cv{font-size:26px;font-weight:700;color:var(--navy);margin:4px 0 10px;white-space:nowrap}
+.con .cw{font-size:13.5px;line-height:1.45;color:var(--ink)}
+.con .cf{position:absolute;left:14px;right:14px;bottom:14px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--good-bg);border-radius:6px;padding:6px 8px;line-height:1.3}
+.card.fix{border-top:4px solid var(--accent)}
+.card.fix.warnc{border-top-color:#c9a227}
+.card .pn{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.card.warnc .pn{color:#8a6d0b}
+table.grid th.c,table.grid td.c{text-align:center}
+table.grid th span{font-size:10px;color:var(--mute);text-transform:none;letter-spacing:0}
+table.grid td{padding:5px 8px}
+table.grid td.r{font-size:12.5px;color:var(--ink2)}
+i.dot{display:inline-block;font-style:normal;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+i.dot.y{background:var(--good-bg);color:var(--accent)}
+i.dot.n{background:var(--bad-bg);color:var(--bad)}
+table.sv{font-size:12.5px}
+table.sv td.bad{color:var(--bad);font-weight:700}
+.timeline.t6{grid-template-columns:repeat(6,1fr)}
+.tl.done{border-top-color:var(--mute);background:#eef0f3}
+.pendbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:9px 14px;border-radius:0 8px 8px 0;font-size:14.5px;color:#5c4a08}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.sub2{font-size:11px;color:var(--mute)}
+.mut{color:var(--mute);font-style:italic}
+a{color:var(--accent2);text-decoration:none}
+table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
+
+table.t.d14 th,table.t.d14 td{padding:3px 7px}
+.slide h2.s28{font-size:28px;line-height:1.12}
+.lede.s15{font-size:15px;margin-bottom:10px}
+p.small{font-size:13.5px;line-height:1.4;color:var(--ink2);margin:8px 0 0}
+
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · NVIDIA Jetson Orin Nano · aarch64 Tegra</div>
+    <h1>What today's rind work means on the Jetson, and what was actually measured there</h1>
+    <div class="sub">The published set is rind 98568332. #82's narrow schedules do not select this Cortex-A78AE. #79's cache-line table applies and has not been timed here.</div>
+  </div>
+  <div class="meta">steelhead99x/rind-results · results/jetson-orin-nano<br>14 November 2026 · America/Los_Angeles</div>
+  <div class="foot"><span class="src">Board facts: results/jetson-orin-nano/facts.txt. Published times: RESULTS.md. Today's pulls: steelhead99x/rind #82 and #79. No number on this deck was estimated.</span><span class="num"></span></div>
+</section>
+
+<!-- 2 BOARD -->
+<section class="slide" data-section="Board">
+  <div class="kicker">The machine the published set ran on</div>
+  <h2 class="s28">Six Cortex-A78AE cores, schedutil 729.6–1728 MHz, services left running</h2>
+  <div class="board">
+    <div class="cell"><div class="k">SoC</div><div class="v" style="font-size:18px">Orin Nano Super</div></div>
+    <div class="cell"><div class="k">CPU</div><div class="v" style="font-size:18px">6× A78AE r0p1</div></div>
+    <div class="cell"><div class="k">Part</div><div class="v" style="font-size:18px">0xd42</div></div>
+    <div class="cell"><div class="k">Memory</div><div class="v" style="font-size:18px">7546 MB LPDDR5</div></div>
+  </div>
+  <ul class="b sm">
+    <li>L4T R39.2.1, Ubuntu 24.04.5, kernel 6.8.12-1021-tegra. nvpmodel MAXN_SUPER, left unchanged. cpufreq tegra194, governor schedutil, 729.6–1728 MHz.</li>
+    <li>L1 64 KB I + 64 KB D and L2 256 KB per core, L3 2 MB per cluster. AES, PMULL, SHA-1, SHA-256, NEON. No SHA-3, no SHA-512 instructions, no DIT.</li>
+    <li>cpu0–3 are cluster 0, cpu4–5 are cluster 1. All three runs pinned to cpu5, 2026-11-13 03:18–05:05 UTC (12 Nov 19:18–21:05 PT). rustc 1.98.1. rind <code>98568332</code>, unpatched.</li>
+    <li>Live services were not stopped. rustls benches ran under libfaketime with the monotonic clock untouched. A control moved rind and aws-lc-rs by at most 0.15%.</li>
+  </ul>
+  <div class="foot"><span class="src">results/jetson-orin-nano/facts.txt · NOTES.md · RESULTS.md header. rind commit 985683329fb98aebfaae6c493f205f20070a8fca.</span><span class="num"></span></div>
+</section>
+
+<!-- 3 BASELINE -->
+<section class="slide" data-section="Baseline">
+  <div class="kicker">Published baseline · rind 98568332 · not a 14 November A/B</div>
+  <h2 class="s28">Rind is fastest on 65 of 68 shared operations. These are the rows #82 would have touched</h2>
+  <p class="lede s15">Median of three criterion runs. Below 1.00× rind is faster than the fastest other library. There is no p256-keygen row in RESULTS.md.</p>
+  <table class="t d14">
+    <tr><th>Operation</th><th class="n">rind</th><th>Fastest other</th><th class="n">ratio</th></tr>
+    <tr><td>x25519-ecdh</td><td class="n">65.87 µs</td><td>graviola, 65.78 µs</td><td class="n">1.00×</td></tr>
+    <tr><td>rsa2048-pkcs1-sha256-sign</td><td class="n">1.21 ms</td><td>ring, 1.43 ms</td><td class="n">0.85×</td></tr>
+    <tr><td>rsa2048-pkcs1-sha256-verify</td><td class="n">37.72 µs</td><td>ring, 46.28 µs</td><td class="n">0.82×</td></tr>
+    <tr><td>p256-ecdh</td><td class="n">109.47 µs</td><td>ring, 117.13 µs</td><td class="n">0.93×</td></tr>
+    <tr><td>p256-ecdsa-sign</td><td class="n">26.38 µs</td><td>graviola, 31.80 µs</td><td class="n">0.83×</td></tr>
+    <tr><td>p256-ecdsa-verify</td><td class="n">103.79 µs</td><td>aws-lc-rs, 104.36 µs</td><td class="n">0.99×</td></tr>
+    <tr><td>ed25519-sign</td><td class="n">15.23 µs</td><td>graviola, 15.55 µs</td><td class="n">0.98×</td></tr>
+    <tr><td>ed25519-verify</td><td class="n">70.73 µs</td><td>graviola, 70.92 µs</td><td class="n">1.00×</td></tr>
+  </table>
+  <p class="small">The two ratios in that report above 1.00× are sha256/64B at 1.07× (150 ns vs RustCrypto 140 ns) and xchacha20poly1305/32B at 1.01× (1.34 µs vs aws-lc-rs 1.33 µs). Host known-answer checks: 91 of 91. rind's own suite at this commit: 778 passed, 0 failed, 33 ignored.</p>
+  <div class="foot"><span class="src">results/jetson-orin-nano/RESULTS.md (the "rind against the fastest other library" table, and the 65 of 68 sentence) · NOTES.md (91/91 and 778 tests)</span><span class="num"></span></div>
+</section>
+
+<!-- 4 #82 -->
+<section class="slide" data-section="#82">
+  <div class="kicker">14 November · <a href="https://github.com/steelhead99x/rind/pull/82">steelhead99x/rind#82</a> · head ece9afa7</div>
+  <h2 class="s28">This board keeps the wide schedules. #82 is not measured on the Jetson</h2>
+  <div class="callout warn">Linux selects the narrow (non-<code>_alt</code>) schedules only when every online core is Cortex-A72, Cortex-A76, or Neoverse N1. Cortex-A78AE is not in that list. An unrecognised part keeps <code>_alt</code>, the code this board already runs.</div>
+  <div class="cols" style="gap:16px;margin-top:14px">
+    <div class="card"><h3>Measured, on a Pi 5, not here</h3>
+      <p class="small" style="margin:0">Cortex-A76, 1.5 GHz cap, median of 5. X25519 252.8 → 107.7 µs (0.426×). RSA-2048 sign 5209.2 → 3071.6 µs (0.590×). P-256 keygen 52.1 → 36.6 µs (0.703×). Those commits do not change which schedule an A76 selects, and the table was not re-measured on <code>ece9afa7</code>. The full table is on the aarch64 deck.</p></div>
+    <div class="card"><h3>Not measured</h3>
+      <ul class="b sm">
+        <li>Jetson Orin Nano: not measured yet.</li>
+        <li>Cortex-A72 and Neoverse N1: selected by the same rule, not measured yet.</li>
+        <li>Forcing narrow on an M1 Pro is slower on every public-key row. The PR does not print those per-op times. Default detection keeps <code>_alt</code>.</li>
+      </ul></div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind#82 body. Jetson CPU: results/jetson-orin-nano/facts.txt (Cortex-A78AE r0p1, part 0xd42).</span><span class="num"></span></div>
+</section>
+
+<!-- 5 #79 -->
+<section class="slide" data-section="#79">
+  <div class="kicker">14 November · <a href="https://github.com/steelhead99x/rind/pull/79">steelhead99x/rind#79</a> · head 54d339e7</div>
+  <h2 class="s28">The P-256 table alignment applies on this aarch64 core. It is not measured here</h2>
+  <ul class="b">
+    <li>The non-x86_64 generator table is <code>#[repr(C, align(64))] AlignedTable</code>. The array is 88,064 bytes, with no trailing padding. Placement padding is less than 64 bytes. Jetson is non-x86_64, so the layout applies.</li>
+    <li>The measured 2.5–3% effect was 16-byte loads of 64-byte points on a Cortex-A76. No speedup was measured on arm or portable.</li>
+    <li>The original Pi 5 timings were not rerun for the accessor refactor or this merge. Head <code>54d339e7</code> has no new Pi 5 number, and no Jetson number.</li>
+    <li>The published Jetson p256-ecdsa-sign time, 26.38 µs, is rind <code>98568332</code>. It is not an A/B of this alignment.</li>
+  </ul>
+  <div class="callout" style="margin-top:8px"><a href="https://github.com/steelhead99x/rind/pull/76">#76</a> changes portable <code>mul_add</code> only. aarch64 Montgomery stays on assembly, so this board's RSA path is outside that pull. The portable result is an unnamed host, within about 1%, and is not a Jetson measurement.</div>
+  <div class="foot"><span class="src">#79 body and comment 6859469361 · #76 comment 6874901551 · RESULTS.md p256-ecdsa-sign row</span><span class="num"></span></div>
+</section>
+
+<!-- 6 OTHER -->
+<section class="slide" data-section="Other">
+  <div class="kicker">14 November · pulls that do not target this board</div>
+  <h2 class="s28">ESP32 IRAM, Poly1305, and bare metal are other machines</h2>
+  <table class="t d14">
+    <tr><th>Pull</th><th>Where it was measured</th><th>On this Jetson</th></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/69">#69</a> rolled SHA-512</td><td>XIAO ESP32-S3, 0.033× main at <code>ef58672f</code></td><td>Not measured. This core has no SHA-512 instruction; the published SHA-512 rows are the 98568332 baseline.</td></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/96">#96</a> / <a href="https://github.com/steelhead99x/rind/pull/98">#98</a> IRAM SHA-256</td><td>#96 on the XIAO at <code>28837e94</code>. #98 is 1,478 bytes of IRAM and was not run on a board.</td><td>Xtensa ESP-IDF only. Not this board.</td></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/87">#87</a> 26-bit Poly1305</td><td>Earlier ESP32-S3 and nRF52840 images. Not re-measured on <code>6f2866d9</code>.</td><td>64-bit path is unchanged. Not measured as an A/B here.</td></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/84">#84</a> bare-metal no_std</td><td>Host tests, 764 passed. No board timing.</td><td>Hosted Linux is unchanged.</td></tr>
+  </table>
+  <p class="small">Published SHA-256 on this board, rind 98568332: 64 B is 150 ns (1.07× RustCrypto), 1350 B is 1.32 µs (0.98× ring), 16 KB is 14.92 µs (1.00× ring). Those are not #96.</p>
+  <div class="foot"><span class="src">#69 comment 6875774312 · #96 comment 6876711215 · #98 body · #87 body · #84 body · RESULTS.md sha256 rows</span><span class="num"></span></div>
+</section>
+
+<!-- 7 UNMEASURED -->
+<section class="slide" data-section="Open">
+  <div class="kicker">Still open on this board</div>
+  <h2 class="s28">Not measured yet on the Jetson Orin Nano</h2>
+  <ul class="b">
+    <li>#82 narrow vs <code>_alt</code>. Detection keeps <code>_alt</code> on Cortex-A78AE, and nobody has forced the other schedule here.</li>
+    <li>#79's 64-byte P-256 table, including head <code>54d339e7</code>.</li>
+    <li>#76, #69, #96, #98, #87, and #84. None of them has a Jetson time.</li>
+    <li>A rerun of the published 98568332 set at a pinned clock. The published runs left schedutil and the live services as found.</li>
+  </ul>
+  <div class="callout">The 65-of-68 table is the measurement this board does have. It is rind <code>98568332</code> on 12 November, three runs, cpu5.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#82, #79, #76, #69, #96, #98, #87, #84 · results/jetson-orin-nano/NOTES.md</span><span class="num"></span></div>
+</section>
+
+<!-- 8 SOURCES -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Sources</div>
+  <h2 class="s28">Every number is from a pull request or from the published Jetson set</h2>
+  <table class="t" style="font-size:14px">
+    <tr><th>Slide</th><th>Source</th></tr>
+    <tr><td>Board</td><td><code>results/jetson-orin-nano/facts.txt</code>, <code>NOTES.md</code></td></tr>
+    <tr><td>Baseline</td><td><code>results/jetson-orin-nano/RESULTS.md</code>, generated from the three runs at rind <code>98568332</code></td></tr>
+    <tr><td>#82</td><td><a href="https://github.com/steelhead99x/rind/pull/82">steelhead99x/rind#82</a> body, head <code>ece9afa7</code></td></tr>
+    <tr><td>#79 and #76</td><td><a href="https://github.com/steelhead99x/rind/pull/79">#79</a> body and comment 6859469361 · <a href="https://github.com/steelhead99x/rind/pull/76">#76</a> comment 6874901551</td></tr>
+    <tr><td>Other pulls</td><td>#69 comment 6875774312 · #96 via #69 comment 6876711215 · #98, #87, #84 bodies</td></tr>
+  </table>
+  <p class="small">Charts of the same published set: <code>benchmarks/media/charts/jetson-orin-nano-rind-vs-fastest.png</code>. No Jetson directory under <code>hosts/</code>. The aarch64 deck's 12 November status line that said Orin results were pending is updated there.</p>
+  <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+
+(function(){
+  const $=s=>document.querySelector(s);
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+
+</script>
+</body>
+</html>

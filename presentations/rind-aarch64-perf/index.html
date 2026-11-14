@@ -220,6 +220,9 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
   #hud{display:none}
 }
+
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+table.t.compact th,table.t.compact td{padding:4px 8px}
 </style>
 </head>
 <body>
@@ -612,7 +615,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ WHERE THE NUMBERS LIVE (added 2026-11-12 evening) ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Where the numbers live · checked <span data-k="meta.asOf"></span></div>
-  <h2>This deck's Pi 5 and M1 Pro numbers are on results branches, not on rind-results main; Orin results are pending</h2>
+  <h2 style="font-size:28px">As of this 12 November check, the Pi 5 and M1 Pro phase numbers are on results branches, and the Orin set was still pending</h2>
   <table class="t" style="margin-top:16px;font-size:14.5px">
     <tr><th style="width:30%">Source used in this deck</th><th style="width:34%">Where it is</th><th>Status</th></tr>
     <tr><td><code>hosts/pi5/NOTES.md</code>, <code>hosts/pi5/pi5.json</code></td><td>main (the b6651423 host run)</td><td><span class="tag ok">on main</span></td></tr>
@@ -622,8 +625,81 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <tr><td><code>hosts/pi5/ab-narrow-mul/series2-layout/</code>, <code>table-align/</code></td><td>branch <code>results/pi5-lane-2026-11-12</code></td><td><span class="tag pending">not merged</span></td></tr>
     <tr><td>NVIDIA Jetson Orin Nano</td><td>bench scripts on main (edcd461); no results yet</td><td><span class="tag pending">pending</span></td></tr>
   </table>
-  <div class="callout warn" style="margin-top:18px">Until these branches are merged, treat this deck's phase results as branch results. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy.</div>
+  <div class="callout warn" style="margin-top:18px">Until these branches are merged, treat this deck's phase results as branch results. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy. The Orin row is this 12 November check. The published set is now on main; the following slides say what it contains.</div>
   <div class="foot"><span class="src">git ls-tree of steelhead99x/rind-results main (edcd461) and branches results/pi5-lane-2026-11-12 (14c89e4), results/m1pro-pi5-argon2-2026-11-12 (94b8b1a), results/argon2-a76-interleave (3a481c4) · README.md host table</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #82 ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November 2026 · <a href="https://github.com/steelhead99x/rind/pull/82">steelhead99x/rind#82</a> · Pi 5, Cortex-A76</div>
+  <h2 style="font-size:28px">Narrow schedules on the A76: X25519 0.426× the wide path, matching closed #33 within 0.1%</h2>
+  <p class="lede" style="font-size:15px;margin-bottom:8px">Median of 5 rounds, µs. Narrow is default detection. Wide is the same binary with <code>RIND_CPU_FORCE_wide_mul=1</code>, the <code>_alt</code> code main runs. Clock held at 1.5 GHz. Dispatch code <code>0ec13b3a</code>; the table was not re-measured on current head <code>ece9afa7</code>.</p>
+  <table class="t compact" style="font-size:13px">
+    <tr><th>op</th><th class="n">wide µs</th><th class="n">narrow µs</th><th class="n">narrow / wide</th><th class="n">#33 µs</th><th class="n">aws-lc-rs µs</th></tr>
+    <tr><td>x25519-ecdh</td><td class="n">252.8 (0.2%)</td><td class="n">107.7 (0.1%)</td><td class="n">0.426</td><td class="n">107.6 (0.0%)</td><td class="n">108.8</td></tr>
+    <tr><td>rsa2048-pkcs1-sha256-sign</td><td class="n">5209.2 (0.0%)</td><td class="n">3071.6 (0.1%)</td><td class="n">0.590</td><td class="n">3069.8 (0.0%)</td><td class="n">3134.1</td></tr>
+    <tr><td>p256-keygen</td><td class="n">52.1 (0.0%)</td><td class="n">36.6 (0.1%)</td><td class="n">0.703</td><td class="n">–</td><td class="n">43.2</td></tr>
+    <tr><td>p256-ecdsa-sign</td><td class="n">60.8 (0.1%)</td><td class="n">45.3 (0.1%)</td><td class="n">0.745</td><td class="n">–</td><td class="n">75.9</td></tr>
+    <tr><td>p256-ecdh</td><td class="n">326.7 (0.0%)</td><td class="n">200.2 (0.0%)</td><td class="n">0.613</td><td class="n">–</td><td class="n">213.6</td></tr>
+    <tr><td>p256-ecdsa-verify</td><td class="n">303.5 (0.0%)</td><td class="n">273.9 (0.1%)</td><td class="n">0.902</td><td class="n">–</td><td class="n">256.6</td></tr>
+  </table>
+  <p class="small">Before this change the PR reports Pi 5 X25519 at 2.3× aws-lc-rs and RSA-2048 signing at 1.7×. Spread is max/min − 1. Temperature 64.8–72 °C, <code>get_throttled</code> 0xe0000, <code>taskset -c 3</code>.</p>
+  <div class="foot"><span class="src">steelhead99x/rind#82 body, measured section. Full earlier series: hosts/pi5/ab-narrow-mul/ab-narrow-mul.md on rind-results main. The 12 November phase slides above are that earlier series, not this table.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #82 WHO ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · #82 · who gets the narrow schedules</div>
+  <h2 style="font-size:28px">Linux selects narrow only when every online core is Cortex-A72, Cortex-A76, or Neoverse N1</h2>
+  <div class="cols" style="gap:18px">
+    <div class="card"><h3>Selected</h3><ul class="b sm">
+      <li>Cortex-A76: measured on the Pi 5, table on the previous slide.</li>
+      <li>Cortex-A72: selected by the same rule. Not measured yet.</li>
+      <li>Neoverse N1: selected by the same rule. Not measured yet.</li>
+    </ul></div>
+    <div class="card"><h3>Keeps <code>_alt</code></h3><ul class="b sm">
+      <li>Apple, Neoverse V1, V2, V3, N2, an unrecognised part, a mixed list, and every OS but Linux.</li>
+      <li>M1 Pro: forcing narrow is slower on every public-key row. The PR does not print a per-op table. Default detection keeps <code>_alt</code>.</li>
+      <li>Jetson Orin Nano is Cortex-A78AE (part 0xd42). That part is not in the narrow list, so it keeps the code it already runs. #82 is not measured on Jetson.</li>
+    </ul></div>
+  </div>
+  <div class="callout" style="margin-top:16px">New public function <code>rind::cpu::wide_multiplier()</code>. On aarch64 it is true when this process runs the <code>_alt</code> schedules. Later commits do not change which schedule a Cortex-A76 selects, and the table was not re-measured. The published Jetson set is a separate baseline: <a href="../rind-jetson/index.html">presentations/rind-jetson/</a>.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#82 body (head ece9afa7). Jetson part: results/jetson-orin-nano/facts.txt. M1 series the PR points at: hosts/m1pro/ab-narrow-mul/.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV #79 ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · <a href="https://github.com/steelhead99x/rind/pull/79">steelhead99x/rind#79</a> · head 54d339e7</div>
+  <h2 style="font-size:28px">The non-x86_64 P-256 generator table is aligned to a cache line. This head was not re-timed</h2>
+  <div class="cols" style="gap:18px;margin-top:8px">
+    <div>
+      <ul class="b sm">
+        <li>The table is <code>#[repr(C, align(64))] AlignedTable</code>. The array is 88,064 bytes, with no trailing padding inside the symbol. Placement padding is less than 64 bytes.</li>
+        <li>The measured 2.5–3% effect was the P-256 kernel's 16-byte loads of 64-byte points on a Cortex-A76. Arm and portable share the layout; no speedup was measured on them.</li>
+        <li>The original Pi 5 timings were not rerun for the accessor refactor or this merge. The 1.000× A/B already in this deck is that earlier measurement, when the table already sat at +32.</li>
+        <li>The alignment applies on Jetson (aarch64, non-x86_64). It is not measured there.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>What the 12 November slides already record</h3>
+      <p class="small" style="margin:0">series2-layout: a table at +8 mod 64 cost 2.5–3.1% (keygen 1.031×). table-align versus an already-+32 narrow-nist build is 1.000× on all four P-256 ops. Those figures stay as measured. They are not a 14 November re-run of head <code>54d339e7</code>.</p></div>
+  </div>
+  <div class="callout warn" style="margin-top:14px">#76 does not change aarch64 Montgomery. That path stays on assembly. The portable 2048/2056 result (within about 1%, unnamed host) is on the boards deck.</div>
+  <div class="foot"><span class="src">#79 body and comment 6859469361 (2.5–3%). Earlier A/B: hosts/pi5/ab-narrow-mul/series2-layout/ and table-align/. #76 comment 6874901551.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 14 NOV ORIN STATUS ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November · where the Orin numbers are</div>
+  <h2 style="font-size:28px">The Jetson Orin Nano set is on main. It is rind 98568332, not a remeasure of #79 or #82</h2>
+  <p class="lede" style="font-size:16px">The status slide above is the 12 November check, when only the bench scripts were on main. The published set is now <code>results/jetson-orin-nano/</code>.</p>
+  <table class="t" style="font-size:14.5px">
+    <tr><th>What</th><th>Where</th><th>What it is</th></tr>
+    <tr><td>Published baseline</td><td><code>results/jetson-orin-nano/</code></td><td>rind <code>98568332</code>, three pinned runs on cpu5, 12 Nov 19:18–21:05 PT. Fastest on 65 of 68 shared ops.</td></tr>
+    <tr><td>#82 narrow schedules</td><td>not on this board</td><td>Cortex-A78AE is not A72, A76, or N1, so detection keeps <code>_alt</code>. Not measured yet.</td></tr>
+    <tr><td>#79 table align</td><td>not on this board</td><td>The change applies to non-x86_64. No Jetson timing.</td></tr>
+  </table>
+  <div class="callout" style="margin-top:16px">Clocks were left at schedutil, 729.6–1728 MHz, nvpmodel MAXN_SUPER. That is not the Pi 5's fixed 1.5 GHz cap. Deck: <a href="../rind-jetson/index.html">presentations/rind-jetson/</a>.</div>
+  <div class="foot"><span class="src">results/jetson-orin-nano/RESULTS.md and facts.txt · steelhead99x/rind#82 body · steelhead99x/rind#79 body</span><span class="num"></span></div>
 </section>
 
 <!-- ============ APPENDIX ============ -->
