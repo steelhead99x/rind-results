@@ -44,6 +44,13 @@ Raw JSON, a trimmed log, and notes are in each folder. The top-level
 | Jetson Orin Nano | Cortex-A78AE, up to 1.73 GHz, Ubuntu 24.04, MAXN_SUPER | [results/jetson-orin-nano/RESULTS.md](../results/jetson-orin-nano/RESULTS.md) |
 | RP2040 (Raspberry Pi Pico) | Cortex-M0+, 125 MHz | Known-answer checks passed on a Pico (2026-11-12). No `results/rp2040/` tree is on main yet, so this repo does not publish timing numbers for it. |
 
+## Other board sets
+
+These are not rind `98568332` and are not the comparable set at `d6ca9a75`.
+
+| Board or host | Hardware | Where the numbers are |
+|---|---|---|
+| Arduino Uno R3 | ATmega328P, 16 MHz, bare metal | [results/uno-r3/](../results/uno-r3/README.md). A `no_std` port of rind's generic primitives from `c08c91ea`, not the full crate. |
 
 ## Later Linux host (rind `a6577cb4`)
 
