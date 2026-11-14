@@ -495,4 +495,4 @@ A ✓ means a published, machine-checked proof shows that all the code computing
 
 ## Contributing
 
-Run `cargo xtask ci` locally before pushing. Pullfrog reviews pull requests. GitHub Actions is a thin backstop: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs that same command. The gate, the result rules, and the Pullfrog setup are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Run `cargo xtask ci` locally before pushing. GPT review or PrairieDog reviews pull requests. GitHub Actions is a thin backstop: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs that same command. The gate and the result rules are in [CONTRIBUTING.md](CONTRIBUTING.md).

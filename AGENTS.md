@@ -2,7 +2,7 @@
 
 # Review instructions
 
-Pullfrog reads this file on every run. These rules also belong in the repository console under Automations → Review PRs → Custom instructions (`prompts.review`), which is the review checklist Pullfrog applies. Guidance here does not replace that field.
+These are the review rules for any reviewer or agent.
 
 - Never suggest editing, regenerating, or correcting a measured number, a raw run, or a published table. Published results stay as measured.
 - A new publish is `results/<host>/<upstream-sha>/`, or `results/<host>/<upstream-sha>-<label>/` for an A/B or a diagnostic. Check that layout, that the set has three runs, that `<host>.json` is schema 1, and that `RUNS.md` and `RESULTS.md` are present. Historical trees stay in the layout they were published in. See `results/README.md`.
