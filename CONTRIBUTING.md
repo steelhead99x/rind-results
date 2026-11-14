@@ -12,7 +12,7 @@ Run `cargo xtask ci` locally before pushing. It is the gate:
 
 Pullfrog reviews pull requests. Its review rules are in [AGENTS.md](AGENTS.md), which the agent reads, and in the repository console under Automations → Review PRs → Custom instructions. GitHub Actions is a thin backstop: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `cargo xtask ci` and nothing else.
 
-The Pullfrog workflow reads the model key from the repository Actions secret `ANTHROPIC_API_KEY`. The repository does not store that key.
+Pullfrog runs OpenAI models on a ChatGPT Codex subscription. Connect it with `npx pullfrog auth codex --repo steelhead99x/rind-results`; that credential stays in Pullfrog's encrypted store. [`.github/workflows/pullfrog.yml`](.github/workflows/pullfrog.yml) maps `OPENAI_API_KEY` from a repository Actions secret only as a fallback. This repository does not set that secret, and the workflow does not pin a model.
 
 ## Measured results
 
