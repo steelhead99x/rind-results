@@ -11,8 +11,10 @@ rind aarch64 performance work from the starting point on 2026-11-11 to the state
 5. The Argon2id two-round interleave, with the PMU root cause, and the scalar rider rounds
 
 It also covers verification status, what was dropped, the current state, next steps, a status slide that says which
-sources are on rind-results main and which are still on results branches (Orin results still pending),
+sources are on rind-results main and which are still on results branches (the 12 November check, when Orin results were still pending),
 and an appendix of branches and data files.
+
+Slides added on 14 November 2026 quote steelhead99x/rind#82 (Pi 5 narrow-schedule table; Cortex-A72, Neoverse N1, and Jetson Cortex-A78AE not measured) and #79 (cache-line P-256 table; head `54d339e7` not re-timed). The published Jetson set is `results/jetson-orin-nano/` at rind `98568332`, described in `presentations/rind-jetson/`. The 12 November phase numbers in the `DATA` block are unchanged.
 
 ## Opening it
 
@@ -48,5 +50,6 @@ Only facts from these sources are used. Numbers with no source are left out or m
   `perf/argon2-sha3-umlal`, `perf/argon2-interleave`, `perf/pi5-narrow-nist`, `perf/pi5-rsa-bench-sizes`,
   `perf/pi5-cpu-detect`, `perf/pi5-rsa-8n`, `perf/pi5-mont-uninit`, `perf/pi5-p384-verify-w7`,
   `perf/pi5-p521-verify-w7`, `fix/p256-table-align`, `perf/argon2-neon-scalar-rider`
+- 14 November: steelhead99x/rind#82 body (head `ece9afa7`) and #79 body plus comment 6859469361 (head `54d339e7`); `results/jetson-orin-nano/`
 
 A dated log of what each refresh changed is in `PROGRESS.md`.

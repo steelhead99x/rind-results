@@ -1,6 +1,6 @@
 # rind on the boards, 12 November 2026: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 17 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 26 slides at 1280×720,
 with the CSS of `presentations/rind-rp2040`. It covers what changed on the microcontroller benchmarks on
 12 November 2026 and a timeline built from git history. All times are America/Los_Angeles (PST).
 
@@ -24,8 +24,17 @@ XChaCha, and a late-evening timeline. Those figures are not on rind-results main
 13. HMAC-SHA256, HKDF-SHA256, and the SHA-256 64 B 25.7% spread (unpublished)
 14. ChaCha20-Poly1305 and XChaCha: 32-bit-limb Poly1305 and rolled HChaCha (unpublished)
 15. Timeline, late evening on the perf branch
-16. Caveats: noise, layout, and work that is not on main, including these evening figures
-17. Sources, with a separate row for the unpublished raw jsonl
+16. 14 November map: #69, #96, #98, and the #95/#97 flash-layout failures
+17. #69 board re-run at `ef58672f`: SHA-512 at 0.033×, SHA-256 hold fails. Head `a01b2b9e` is not timed
+18. #96 SHA-256 and SHA-512 hold table, historical head `28837e94`
+19. #96 HMAC/HKDF rows and the 12.6 KB IRAM cost
+20. #95 and #97 ratios versus main and versus #96
+21. #98 IRAM size, 1,478 bytes. Not run on a board
+22. #87 (earlier Poly1305 images), #76 (within about 1% on an unnamed host), #84 (no board timing)
+23. Correctness: #23, #32 (41 sets / 16,031 cases), #39, #64
+24. What is still unmeasured
+25. Caveats: noise, layout, and work that is not on main, including these evening figures
+26. Sources, with a separate row for the unpublished raw jsonl and one for the 14 November pulls
 
 ## Sources
 
@@ -46,3 +55,5 @@ or left half of the slide. `#N` in the URL opens slide N.
 ## Updating it
 
 When the Pi 5 lane results reach main, replace the remaining in-progress row on slide 8 and add those commits to the timeline.
+
+The 14 November slides (16–24) quote steelhead99x/rind pull comments and descriptions. They are not a new `results/` publish, and they are separate from the unpublished evening run on slides 11–15.

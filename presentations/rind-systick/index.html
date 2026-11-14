@@ -492,6 +492,22 @@ ns = (x1 - x0) * 1e9 / x2</pre></div>
   <div class="foot"><span class="src">rind-results main 95300f2: results/diag/flash-80mhz/README.md · results/diag/nrf52840-watchdog-2026-11-12/README.md · results/diag/esp32s3-relink-fixed-98568332/README.md · results/diag/esp32s3-icache32-80mhz-98568332/ratios.md · results/RESULTS.md</span><span class="num"></span></div>
 </section>
 
+<!-- 14 NOV COUNTERS -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November 2026 · which counter each new run used</div>
+  <h2 style="font-size:28px">Today's benches used the counters already on these boards. There is no new SysTick bug</h2>
+  <table class="t" style="margin-top:8px;font-size:14px">
+    <tr><th>Host</th><th>Counter in the 14 November sources</th><th>What was timed</th></tr>
+    <tr><td>Seeed XIAO ESP32-S3</td><td>CCOUNT, reported as on-device ns. 240 MHz CPU, 80 MHz flash, 16 KB I-cache. Harness rind-hardware <code>08de2829</code>.</td><td>#69 at <code>ef58672f</code>, #96 at <code>28837e94</code>, #95, #97. #98 not run. #69 head <code>a01b2b9e</code> and #96 head <code>966efe08</code> not run.</td></tr>
+    <tr><td>Raspberry Pi 5</td><td>criterion, 1 s warm-up, 3 s measurement, <code>taskset -c 3</code>, cpufreq capped at 1.5 GHz.</td><td>#82 narrow vs wide, dispatch <code>0ec13b3a</code>. Not re-measured on head <code>ece9afa7</code>. #79's new head was not re-timed.</td></tr>
+    <tr><td>Jetson Orin Nano</td><td>criterion, schedutil 729.6–1728 MHz, three runs pinned to cpu5. Not a SysTick.</td><td>Published rind <code>98568332</code> only. #79 and #82 are not measured on this board.</td></tr>
+    <tr><td>nRF52840 (T1000-E)</td><td>DWT cycles, 64 MHz, in the published poly1305-32 compare.</td><td>#87 cites seal 16 KB at 0.698 of the HACL* image. Not re-measured on <code>6f2866d9</code>.</td></tr>
+    <tr><td>RP2040 Pico</td><td>The SysTick snapshot on the RP2040 deck. No new counter.</td><td>#84, #87, #76, and #69 are not measured on the Pico.</td></tr>
+  </table>
+  <p class="small">#76's portable RSA numbers are criterion-style ns/op on a host the PR does not name. They are not a SysTick run.</p>
+  <div class="foot"><span class="src">steelhead99x/rind#69 comment 6875774312 · #82 body · results/jetson-orin-nano/facts.txt · #87 body · results/nrf52840/diag/poly1305-32/README.md</span><span class="num"></span></div>
+</section>
+
 <!-- 12. OPEN -->
 <section class="slide" data-section="Open">
   <div class="kicker">Not yet known</div>

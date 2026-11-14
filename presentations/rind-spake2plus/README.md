@@ -1,12 +1,13 @@
 # SPAKE2+ comes to rind: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 16 slides at 1280×720.
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 17 slides at 1280×720.
 It covers:
 
 1. What SPAKE2+ (RFC 9383) does, with a one-page flow of prover and verifier
 2. How rind implements it: the RFC 9383 and Matter PASE suites, and the constant-time identity check
 3. The pull request moq-dev/rind#689: timeline, tests, and its status at 4:22 PM PST on 2026-11-12
-4. A summary of the aarch64 performance work from 2026-11-11 to 2026-11-12, and the Raspberry Pi 5 follow-up branches
+4. 14 November: SPAKE2+ itself was not changed. #64 records 914 Ed25519 CCTV verdicts. #82 and #79 are on the aarch64 deck, and there is no new SPAKE2+ timing
+5. A summary of the aarch64 performance work from 2026-11-11 to 2026-11-12, and the Raspberry Pi 5 follow-up branches. Those benchmark numbers were not rebuilt from the 14 November pulls
 
 ## Opening it
 

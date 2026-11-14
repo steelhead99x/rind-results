@@ -511,6 +511,26 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="foot"><span class="src">moq-dev/rind#689 · moq-dev/rind#709 · follow-up branch test run</span><span class="num"></span></div>
 </section>
 
+<!-- ============ 14 NOV SPAKE ============ -->
+<section class="slide" data-section="14 Nov">
+  <div class="kicker">14 November 2026 · SPAKE2+ itself</div>
+  <h2 style="font-size:30px">None of today's rind pulls change SPAKE2+. There is no new SPAKE2+ timing</h2>
+  <div class="cols" style="gap:18px;margin-top:8px">
+    <div class="card"><h3>What did change nearby</h3><ul class="b sm">
+      <li><a href="https://github.com/steelhead99x/rind/pull/64">#64</a> records aws-lc's accept or reject for 914 CCTV Ed25519 vectors, so wasm has an oracle, and the wipe canaries return a result instead of panicking.</li>
+      <li>The PR says it replaces kixel-ai/rind#709, and that the upstream replacement is not opened yet.</li>
+      <li>A separate full-CI FIPS break-test timed out after 10.174 s. The PR says this patch does not affect that binary. One focused diagnostic passed in 0.120 s and does not clear the timeout.</li>
+    </ul></div>
+    <div class="card"><h3>Performance, on the aarch64 deck</h3><ul class="b sm">
+      <li><a href="https://github.com/steelhead99x/rind/pull/82">#82</a> narrow-multiplier schedules are measured on the Pi 5 (X25519 0.426× the wide path). Jetson Cortex-A78AE keeps <code>_alt</code> and is not measured.</li>
+      <li><a href="https://github.com/steelhead99x/rind/pull/79">#79</a> aligns the non-x86_64 P-256 table to 64 bytes. The Pi 5 timings were not rerun on head <code>54d339e7</code>.</li>
+      <li>The benchmark slides after this one stay the 11–12 November copy. They were not rebuilt from today's pulls.</li>
+    </ul></div>
+  </div>
+  <div class="callout" style="margin-top:16px">Ed25519 work named on the previous slide as moq-dev/rind#709 continues on the fork as #64. No pull was opened on kixel-ai.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#64 body (04d6a9d8) · #82 body · #79 body. SPAKE2+ suite code is not in those diffs.</span><span class="num"></span></div>
+</section>
+
 <!-- ============ 12. BENCH SUMMARY ============ -->
 <section class="slide" data-section="Benchmarks">
   <div class="kicker">rind on aarch64 · Nov 11 to 12, 2026</div>
