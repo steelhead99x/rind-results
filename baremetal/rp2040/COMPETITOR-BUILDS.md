@@ -6,7 +6,7 @@ Run on 2026-11-12, rustc 1.99.1 (stable), on an x86_64 Linux host, with no devic
 cargo build --release --target <triple> -p <crate>
 ```
 
-If the first attempt fails in getrandom 0.4, `build-matrix.sh` retries with `RUSTFLAGS='--cfg getrandom_backend="custom"'`. C toolchains for the C-backed crates came from nixpkgs: Arm GNU Toolchain `arm-none-eabi-gcc` 15.3.1 for the Arm targets, and `clang` 21.1.8 (bare, with no libc headers) for riscv32.
+If the first attempt fails in getrandom 0.4, `build-matrix.sh` (now `cargo xtask build-matrix`) retries with `RUSTFLAGS='--cfg getrandom_backend="custom"'`. C toolchains for the C-backed crates came from nixpkgs: Arm GNU Toolchain `arm-none-eabi-gcc` 15.3.1 for the Arm targets, and `clang` 21.1.8 (bare, with no libc headers) for riscv32.
 
 What this checks is compilation only: no link, and nothing run. Most crates just re-export the library (`pub use`), so its generic code isn't monomorphized. The ring, sha2, and curve25519-dalek crates each call one function.
 
