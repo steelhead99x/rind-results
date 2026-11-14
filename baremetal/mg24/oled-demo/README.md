@@ -8,13 +8,13 @@ Cycles three 128x64 frames on the SSD1306 (I2C 0x3C, I2C1 on PC4/PC5), 4 s each:
 
 The sketch probes 0x3C then 0x3D. Serial at 115200 prints `{"app":"oled-demo","oled":"0x3C","frame":N}`, or `"oled":"absent"` and blinks the LED.
 
-Logo files are not in this tree (see SOURCES.md). Generate `oled_demo/frames.h` and the preview PNGs before compiling:
+The rind wordmark is vendored (see SOURCES.md). Generate `oled_demo/frames.h` and the preview PNGs before compiling, from anywhere in the repository:
 
 ```
-python3 tools/gen_frames.py
+cargo xtask gen-frames
 ```
 
-Needs cairosvg, Pillow, and DejaVu fonts. The script fetches the SVGs into a local `assets/` directory (gitignored) on first run.
+It checks the vendored wordmark's SHA-256 and downloads the moq.dev favicon with curl into gitignored `assets/` only when that file matches its pinned SHA-256. Text is drawn with the DejaVu fonts in `tools/xtask/fonts` (`--fonts DIR` for others). It replaces `tools/gen_frames.py`: the text is pixel for pixel the same, and the logos differ from cairosvg's in three pixels (see `tools/xtask/tests/fixtures/gen-frames/README.md`).
 
 Build and flash with arduino-cli (Silicon Labs core 5.0.0) and probe-rs 0.32.0. Use the EFR32MG24 board FQBN from that core; this writes only the app region, leaving the bootloader and last pages alone:
 

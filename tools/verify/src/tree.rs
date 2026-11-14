@@ -89,6 +89,9 @@ fn walk(dir: &Path, rep: &mut Report) -> bool {
     if check_compares(dir, rep) {
         found = true;
     }
+    if check_cycle_median_dir(dir, rep) {
+        found = true;
+    }
 
     let raw_used = board_raw(dir);
     let mut children: Vec<PathBuf> = std::fs::read_dir(dir)
@@ -99,7 +102,7 @@ fn walk(dir: &Path, rep: &mut Report) -> bool {
         .filter(|p| p.is_dir())
         .filter(|p| {
             let name = p.file_name().unwrap_or_default().to_string_lossy();
-            !name.starts_with('.') && name != "checks" && name != "raw"
+            !skip_walk_child(&name)
         })
         .collect();
     children.sort();
@@ -406,6 +409,14 @@ fn summary_pair(dir: &Path) -> Option<(PathBuf, PathBuf)> {
     }
 }
 
+fn skip_walk_child(name: &str) -> bool {
+    name.starts_with('.')
+        || matches!(
+            name,
+            "checks" | "raw" | "firmware" | "host" | "src" | "target" | "venv"
+        )
+}
+
 fn looks_like_tree(dir: &Path) -> bool {
     has_host_runs(dir)
         || board_raw(dir).is_some()
@@ -414,6 +425,413 @@ fn looks_like_tree(dir: &Path) -> bool {
         || ab_jsons(dir).next().is_some()
         || has_agg_table(dir)
         || compare_mds(dir).next().is_some()
+        || is_cycle_median_tree(dir)
+}
+
+/// A published cycle-median tree (Arduino Uno R3 and similar): medians.json
+/// plus RUNS.md and RESULTS.md, with optional firmware/ and host/ sources.
+fn is_cycle_median_tree(dir: &Path) -> bool {
+    dir.join("medians.json").is_file()
+        && dir.join("RUNS.md").is_file()
+        && dir.join("RESULTS.md").is_file()
+}
+
+fn check_cycle_median_dir(dir: &Path, rep: &mut Report) -> bool {
+    if !is_cycle_median_tree(dir) {
+        return false;
+    }
+    let label = dir
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| dir.display().to_string());
+    check_cycle_median(&label, dir, rep);
+    true
+}
+
+fn parse_u64_commas(s: &str) -> Option<u64> {
+    let trimmed = s.trim().trim_matches('`');
+    let token = trimmed.split_whitespace().next().unwrap_or(trimmed);
+    let digits: String = token.chars().filter(|c| c.is_ascii_digit()).collect();
+    if digits.is_empty() {
+        None
+    } else {
+        digits.parse().ok()
+    }
+}
+
+fn median_u64(xs: &[u64]) -> Option<u64> {
+    if xs.is_empty() {
+        return None;
+    }
+    let mut v = xs.to_vec();
+    v.sort_unstable();
+    let n = v.len();
+    if n % 2 == 1 {
+        Some(v[n / 2])
+    } else {
+        Some((v[n / 2 - 1] + v[n / 2]) / 2)
+    }
+}
+
+fn md_tables(text: &str) -> Vec<(Vec<String>, Vec<Vec<String>>)> {
+    let mut out = Vec::new();
+    let mut header: Option<Vec<String>> = None;
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    let mut seen_sep = false;
+    for line in text.lines() {
+        let t = line.trim();
+        if !(t.starts_with('|') && t.ends_with('|')) {
+            if let Some(h) = header.take() {
+                if !rows.is_empty() {
+                    out.push((h, std::mem::take(&mut rows)));
+                }
+            }
+            seen_sep = false;
+            continue;
+        }
+        let cells: Vec<String> = t
+            .trim_matches('|')
+            .split('|')
+            .map(|s| s.trim().to_string())
+            .collect();
+        if cells
+            .iter()
+            .all(|c| c.chars().all(|ch| ch == '-' || ch == ':'))
+        {
+            seen_sep = true;
+            continue;
+        }
+        if header.is_none() {
+            header = Some(cells);
+            seen_sep = false;
+            continue;
+        }
+        if !seen_sep && rows.is_empty() {
+            // a new header without a separator; close previous (shouldn't happen)
+            header = Some(cells);
+            continue;
+        }
+        rows.push(cells);
+    }
+    if let Some(h) = header {
+        if !rows.is_empty() {
+            out.push((h, rows));
+        }
+    }
+    out
+}
+
+fn header_has(header: &[String], needle: &str) -> bool {
+    header
+        .iter()
+        .any(|h| h.to_ascii_lowercase().contains(needle))
+}
+
+fn col_index(header: &[String], needles: &[&str]) -> Option<usize> {
+    header.iter().position(|h| {
+        let l = h.to_ascii_lowercase();
+        needles.iter().any(|n| l.contains(n))
+    })
+}
+
+struct CycleOp {
+    cycles_all: Vec<u64>,
+    cycles_median: u64,
+    cycles_min: u64,
+    cycles_max: u64,
+    us_median: u64,
+}
+
+fn load_cycle_ops(
+    json: &Value,
+    label: &str,
+    clock_hz: u64,
+    rep: &mut Report,
+) -> BTreeMap<String, CycleOp> {
+    let mut out = BTreeMap::new();
+    let Some(ops) = json.get("ops").and_then(|v| v.as_object()) else {
+        rep.bad(label, "medians.json has no ops object".into());
+        return out;
+    };
+    for (name, rec) in ops {
+        let Some(all) = rec.get("cycles_all").and_then(|v| v.as_array()) else {
+            rep.bad(label, format!("{name}: missing cycles_all"));
+            continue;
+        };
+        let mut cycles_all = Vec::new();
+        for (i, v) in all.iter().enumerate() {
+            match v.as_u64() {
+                Some(n) => cycles_all.push(n),
+                None => {
+                    // JSON may store these as i64
+                    if let Some(n) = v.as_i64().filter(|n| *n >= 0) {
+                        cycles_all.push(n as u64);
+                    } else {
+                        rep.bad(label, format!("{name}: cycles_all[{i}] is not an integer"));
+                    }
+                }
+            }
+        }
+        let n_field = rec.get("n").and_then(|v| v.as_u64()).unwrap_or(0);
+        if n_field != 0 && n_field as usize != cycles_all.len() {
+            rep.bad(
+                label,
+                format!(
+                    "{name}: n is {n_field}, but cycles_all has {} values",
+                    cycles_all.len()
+                ),
+            );
+        }
+        let Some(want_med) = median_u64(&cycles_all) else {
+            rep.bad(label, format!("{name}: empty cycles_all"));
+            continue;
+        };
+        let want_min = *cycles_all.iter().min().unwrap();
+        let want_max = *cycles_all.iter().max().unwrap();
+        let got_med = rec.get("cycles_median").and_then(|v| v.as_u64());
+        let got_min = rec.get("cycles_min").and_then(|v| v.as_u64());
+        let got_max = rec.get("cycles_max").and_then(|v| v.as_u64());
+        let got_us = rec.get("us_median").and_then(|v| v.as_u64());
+        if got_med != Some(want_med) {
+            rep.bad(
+                label,
+                format!("{name}: cycles_median is {got_med:?}, median of cycles_all is {want_med}"),
+            );
+        }
+        if got_min != Some(want_min) {
+            rep.bad(
+                label,
+                format!("{name}: cycles_min is {got_min:?}, min of cycles_all is {want_min}"),
+            );
+        }
+        if got_max != Some(want_max) {
+            rep.bad(
+                label,
+                format!("{name}: cycles_max is {got_max:?}, max of cycles_all is {want_max}"),
+            );
+        }
+        if let Some(want_us) = want_med.saturating_mul(1_000_000).checked_div(clock_hz) {
+            if got_us != Some(want_us) {
+                rep.bad(
+                    label,
+                    format!("{name}: us_median is {got_us:?}, cycles/clock is {want_us}"),
+                );
+            }
+        }
+        out.insert(
+            name.clone(),
+            CycleOp {
+                cycles_all,
+                cycles_median: got_med.unwrap_or(want_med),
+                cycles_min: got_min.unwrap_or(want_min),
+                cycles_max: got_max.unwrap_or(want_max),
+                us_median: got_us.unwrap_or(0),
+            },
+        );
+    }
+    out
+}
+
+fn check_cycle_median(label: &str, dir: &Path, rep: &mut Report) {
+    let json_path = dir.join("medians.json");
+    let Ok(json) = read_json(&json_path) else {
+        rep.bad(label, "medians.json: not JSON".into());
+        return;
+    };
+    let clock_hz = json.get("clock_hz").and_then(|v| v.as_u64()).unwrap_or(0);
+    if clock_hz == 0 {
+        rep.bad(label, "medians.json has no clock_hz".into());
+    }
+    let ops = load_cycle_ops(&json, label, clock_hz, rep);
+    if ops.is_empty() {
+        return;
+    }
+
+    let runs = super::read(&dir.join("RUNS.md"));
+    let mut runs_checked = 0usize;
+    let mut seen = std::collections::BTreeSet::new();
+    for (header, rows) in md_tables(&runs) {
+        if !(header_has(&header, "median") && header_has(&header, "spread")) {
+            continue;
+        }
+        let Some(op_i) = col_index(&header, &["operation"]) else {
+            continue;
+        };
+        let Some(med_i) = col_index(&header, &["median"]) else {
+            continue;
+        };
+        let Some(spread_i) = col_index(&header, &["spread"]) else {
+            continue;
+        };
+        let run_cols: Vec<usize> = header
+            .iter()
+            .enumerate()
+            .filter(|(_, h)| {
+                let l = h.to_ascii_lowercase();
+                l.starts_with("run") || l.contains("run ")
+            })
+            .map(|(i, _)| i)
+            .collect();
+        for row in rows {
+            if row.len() <= med_i.max(spread_i).max(op_i) {
+                continue;
+            }
+            let name = row[op_i].trim().trim_matches('`').to_string();
+            let Some(op) = ops.get(&name) else {
+                continue;
+            };
+            seen.insert(name.clone());
+            runs_checked += 1;
+            let Some(shown_med) = parse_u64_commas(&row[med_i]) else {
+                rep.bad(label, format!("RUNS.md {name}: median is not an integer"));
+                continue;
+            };
+            if shown_med != op.cycles_median {
+                rep.bad(
+                    label,
+                    format!(
+                        "RUNS.md {name}: median is {shown_med}, medians.json has {}",
+                        op.cycles_median
+                    ),
+                );
+            }
+            let mut shown_runs = Vec::new();
+            for i in &run_cols {
+                if *i < row.len() {
+                    if let Some(v) = parse_u64_commas(&row[*i]) {
+                        shown_runs.push(v);
+                    }
+                }
+            }
+            if !shown_runs.is_empty() && shown_runs != op.cycles_all {
+                rep.bad(
+                    label,
+                    format!("RUNS.md {name}: per-run cycles do not match medians.json"),
+                );
+            }
+            let spread_text = row[spread_i].trim().trim_end_matches('%');
+            if let Ok(shown) = spread_text.replace(',', "").parse::<f64>() {
+                let spread = if op.cycles_median == 0 {
+                    0.0
+                } else {
+                    (op.cycles_max - op.cycles_min) as f64 / op.cycles_median as f64 * 100.0
+                };
+                let shown_half = 0.5 * 10f64.powi(-decimals(spread_text));
+                let rounds_to_zero = shown == 0.0 && spread < 0.005 + 1e-12;
+                if !rounds_to_zero
+                    && (shown + shown_half + 1e-9 < spread || shown - shown_half - 1e-9 > spread)
+                {
+                    rep.bad(
+                        label,
+                        format!(
+                            "RUNS.md {name}: spread shows {shown}%, (max-min)/median is {spread:.4}%"
+                        ),
+                    );
+                }
+            }
+        }
+        break; // only the first published (median/spread) table
+    }
+    for name in ops.keys() {
+        if !seen.contains(name) {
+            rep.bad(label, format!("RUNS.md is missing published op {name}"));
+        }
+    }
+
+    let mut md_checked = 0usize;
+    for rel in ["RESULTS.md", "medians.md"] {
+        let path = dir.join(rel);
+        if !path.is_file() {
+            continue;
+        }
+        let text = super::read(&path);
+        for (header, rows) in md_tables(&text) {
+            if !(header_has(&header, "cycles")
+                && (header_has(&header, "µs") || header_has(&header, "us")))
+            {
+                continue;
+            }
+            // Prefer the headline table whose cycle column is this board's, not a comparison.
+            // Skip tables that also have another board's cycle column if the first cycle
+            // column is not paired with a µs column for the same board... We check every
+            // row whose operation is in ops, against the first cycles column and first µs column.
+            let Some(op_i) = col_index(&header, &["operation"]) else {
+                continue;
+            };
+            let Some(cyc_i) = col_index(&header, &["cycles"]) else {
+                continue;
+            };
+            let Some(us_i) = col_index(&header, &["µs", "us"]) else {
+                continue;
+            };
+            // Comparison tables list other boards after the first cycles column.
+            // Only treat this as the headline table when the first cycles column
+            // sits before any later board column — still verify matching ops.
+            let mut n = 0usize;
+            for row in &rows {
+                if row.len() <= op_i.max(cyc_i).max(us_i) {
+                    continue;
+                }
+                let name = row[op_i].trim().trim_matches('`').to_string();
+                let Some(op) = ops.get(&name) else {
+                    continue;
+                };
+                n += 1;
+                if let Some(shown) = parse_u64_commas(&row[cyc_i]) {
+                    if shown != op.cycles_median {
+                        rep.bad(
+                            label,
+                            format!(
+                                "{rel} {name}: cycles are {shown}, medians.json has {}",
+                                op.cycles_median
+                            ),
+                        );
+                    }
+                }
+                if let Some(shown) = parse_u64_commas(&row[us_i]) {
+                    if shown != op.us_median {
+                        rep.bad(
+                            label,
+                            format!(
+                                "{rel} {name}: µs are {shown}, medians.json has {}",
+                                op.us_median
+                            ),
+                        );
+                    }
+                }
+                if let Some(range_i) = col_index(&header, &["range"]) {
+                    if range_i < row.len() {
+                        let range = row[range_i].replace(',', "");
+                        let sep = if range.contains('–') { '–' } else { '-' };
+                        let parts: Vec<&str> = range.split(sep).collect();
+                        if parts.len() == 2 {
+                            if let (Some(lo), Some(hi)) =
+                                (parse_u64_commas(parts[0]), parse_u64_commas(parts[1]))
+                            {
+                                if lo != op.cycles_min || hi != op.cycles_max {
+                                    rep.bad(
+                                        label,
+                                        format!(
+                                            "{rel} {name}: range is {}, medians.json is {}–{}",
+                                            row[range_i], op.cycles_min, op.cycles_max
+                                        ),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if n > 0 {
+                md_checked += n;
+                break;
+            }
+        }
+    }
+    println!(
+        "{label}: {} cycle-median ops, {runs_checked} RUNS.md rows, {md_checked} RESULTS/medians cells checked",
+        ops.len()
+    );
 }
 
 /// An aggregated criterion table, not every Markdown file. A README next to
@@ -1542,5 +1960,87 @@ Known-answer checks: board-1 1/1, board-2 1/1. Runs: 1 and 1. Rows: 1 in both.
                 rep.problems.join("\n")
             );
         }
+    }
+
+    fn write_cycle_tree(dir: &Path, median: u64, runs: [u64; 5]) {
+        std::fs::create_dir_all(dir.join("firmware/src")).unwrap();
+        std::fs::write(
+            dir.join("firmware/src/main.rs"),
+            "// source, not a result tree\n",
+        )
+        .unwrap();
+        let min = *runs.iter().min().unwrap();
+        let max = *runs.iter().max().unwrap();
+        let json = format!(
+            "{{\n  \"schema\": 1,\n  \"host\": \"uno-r3\",\n  \"clock_hz\": 16000000,\n  \"ops\": {{\n    \"sha256/32B\": {{\n      \"n\": 5,\n      \"cycles_all\": [{0}, {1}, {2}, {3}, {4}],\n      \"cycles_median\": {5},\n      \"cycles_min\": {6},\n      \"cycles_max\": {7},\n      \"us_median\": {8}\n    }}\n  }}\n}}\n",
+            runs[0],
+            runs[1],
+            runs[2],
+            runs[3],
+            runs[4],
+            median,
+            min,
+            max,
+            median / 16
+        );
+        std::fs::write(dir.join("medians.json"), json).unwrap();
+        std::fs::write(
+            dir.join("RUNS.md"),
+            format!(
+                "| operation | run 1 | run 2 | run 3 | run 4 | run 5 | median | spread |\n|---|---:|---:|---:|---:|---:|---:|---:|\n| `sha256/32B` | {0} | {1} | {2} | {3} | {4} | {5} | 0.00% |\n",
+                runs[0], runs[1], runs[2], runs[3], runs[4], median
+            ),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("RESULTS.md"),
+            format!(
+                "| Operation | Uno R3 cycles (n=5) | range | Uno R3 µs |\n|---|---:|---:|---:|\n| sha256/32B | {median} | {min}–{max} | {us} |\n",
+                median = median,
+                min = min,
+                max = max,
+                us = median / 16
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn cycle_median_tree_skips_firmware_and_checks_tables() {
+        let dir = scratch();
+        write_cycle_tree(&dir, 61048, [61048, 61048, 61048, 61048, 61048]);
+        let mut rep = Report::default();
+        assert!(verify_dir(&dir, &mut rep), "{}", dir.display());
+        assert!(rep.problems.is_empty(), "{}", rep.problems.join("\n"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cycle_median_tree_flags_a_rewritten_median() {
+        let dir = scratch();
+        write_cycle_tree(&dir, 61048, [61048, 61048, 61048, 61048, 61048]);
+        std::fs::write(
+            dir.join("RESULTS.md"),
+            "| Operation | Uno R3 cycles (n=5) | range | Uno R3 µs |\n|---|---:|---:|---:|\n| sha256/32B | 99999 | 61048–61048 | 3815 |\n",
+        )
+        .unwrap();
+        let mut rep = Report::default();
+        assert!(verify_dir(&dir, &mut rep), "{}", dir.display());
+        assert!(
+            rep.problems
+                .iter()
+                .any(|p| p.contains("RESULTS.md") && p.contains("99999")),
+            "{:?}",
+            rep.problems
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn published_uno_r3_cycle_medians_match() {
+        let dir = super::super::root().join("results/uno-r3");
+        let mut rep = Report::default();
+        assert!(verify_dir(&dir, &mut rep), "{}", rep.problems.join("\n"));
+        assert!(rep.problems.is_empty(), "{}", rep.problems.join("\n"));
     }
 }
