@@ -83,7 +83,8 @@ enum Cmd {
         #[arg(long)]
         rind: PathBuf,
     },
-    /// Measure one board: host, Android capture, or bare-metal images.
+    /// Measure one board: a filesystem-safe host id (default: this CPU's slug),
+    /// an Android capture, or bare-metal images.
     Bench(bench::Args),
     /// Install the ESP32-S3 toolchain rind-hardware's images were built with
     /// (espup, espflash, ldproxy), without root, into RIND_HARDWARE_DIR/.tools
@@ -456,6 +457,7 @@ fn check() -> Result<(), String> {
 // that live outside `results/`.
 const RESULT_DIRS: &[&str] = &[
     "results",
+    "results/intel-core-ultra-9-275hx",
     "results/efr32mg24",
     "results/diag/esp32s3-second-host-2026-11-12",
     "hosts/pi5/ab-narrow-mul",
