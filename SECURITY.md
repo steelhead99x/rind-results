@@ -49,7 +49,5 @@ secret scanner, including merge changes, and review any matches privately.
 Preserve published measurements and their original provenance. Record new
 measurements as a separate set rather than overwriting evidence.
 
-Pullfrog account installation, provider authentication, and automatic review
-settings are separate from committing its workflow. Verify them in the
-Pullfrog console before relying on automatic reviews. This policy does not
-make hosted CI or Pullfrog a required merge check.
+Pull requests are reviewed by GPT review or PrairieDog. This policy does not
+make hosted CI a required merge check.
