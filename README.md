@@ -496,3 +496,5 @@ A ✓ means a published, machine-checked proof shows that all the code computing
 ## Contributing
 
 Run `cargo xtask ci` locally before pushing. GPT review or PrairieDog reviews pull requests. GitHub Actions is a thin backstop: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs that same command. The gate and the result rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Security reporting and tooling trust boundaries are in [SECURITY.md](SECURITY.md). The [2026-11-14 release audit](audit/2026-11-14/REPORT.md) records the reviewed commit, findings, dependency inventory, and remaining release decisions.

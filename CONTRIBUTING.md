@@ -5,10 +5,10 @@
 Run `cargo xtask ci` locally before pushing. It is the gate:
 
 - `cargo fmt --all --check`
-- `cargo clippy --workspace --all-targets -- -D warnings`
-- `cargo test --workspace`
+- `cargo clippy --workspace --all-targets --locked -- -D warnings`
+- `cargo test --workspace --locked`
 - `cargo deny --locked check` (installs cargo-deny 0.20.2 when the `cargo deny` subcommand is missing)
-- `cargo verify` on the published trees, then `cargo xtask verify --dir` on every results tree that gate names
+- `cargo verify` on the published trees, then `cargo xtask verify --dir` on every results tree that gate names (both aliases build with `--locked`)
 
 GPT review or PrairieDog reviews pull requests. The review rules are in [AGENTS.md](AGENTS.md), which any reviewer or agent reads. GitHub Actions is a thin backstop: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `cargo xtask ci` and nothing else.
 
