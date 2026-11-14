@@ -50,12 +50,12 @@ All figures are rind's own rows. Times are medians unless stated.
 | Pi 5, lane 1 | tests | — | 703 lib tests passed (37 ignored) in default, wide and narrow modes, plus integration and wipe tests; clippy clean | rind PR #82 |
 | Pi 5, lane 2 | tests | — | full test tiers with and without the crypto extensions: 1,269 passed, 33 ignored, 0 failed each; wipe, debug and slow CCTV tiers pass. Timed rounds pending. | lane log, not yet in rind-results |
 | Pi 5, lane 3 | tests | — | same tiers: 1,239 passed, 32 ignored, 0 failed each (doctests not run). Fixed 1.5 GHz. Timed rounds: 2 of 5 complete at the time of writing. | lane log, not yet in rind-results |
-| Pi 2 Model B | criterion estimates (slides 4, 5, 8) | median of 5 valid rounds | rind `a6577cb4`, armv7 cross-build, 900 MHz in every round, 42–46 °C, no throttling, core 3, performance governor; 345 results | `results/pi2b-bench/a6577cb4…/` on branch `results/pi2b-bench-armv7` |
+| Pi 2 Model B | criterion estimates (slides 4, 5, 8) | median of 5 valid rounds | rind `a6577cb4`, armv7 cross-build, 900 MHz in every round, 42–46 °C, no throttling, core 3, performance governor; 345 results | `results/pi2b-bench/a6577cb4…/` on main (host id `pi2b-bench`) |
 | Pi 2 Model B | tests | — | 52 test binaries, 1,023 passed, 34 ignored, 0 failed, with NEON and with NEON denied; wipe tests 28 + 28 | same |
 | XIAO MG24 | cycles (slides 4–6) | median of 5 run medians | EFR32MG24 Cortex-M33F at 78 MHz (clock checked against the crystal), 12 images, 0 KAT failures in every run | `results/efr32mg24/` |
 | ESP32-S3 | cycles (slides 4–6) | median of 5 run medians per board | Xtensa LX7 at 240 MHz, flash 80 MHz, 2 boards (board 1 shown; boards agree within 0.3%), 0 KAT failures | `results/diag/esp32s3-second-host-2026-11-12/` |
-| RP2040 Pico, Pico W | cycles (slides 4–6) | median of 5 rounds per board | Cortex-M0+ at 125 MHz, base build (upstream `c333c59e` + rind-hardware `a87d3a1f`, SysTick wrap fix), 207 rows 5/5 valid, 0 KAT failures, boards agree within 0.10%. A later re-verify on the Pico alone passed 66/66 KATs. | `presentations/rind-rp2040/` on branch `docs/rp2040-deck-r3`; `hosts/rp2040/` |
-| Arduino Uno R3 | cycles (slides 4, 7) | median of 5 runs, after one priming call | ATmega328P at 16 MHz, Timer1 with no prescale (1 tick = 1 cycle). `no_std` port of rind's generic SHA-256, the rolled SHA-512 loop and Poly1305 from rind `c08c91ea`; not the full crate. 5/5 KATs pass; every timed digest matched a host check. ChaCha20 timings omitted. | `results/uno-r3/` on branch `results/uno-r3-2026-11-13` |
+| RP2040 Pico, Pico W | cycles (slides 4–6) | median of 5 rounds per board | Cortex-M0+ at 125 MHz, base build (upstream `c333c59e` + rind-hardware `a87d3a1f`, SysTick wrap fix), 207 rows 5/5 valid, 0 KAT failures, boards agree within 0.10%. A later re-verify on the Pico alone passed 66/66 KATs. | `presentations/rind-rp2040/` and `hosts/rp2040/` on main. No `results/rp2040/` timing tree yet. |
+| Arduino Uno R3 | cycles (slides 4, 7) | median of 5 runs, after one priming call | ATmega328P at 16 MHz, Timer1 with no prescale (1 tick = 1 cycle). `no_std` port of rind's generic SHA-256, the rolled SHA-512 loop and Poly1305 from rind `c08c91ea`; not the full crate. 5/5 KATs pass; every timed digest matched a host check. ChaCha20 timings omitted. | `results/uno-r3/` on main |
 
 ### SHA-512 caveat
 
@@ -66,5 +66,4 @@ The ESP32-S3 (98,199,751 cycles) and RP2040 (36,057,712) publish more cycles for
 
 ## Devices not covered
 
-Also published on rind-results main but outside this deck: nRF52840 (Seeed T1000-E), Jetson Orin Nano, Pixel 9 Pro,
-and x86_64 hosts.
+Also published on rind-results main but outside this deck: `results/nrf52840` (Seeed T1000-E), `results/jetson-orin-nano`, `hosts/pixel9pro`, `hosts/xeon-vm`, `results/intel-core-ultra-9-275hx`, and `results/host` (a noisy x86_64 laptop at rind `99b509a`).

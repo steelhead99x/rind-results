@@ -21,7 +21,7 @@ const DATA = {
   meta: {
     title: "rind on real hardware",
     subtitle: "Benchmarks on nine kinds of device, and what has been verified on each",
-    asOf: "2026-11-13 14:10 PST"
+    asOf: "2026-11-14"
   },
 
   /* Devices at a glance. ram/clock as recorded by each lane; "—" = not recorded. */
@@ -50,17 +50,17 @@ const DATA = {
     { d: "Pi 5 · lane 3", c: [
       {s:"ok", t:"full crate"}, {s:"ok", t:"1,239 passed · 0 failed"}, {s:"prog", t:"2 of 5 rounds"}, {s:"pend"}, {s:"pend", t:"not yet"} ] },
     { d: "Pi 2 Model B", c: [
-      {s:"ok", t:"full crate"}, {s:"ok", t:"1,023 passed × 2 tiers"}, {s:"ok", t:"5 rounds · 345 results"}, {s:"ok"}, {s:"ok", t:"branch"} ] },
+      {s:"ok", t:"full crate"}, {s:"ok", t:"1,023 passed × 2 tiers"}, {s:"ok", t:"5 rounds · 345 results"}, {s:"ok"}, {s:"ok", t:"main"} ] },
     { d: "XIAO MG24", c: [
       {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"main"} ] },
     { d: "ESP32-S3 × 2", c: [
       {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures · both"}, {s:"ok", t:"5 runs per board"}, {s:"ok"}, {s:"ok", t:"main"} ] },
     { d: "RP2040 Pico", c: [
-      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"branch (deck)"} ] },
+      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"main (deck)"} ] },
     { d: "RP2040 Pico W", c: [
-      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"branch (deck)"} ] },
+      {s:"ok", t:"12 images"}, {s:"ok", t:"0 KAT failures"}, {s:"ok", t:"5 runs"}, {s:"ok"}, {s:"ok", t:"main (deck)"} ] },
     { d: "Arduino Uno R3", c: [
-      {s:"ok", t:"no_std port"}, {s:"ok", t:"5 / 5 KATs"}, {s:"ok", t:"5 runs · 3 primitives"}, {s:"na", t:"does not fit"}, {s:"ok", t:"branch"} ] },
+      {s:"ok", t:"no_std port"}, {s:"ok", t:"5 / 5 KATs"}, {s:"ok", t:"5 runs · 3 primitives"}, {s:"na", t:"does not fit"}, {s:"ok", t:"main"} ] },
     { d: "Arduino Nano 33 BLE", c: [
       {s:"ok", t:"images built"}, {s:"pend", t:"not enumerated"}, {s:"pend"}, {s:"pend"}, {s:"pend", t:"none"} ] },
     { d: "iPad Pro (M4)", c: [
@@ -165,20 +165,20 @@ const DATA = {
     ["iPad Pro (M4)", "Tests, timing", "Bench binaries cross-built. Parked: install needs a newer macOS / Xcode for signing and device support."],
     ["Arduino Uno R3", "ChaCha20 timing", "RFC 8439 KAT passed, but the timed rows were unstable and some cycle counts wrapped. Dropped, not guessed."],
     ["RP2040 Pico W", "Re-verify", "The 13 Nov re-verify ran on the Pico only; the Pico W was off USB."],
-    ["Pi 2, Uno R3, RP2040", "Merge to main", "Results sit on rind-results branches, not on main yet."]
+    ["RP2040", "results/rp2040/", "The deck and hosts/rp2040 notes are on main. There is still no results/rp2040/ timing tree."]
   ],
 
   /* Where the numbers live (rind-results paths unless noted). */
   where: [
     ["Apple M1 Pro", "main", "hosts/m1pro/ · results/m1pro-8feee30e/"],
     ["Pi 5 · lane 1", "main", "hosts/pi5/ · hosts/pi5/ab-narrow-mul/ · results/pr33-pi5/"],
-    ["Pi 5 · PR #82 A/B", "rind", "steelhead99x/rind PR #82 description"],
+    ["Pi 5 · PR #82 A/B", "rind fork", "PR #82 description"],
     ["Pi 5 · lanes 2, 3", "—", "not yet in rind-results"],
-    ["Pi 2 Model B", "branch results/pi2b-bench-armv7", "results/pi2b-bench/a6577cb4…/RESULTS.md"],
+    ["Pi 2 Model B", "main", "results/pi2b-bench/a6577cb4…/RESULTS.md"],
     ["XIAO MG24", "main", "results/efr32mg24/"],
     ["ESP32-S3 × 2", "main", "results/diag/esp32s3-second-host-2026-11-12/ · results/RESULTS.md"],
-    ["RP2040 Pico / Pico W", "branch docs/rp2040-deck-r3", "presentations/rind-rp2040/ · hosts/rp2040/ (main)"],
-    ["Arduino Uno R3", "branch results/uno-r3-2026-11-13", "results/uno-r3/"],
+    ["RP2040 Pico / Pico W", "main", "presentations/rind-rp2040/ · hosts/rp2040/"],
+    ["Arduino Uno R3", "main", "results/uno-r3/"],
     ["Nano 33 BLE · iPad", "—", "no results yet"]
   ]
 };
@@ -305,7 +305,7 @@ sup{line-height:0;font-size:.7em;color:var(--mute)}
     <h1 data-k="meta.title"></h1>
     <div class="sub" data-k="meta.subtitle"></div>
   </div>
-  <div class="meta">steelhead99x/rind · steelhead99x/rind-results<br>As of <span data-k="meta.asOf"></span></div>
+  <div class="meta">rind fork · rind-results<br>As of <span data-k="meta.asOf"></span></div>
   <div class="foot"><span class="src">Every number comes from rind-results, rind PR #82, or the lane status logs named in README.md. Nothing is estimated; missing numbers say “pending”.</span><span class="num"></span></div>
 </section>
 
@@ -324,7 +324,7 @@ sup{line-height:0;font-size:.7em;color:var(--mute)}
   <h2>What has been verified, device by device</h2>
   <div class="keyrow"><span class="st ok"><b>✓</b> done</span><span class="st prog"><b>…</b> in progress</span><span class="st pend"><b>pending</b></span><span class="st na"><b>n/a</b> not supported</span></div>
   <table class="mx" id="tb-matrix"></table>
-  <div class="foot"><span class="src">Tests = rind's own test suite on the device (Linux/macOS). KATs = known-answer checks run on the board before timing (microcontrollers). Public-key ops = X25519 / Ed25519 / P-256 timed. “Branch” = on a rind-results branch, not main yet.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Tests = rind's own test suite on the device (Linux/macOS). KATs = known-answer checks run on the board before timing (microcontrollers). Public-key ops = X25519 / Ed25519 / P-256 timed. “main” = published on rind-results main.</span><span class="num"></span></div>
 </section>
 
 <!-- 4. HASHES ACROSS DEVICES -->
@@ -358,7 +358,7 @@ sup{line-height:0;font-size:.7em;color:var(--mute)}
   <h2>MG24, ESP32-S3 and RP2040, in cycles</h2>
   <p class="lede">All 12 bench images ran and passed their KATs on every board. Fewer cycles is better.</p>
   <table class="t big" id="tb-mcu"></table>
-  <div class="foot"><span class="src">rind rows, CPU cycles. MG24, ESP32-S3: median of 5 run medians (ESP32-S3 = board 1). RP2040: median of 5 rounds on each board, SysTick wrap fix applied. <span data-k="mcu.agree"></span>. Sources: results/efr32mg24/, results/diag/esp32s3-second-host-2026-11-12/, presentations/rind-rp2040/ (branch docs/rp2040-deck-r3).</span><span class="num"></span></div>
+  <div class="foot"><span class="src">rind rows, CPU cycles. MG24, ESP32-S3: median of 5 run medians (ESP32-S3 = board 1). RP2040: median of 5 rounds on each board, SysTick wrap fix applied. <span data-k="mcu.agree"></span>. Sources: results/efr32mg24/, results/diag/esp32s3-second-host-2026-11-12/, presentations/rind-rp2040/ on main.</span><span class="num"></span></div>
 </section>
 
 <!-- 7. UNO -->
@@ -377,7 +377,7 @@ sup{line-height:0;font-size:.7em;color:var(--mute)}
       <div class="card"><h3>Dropped</h3><div class="note">ChaCha20 timings: unstable checksums and wrapped cycle counts across the 5 runs. Omitted, not guessed.</div></div>
     </div>
   </div>
-  <div class="foot"><span class="src">Timer1, no prescale (1 tick = 1 cycle); one priming call, then median of 5 runs. µs computed = cycles ÷ 16. Every timed digest matched a host hashlib / RFC 8439 check. Source: results/uno-r3/ (branch results/uno-r3-2026-11-13).</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Timer1, no prescale (1 tick = 1 cycle); one priming call, then median of 5 runs. µs computed = cycles ÷ 16. Every timed digest matched a host hashlib / RFC 8439 check. Source: results/uno-r3/ on main.</span><span class="num"></span></div>
 </section>
 
 <!-- 8. LINUX + MAC -->
@@ -388,7 +388,7 @@ sup{line-height:0;font-size:.7em;color:var(--mute)}
     <table class="t big" id="tb-hosts"></table>
     <div><div class="chart-title">µs, log scale</div><div id="ch-hosts"></div><div class="legend" id="lg-hosts"></div></div>
   </div>
-  <div class="foot"><span class="src">rind rows, criterion estimates. M1 Pro and Pi 5: published host sets at rind b6651423, 1 run each (M1 Pro flagged busy: treat &lt; 10–15% as noise; Pi 5 public-key rows are the old wide-multiplier build, see next slide). Pi 2: median of 5 rounds at rind a6577cb4, 900 MHz, no throttling. Sources: hosts/m1pro/, hosts/pi5/, results/pi2b-bench/ (branch).</span><span class="num"></span></div>
+  <div class="foot"><span class="src">rind rows, criterion estimates. M1 Pro and Pi 5: published host sets at rind b6651423, 1 run each (M1 Pro flagged busy: treat &lt; 10–15% as noise; Pi 5 public-key rows are the old wide-multiplier build, see next slide). Pi 2: median of 5 rounds at rind a6577cb4, 900 MHz, no throttling. Sources: hosts/m1pro/, hosts/pi5/, results/pi2b-bench/ on main (host id pi2b-bench).</span><span class="num"></span></div>
 </section>
 
 <!-- 9. PI 5 NARROW -->
@@ -401,7 +401,7 @@ sup{line-height:0;font-size:.7em;color:var(--mute)}
     <div><table class="t big" id="tb-pi5ab"></table>
       <div class="callout" style="margin-top:16px">✓ <span data-k="pi5tests"></span>.</div></div>
   </div>
-  <div class="foot"><span class="src">Medians of 5 interleaved runs, pinned to core 3, 1.5 GHz, 64.8–71.9 °C, no live throttling. narrow/wide computed from the medians shown. Source: steelhead99x/rind PR #82; earlier PR #33 A/B in hosts/pi5/ab-narrow-mul/.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Medians of 5 interleaved runs, pinned to core 3, 1.5 GHz, 64.8–71.9 °C, no live throttling. narrow/wide computed from the medians shown. Source: rind fork PR #82; earlier PR #33 A/B in hosts/pi5/ab-narrow-mul/.</span><span class="num"></span></div>
 </section>
 
 <!-- 10. PENDING -->
@@ -416,9 +416,9 @@ sup{line-height:0;font-size:.7em;color:var(--mute)}
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
   <h2>Where the numbers live</h2>
-  <p class="lede">Paths in steelhead99x/rind-results unless noted.</p>
+  <p class="lede">Paths in rind-results unless noted.</p>
   <table class="t big" id="tb-where"></table>
-  <div class="foot"><span class="src">Run counts and conditions for every number on these slides: presentations/rind-hardware-bench/README.md. Also published on main but outside this deck: nRF52840 (T1000-E), Jetson Orin Nano, Pixel 9 Pro, x86_64 hosts.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Run counts: presentations/rind-hardware-bench/README.md. Also on main, outside this deck: results/nrf52840, results/jetson-orin-nano, hosts/pixel9pro, hosts/xeon-vm, results/intel-core-ultra-9-275hx, results/host.</span><span class="num"></span></div>
 </section>
 
 </div>
