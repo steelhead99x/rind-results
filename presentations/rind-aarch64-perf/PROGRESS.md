@@ -2,6 +2,25 @@
 
 Each refresh reworks the whole deck into one story; this log records what changed in each refresh. Times are PST.
 
+## 2026-11-13 16:05
+
+- New Phase 6 slide (17) from new `DATA.pi5full` and `DATA.pi5fullMeta` blocks: the full report suite on stock
+  upstream main (a6577cb4) on the fanless Pi 5 at 1.5 GHz, 11:47–15:27 PST. 396 benchmark IDs, 68 operations,
+  7 libraries, median of 5 valid rounds; 174 test binaries passed first with 0 failures. rind is fastest on 45 of 68
+  (aws-lc-rs 19, RustCrypto 3, ring 1); all 19 operations where rind trails by more than 5% are public-key operations or
+  the TLS handshakes that use them. Gaps to aws-lc-rs: X25519 2.32×, RSA-2048 sign 1.69×, P-256 ECDH 1.54×, Ed25519 sign
+  1.46×, P-256 verify 1.19×. rind's times match the wide rows of the PR #82 A/B within 0.3% (X25519 252.76 vs 252.8 µs).
+  Round-to-round spread median 0.2%, max 8.9%; up to 75.2 °C, no live throttle bits, 1.5 GHz in every timed sample.
+  A power loss stopped round 3; it was rerun in full and the partial round is excluded.
+- New `DATA.pi5at24` block, marked provisional: the second Pi 5 (16 GB) at its stock 2.4 GHz, same commit and
+  binaries, 3 of 5 rounds finished at 16:00. Times are 1.60× shorter (median 1.601 over all 396 IDs, range 1.54–1.77),
+  so every rind-vs-library ratio is unchanged. Quoted on the new slide, the clock slide and the next-steps slide.
+  Replace it with the 5-round medians when the set finishes.
+- Timeline: three new entries (the full suite, the 2.4 GHz rounds, rind-results #24 with the Pi 2 armv7 set merged at
+  15:14). The 07:23 entry no longer calls its Pi 5 "a third Pi 5": the board with the 1239-test matrix is the same
+  fanless 8 GB Pi 5 as the A/Bs (same boot-time 1.5 GHz cap, and it shared the bench lock with the PR #82 A/B that day).
+- Summary, next steps and "where the numbers live" updated to match. Every earlier number is unchanged.
+
 ## 2026-11-13 13:40
 
 - New: two timeline slides (19 and 20) rendered from a new `DATA.timeline` block: 25 dated entries from 2026-11-11 to
