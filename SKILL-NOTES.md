@@ -27,7 +27,7 @@ suggestions for whoever updates it.
    `benchmarks/gaps.toml` lacks a decision for. A new host almost always has such gaps (here: ChaCha20
    vs OpenSSL on an AVX-512 Xeon), so render cannot be used as-is for a side report. This run imported
    the renderer as a module and called `report()` / `overview_svg()` / `host_svg()` with its own host
-   table and output dir (`render-ours.py`).
+   table and output dir (`render-ours.py`, now `cargo xtask render-ours`).
 
 ## Left out
 

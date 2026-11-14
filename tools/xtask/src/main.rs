@@ -6,10 +6,13 @@
 
 mod bench;
 mod boards;
+mod build_matrix;
 mod capture;
 mod charts;
 mod compare;
+mod crit;
 mod demo_tsv;
+mod gen_frames;
 mod host_report;
 mod host_run;
 mod layout;
@@ -17,9 +20,11 @@ mod legacy_map;
 mod md2png;
 mod py;
 mod relink;
+mod render_ours;
 mod report;
 mod run_all;
 mod script2cast;
+mod setup_toolchain;
 mod sizes;
 mod tables;
 mod upstream_run;
@@ -45,6 +50,8 @@ enum Cmd {
     Relink(relink::Args),
     /// Write the OLED demo's page table from a board's report JSON
     DemoTsv(demo_tsv::Args),
+    /// Draw the EFR32MG24 OLED demo's frames.h and preview PNGs from the logo SVGs
+    GenFrames(gen_frames::Args),
     /// Draw rind-over-fastest SVG charts from report JSON
     Charts(charts::Args),
     /// Attribute linked code and read-only data to the libraries raced
@@ -75,6 +82,9 @@ enum Cmd {
     },
     /// Measure one board: host, Android capture, or bare-metal images.
     Bench(bench::Args),
+    /// Install the ESP32-S3 toolchain rind-hardware's images were built with
+    /// (espup, espflash, ldproxy), without root, into RIND_HARDWARE_DIR/.tools
+    SetupToolchain(setup_toolchain::Args),
     /// Unpack the staged Jetson toolchain under ~/rind-bench-orin.
     OrinSetup {
         #[arg(long)]
@@ -129,6 +139,22 @@ enum Cmd {
         #[arg(long, default_value = layout::COMPARABLE_PIN)]
         commit: String,
     },
+    /// Per id and mode, criterion's runs under ROOT/<mode>-r<N>: median, min, max, spread
+    CritParse(crit::ParseArgs),
+    /// A/B table: rind's median per mode, ratios to BASE and to aws-lc-rs
+    AbCmp(crit::CmpArgs),
+    /// A/B table from the fastest round of each mode, for noisy hosts
+    AbMin(crit::MinArgs),
+    /// An A/B run's criterion homes as one rind-results/ab-v1 JSON, on stdout
+    AbCollect(crit::CollectArgs),
+    /// Argon2id wall time and PMU per block, per size and variant, from a TSV log
+    Argon2PmuSum(crit::Argon2PmuArgs),
+    /// Harness PMU medians per op and variant, from a tab-separated log
+    AbPmuSum(crit::AbPmuArgs),
+    /// `perf stat` CSVs (stat-<binary>-<op>-<run>.csv in the current directory) as a table
+    AbPerfSum,
+    /// Build each baremetal/rp2040/builds crate for a target, one TSV line per crate
+    BuildMatrix(build_matrix::Args),
     /// Re-check a result tree. With no flags, the published set.
     Verify {
         #[arg(long)]
@@ -172,6 +198,8 @@ enum Cmd {
         note: Vec<String>,
         json: Vec<PathBuf>,
     },
+    /// The side report for xeon-vm, m1pro, pi5 and pixel9pro (STATS.md, SVGs, summary.json)
+    RenderOurs(render_ours::Args),
     /// Stage a results tree from host JSON. Remaining arguments are stage-repo's.
     Stage {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
@@ -193,6 +221,7 @@ fn main() -> ExitCode {
         Cmd::Report(a) => report::run(a),
         Cmd::Compare(a) => compare::run(a),
         Cmd::DemoTsv(a) => demo_tsv::run(a),
+        Cmd::GenFrames(a) => gen_frames::run(a),
         Cmd::Relink(a) => relink::run(a),
         Cmd::Charts(a) => charts::run(a),
         Cmd::Sizes(a) => sizes::run(a),
@@ -207,6 +236,7 @@ fn main() -> ExitCode {
         Cmd::Check => check(),
         Cmd::BenchTables { rind } => tables::refresh(&rind),
         Cmd::Bench(a) => bench::run(a),
+        Cmd::SetupToolchain(a) => setup_toolchain::run(a),
         Cmd::OrinSetup { home } => (|| {
             let home = match home {
                 Some(h) => h,
@@ -268,6 +298,15 @@ fn main() -> ExitCode {
             let home = home.unwrap_or(boards::home_dir()?.join("rind-bench-run"));
             boards::pi_run(&home, &commit)
         })(),
+        Cmd::CritParse(a) => crit::parse(a),
+        Cmd::AbCmp(a) => crit::cmp(a),
+        Cmd::AbMin(a) => crit::min_rounds(a),
+        Cmd::AbCollect(a) => crit::collect(a),
+        Cmd::Argon2PmuSum(a) => crit::argon2_pmu_sum(a),
+        Cmd::AbPmuSum(a) => crit::ab_pmu_sum(a),
+        Cmd::AbPerfSum => crit::ab_perf_sum(),
+        Cmd::RenderOurs(a) => render_ours::run(a),
+        Cmd::BuildMatrix(a) => build_matrix::run(a),
         Cmd::Verify { dir, board } => run_verify(&dir, &board),
         Cmd::AndroidConvert {
             rind,

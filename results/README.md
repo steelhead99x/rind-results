@@ -21,6 +21,8 @@ results/<host>/<upstream-sha>-<label>/
 
 `cargo xtask bench` writes that directory. `cargo verify --dir` checks it before it is published. Nothing here moves a number that was already published.
 
+Published in this layout: [`pi2b-bench` at `a6577cb4`](pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 2 Model B, armv7, five rounds).
+
 ## Historical trees
 
 These stay in the layout they were published in. They are not the new per-commit directories, and they are not one comparable set.
