@@ -21,7 +21,7 @@ results/<host>/<upstream-sha>-<label>/
 
 `cargo xtask bench` writes that directory. `cargo verify --dir` checks it before it is published. Nothing here moves a number that was already published.
 
-Published in this layout: [`pi2b-bench` at `a6577cb4`](pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 2 Model B, armv7, five rounds).
+Published in this layout: [`pi2b-bench` at `a6577cb4`](pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 2 Model B, armv7, five rounds); [`pi5-nofan-1p5ghz` at `a6577cb4`](pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) (Raspberry Pi 5, aarch64, no fan, held at 1.5 GHz, five rounds).
 
 ## Historical trees
 
