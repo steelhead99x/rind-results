@@ -184,7 +184,7 @@ const DATA = {
     { day:"11-12", t:"23:10", k:"rust", what:"rind-agent #49: bench helpers ported to Rust (closed unmerged Nov 13, 07:19)", host:"–", eff:"Rust share of the repo 37.2% → 85.3% on the branch", st:"closed" },
     { day:"11-13", t:"00:04–01:39", k:"pr", what:"Portable perf PRs opened: #69 (ESP32-S3 I-cache gaps), #70 (P-521 verify), #71 (RSA square), #76 (Montgomery rows)", host:"–", eff:"", st:"open" },
     { day:"11-13", t:"00:20–01:40", k:"fix", what:"RP2040 P-256 slowdown traced to XIP cache conflicts; hot code packed into one section (0d143bcf)", host:"RP2040 (model)", eff:"CT stack ECDH 21.80M → 33.16M cycles (1.521×); modelled misses per window 2660 → 0; board timing pending", st:"pending" },
-    { day:"11-13", t:"07:10–11:16", k:"rust", what:"Bench tooling in Rust: rind-results #7, #8, #10–#15 merged (board runners in cargo xtask); #18–#23 open; rind-agent #51 merged", host:"–", eff:"", st:"merged" },
+    { day:"11-13", t:"07:10–11:16", k:"rust", what:"Bench tooling in Rust: rind-results #7, #8, #10–#23 are on main (board runners and the criterion/PMU summaries in cargo xtask); rind-agent #51 merged", host:"–", eff:"", st:"merged" },
     { day:"11-13", t:"07:23", k:"pr", what:"PRs #79 (P-256 table alignment) and #80 (RSA-2048/3072/4096 bench) opened on fork main", host:"–", eff:"#79 measured 1.000× on narrow NIST (that table already sat at +32)", st:"open" },
     { day:"11-13", t:"07:23–13:05", k:"board", what:"Pi 2 (Cortex-A7) and the fanless Pi 5 at upstream main: full test matrices; 5 timed rounds finished on the Pi 2", host:"Pi 2, Pi 5", eff:"Pi 2: 1023 passed, 0 failed, NEON on and off; Pi 5: 1239 passed, 0 failed (its timed suite is the 11:47 entry)", st:"done" },
     { day:"11-13", t:"07:41–09:19", k:"pr", what:"rind-results #2 (MG24), #3 (ESP32-S3 second host), #4 (Pi 5 follow-ups), #5 (Argon2, PR #33 A/B), #17 (ESP32-S3 set) merged", host:"–", eff:"", st:"merged" },
@@ -194,9 +194,9 @@ const DATA = {
     { day:"11-13", t:"11:44–13:29", k:"perf", what:"RP2040 short-message SHA-256: 8 rounds per iteration in a hot section, HACL from 2 KB", host:"RP2040", eff:"SHA-256 32 B 11,486 → 8,467 cycles (0.737×); HMAC 32 B 0.876×; HKDF expand 0.814× (2–3 rounds)", st:"pushed" },
     { day:"11-13", t:"11:47–15:27", k:"board", what:"Full suite on stock upstream main (a6577cb4): 396 IDs, 5 rounds; 174 test binaries, 0 failed", host:"Pi 5 (no fan, 1.5 GHz)", eff:"rind fastest on 45 of 68; X25519 2.32×, RSA-2048 sign 1.69× of aws-lc-rs", st:"done" },
     { day:"11-13", t:"13:01–13:31", k:"fix", what:"PR #82: Pi tests run; CI regenerate fix b6f71072 (narrow driver runs last)", host:"Pi 5", eff:"703 lib tests pass in default, wide and narrow; 13 CI checks still pending", st:"draft" },
-    { day:"11-13", t:"from 13:09", k:"board", what:"Arduino Uno R3 (AVR) and Nano 33 BLE benches", host:"ATmega328P, nRF52840", eff:"No numbers yet: Uno toolchain in progress; the Nano 33 BLE has not enumerated", st:"pending" },
+    { day:"11-13", t:"from 13:09", k:"board", what:"Arduino Uno R3 (AVR) and Nano 33 BLE benches", host:"results/uno-r3, nRF52840", eff:"Uno R3 medians are on main at results/uno-r3 (PR #25). The Nano 33 BLE has not enumerated", st:"pending" },
     { day:"11-13", t:"from 14:09", k:"board", what:"Second Pi 5: the same suite and binaries at its stock 2.4 GHz", host:"Pi 5 #2 (2.4 GHz)", eff:"3 of 5 rounds: times 1.60× shorter, ratios unchanged", st:"preliminary" },
-    { day:"11-13", t:"15:14", k:"pr", what:"rind-results #24 merged: Pi 2 (armv7) results at upstream a6577cb4", host:"Pi 2", eff:"", st:"merged" }
+    { day:"11-13", t:"15:14", k:"pr", what:"rind-results #24 merged: Pi 2 (armv7) results at upstream a6577cb4", host:"pi2b-bench", eff:"Published host id pi2b-bench (results/pi2b-bench/)", st:"merged" }
   ],
   interleaveM1: [
     ["1 MiB", "sha3", "624.95 µs", "562.30 µs", "0.900"],
@@ -736,7 +736,7 @@ table.tlt tr.pend td{background:var(--pend-bg)}
       <li><b>Pi 5 at 2.4 GHz:</b> the second Pi 5 runs stock main (3 of 5 rounds: 1.60× shorter, ratios unchanged). A/Bs at 2.4 GHz need a fan on the fanless board. <span class="tag pending">in progress</span></li>
       <li><b>Clean M1 Pro rerun</b> under the lock with nothing else running. Current M1 medians are noisy.</li>
       <li>Native ct-qemu and ctgrind on the Argon2 commits</li>
-      <li><b>Boards:</b> Pi 2 set on main (rind-results #24); Pi 5 suite summarized. Next: publish both Pi 5 sets, time the RP2040 P-256 pack, first Uno R3 and Nano 33 BLE numbers. <span class="tag pending">pending</span></li>
+      <li><b>Boards:</b> Pi 2 is on main as <code>results/pi2b-bench</code> (rind-results #24). Uno R3 is on main as <code>results/uno-r3</code> (#25). Next: publish both Pi 5 sets, time the RP2040 P-256 pack, and get the first Nano 33 BLE numbers. <span class="tag pending">pending</span></li>
     </ul></div>
     <div class="card"><h3>Review and landing</h3><ul class="b sm">
       <li><b>PR #82</b> re-proposes the narrow dispatch on current main (PR #33 was closed unmerged). Gains and tests hold; mark it ready once regenerate passes on b6f71072. The table fix stays in #79. <span class="tag pending">CI pending</span></li>
@@ -748,7 +748,7 @@ table.tlt tr.pend td{background:var(--pend-bg)}
 </section>
 
 <!-- ============ WHERE THE NUMBERS LIVE (added 2026-11-12 evening) ============ -->
-<section class="slide" data-section="Status">
+<section class="slide" data-section="Status" id="where-live">
   <div class="kicker">Where the numbers live · checked <span data-k="meta.asOf"></span></div>
   <h2>Every Nov 11–12 Pi 5 and M1 Pro number is on rind-results main; the Nov 13 PR #82 A/B and Pi 5 full suites are not yet</h2>
   <table class="t" style="margin-top:16px;font-size:14.5px">
@@ -762,8 +762,8 @@ table.tlt tr.pend td{background:var(--pend-bg)}
     <tr><td>MG24 and ESP32-S3 board results (timeline)</td><td>rind-results PRs #2, #3 and #17, merged 2026-11-13</td><td><span class="tag ok">on main</span></td></tr>
     <tr><td>NVIDIA Jetson Orin Nano</td><td>full-suite results on main (<code>results/jetson-orin-nano/</code>, 3 pinned runs at another rind commit); not an A/B of this work</td><td><span class="tag ok">on main</span></td></tr>
   </table>
-  <div class="callout" style="margin-top:18px">The merge also corrected one M1 spread in the interleave table (64 MiB NEON, before: 11.7% → 10.7%); no median or ratio in this deck changed. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy.</div>
-  <div class="foot"><span class="src">git ls-tree of rind-results main (44205f9) · rind-results PRs #2–#5 and #17 · results/argon2-interleave/RESULTS.md</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:18px">The merge also corrected one M1 spread in the interleave table (64 MiB NEON, before: 11.7% → 10.7%); no median or ratio in this deck changed. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy. Host ids on this main: <code>pi2b-bench</code>, <code>uno-r3</code>, <code>intel-core-ultra-9-275hx</code>.</div>
+  <div class="foot"><span class="src">git ls-tree of rind-results main (45c523e) · rind-results PRs #2–#5, #17, #24, #25, #29 · results/argon2-interleave/RESULTS.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ APPENDIX ============ -->
@@ -808,11 +808,11 @@ table.tlt tr.pend td{background:var(--pend-bg)}
   <table class="t" style="font-size:12.5px">
     <tr><th style="width:20%">Phase</th><th>Files</th></tr>
     <tr><td>Starting point</td><td><code>hosts/pi5/NOTES.md</code>, <code>hosts/pi5/pi5.json</code> (b6651423) · <code>results/m1pro-8feee30e/</code> · the static scout notes (llvm-mca)</td></tr>
-    <tr><td>1 · PR #33</td><td><code>results/pr33-pi5/README.md</code>, <code>raw.md</code>, <code>run.log</code> · <code>scripts/pi5-pr33-ab.sh</code>, <code>pi5-pr33-build.sh</code>, <code>crit-parse.py</code></td></tr>
+    <tr><td>1 · PR #33</td><td><code>results/pr33-pi5/README.md</code>, <code>raw.md</code>, <code>run.log</code> · <code>scripts/pi5-pr33-ab.sh</code>, <code>pi5-pr33-build.sh</code>, <code>cargo xtask crit-parse</code></td></tr>
     <tr><td>2 · Pi 5 follow-ups</td><td><code>hosts/pi5/ab-narrow-mul/</code> (<code>README.md</code>, <code>ab-narrow-mul.*</code>, <code>ab-rsa-8n.*</code>, <code>ab-cpu-detect.*</code>, <code>ab-p384-w7.*</code>, <code>ab-p521-w7.*</code>, <code>series2-layout/</code>, <code>table-align/</code>, <code>scripts/</code>), <code>hosts/m1pro/ab-narrow-mul/</code>, <code>hosts/pi5/NOTES.md</code></td></tr>
     <tr><td>3 · Argon2 NEON</td><td>rind <code>perf/argon2-neon</code> commit messages (705167ac, bd907631, 4ad61ae3)</td></tr>
     <tr><td>4 · SHA3 umlal</td><td><code>results/argon2/RESULTS.md</code>, <code>raw/m1pro-round{1,2,3}.md</code>, <code>raw/pi5-round{1,2,3}*.md</code>, <code>pi5-final-run.log</code> · <code>scripts/argon2-build-variants.sh</code>, <code>argon2-run-ab.sh</code></td></tr>
-    <tr><td>5 · Interleave</td><td><code>results/argon2-interleave/RESULTS.md</code>, <code>raw/pi5-criterion-r5.md</code>, <code>raw/pi5-pmu-r{1..5}*.tsv</code>, <code>raw/pi5-disasm-summary.txt</code>, <code>raw/m1pro-criterion-r6.md</code>, <code>raw/m1pro-*-wall-r*.tsv</code> · <code>scripts/argon2-pmu/</code>, <code>argon2-pmu-*.sh</code>, <code>argon2-pmu-sum.py</code> · <code>results/argon2-scalar-rider/RESULTS.md</code>, <code>raw/pi5-criterion-r6.md</code>, <code>r7.md</code>, <code>raw/pi5-pmu-h2.tsv</code>, <code>raw/m1pro-*</code></td></tr>
+    <tr><td>5 · Interleave</td><td><code>results/argon2-interleave/RESULTS.md</code>, <code>raw/pi5-criterion-r5.md</code>, <code>raw/pi5-pmu-r{1..5}*.tsv</code>, <code>raw/pi5-disasm-summary.txt</code>, <code>raw/m1pro-criterion-r6.md</code>, <code>raw/m1pro-*-wall-r*.tsv</code> · <code>scripts/argon2-pmu/</code>, <code>argon2-pmu-*.sh</code>, <code>cargo xtask argon2-pmu-sum</code> · <code>results/argon2-scalar-rider/RESULTS.md</code>, <code>raw/pi5-criterion-r6.md</code>, <code>r7.md</code>, <code>raw/pi5-pmu-h2.tsv</code>, <code>raw/m1pro-*</code></td></tr>
     <tr><td>Verification</td><td>test tables in both RESULTS.md files · <code>results/argon2-interleave/raw/pi5-ct-vartime.log</code> · the verification status notes</td></tr>
     <tr><td>Status</td><td>Argon2, Pi-lane and verification status notes kept beside the checkouts (not in this repo)</td></tr>
   </table>

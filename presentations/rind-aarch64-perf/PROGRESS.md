@@ -2,6 +2,12 @@
 
 Each refresh reworks the whole deck into one story; this log records what changed in each refresh. Times are PST.
 
+## 2026-11-14
+
+- Merged rind-results main `45c523e`. No number in the DATA block changed.
+- Host paths match that main: Pi 2 is `results/pi2b-bench` (PR #24), the Uno R3 set is `results/uno-r3` (PR #25), and the comparable x86 host is `results/intel-core-ultra-9-275hx` (PR #29). The Nano 33 BLE still has no published numbers. The Nov 13 Pi 5 full suites and the PR #82 A/B are still not on main.
+- rind-results #18–#23 are on main. Appendix citations of `crit-parse.py` and `argon2-pmu-sum.py` now name `cargo xtask crit-parse` and `cargo xtask argon2-pmu-sum`.
+
 ## 2026-11-13 16:05
 
 - New Phase 6 slide (17) from new `DATA.pi5full` and `DATA.pi5fullMeta` blocks: the full report suite on stock

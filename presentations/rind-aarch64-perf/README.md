@@ -47,7 +47,7 @@ All of these are on steelhead99x/rind-results `main` (PR #4 from `results/pi5-la
 `results/argon2-a76-interleave`, both merged 2026-11-13):
 
 - `results/pr33-pi5/README.md`, `raw.md`; `results/argon2/RESULTS.md` and `raw/`; `results/m1pro-8feee30e/NOTES.md`
-- `results/argon2-interleave/RESULTS.md` and `raw/`; `scripts/argon2-pmu/`, `scripts/argon2-pmu-*.sh`, `scripts/argon2-pmu-sum.py`
+- `results/argon2-interleave/RESULTS.md` and `raw/`; `scripts/argon2-pmu/`, `scripts/argon2-pmu-*.sh`, `cargo xtask argon2-pmu-sum`
 - `results/argon2-scalar-rider/RESULTS.md` and `raw/`
 - `hosts/pi5/NOTES.md`, `hosts/pi5/ab-narrow-mul/` (README.md, ab-narrow-mul, ab-rsa-8n, ab-cpu-detect, ab-p384-w7,
   ab-p521-w7, series2-layout/, table-align/), `hosts/m1pro/ab-narrow-mul/`
@@ -58,7 +58,7 @@ All of these are on steelhead99x/rind-results `main` (PR #4 from `results/pi5-la
 - Pi 5 full-suite run files at upstream a6577cb4, 2026-11-13: criterion estimates of each round, test logs, thermal log;
   and the second Pi 5's 2.4 GHz rounds at the same commit (3 of 5 finished when this was written; provisional)
 - PR state on GitHub: steelhead99x/rind #33 (closed unmerged), #69–#71, #76, #79, #80 (open), #82, #84, #87 (draft);
-  steelhead99x/rind-results #2–#5, #7, #8, #10–#17, #24 (merged), #18–#23 (open); steelhead99x/rind-agent #49 (closed
+  steelhead99x/rind-results #2–#5, #7, #8, #10–#25 and #29 (merged); steelhead99x/rind-agent #49 (closed
   unmerged), #51 (merged)
 - steelhead99x/rind commit messages: `cursor/aarch64-narrow-mul-132a` (PR #33), `perf/argon2-neon`,
   `perf/argon2-sha3-umlal`, `perf/argon2-interleave`, `perf/pi5-narrow-nist`, `perf/pi5-rsa-bench-sizes`,
