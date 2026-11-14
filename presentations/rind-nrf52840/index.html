@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>rind on the nRF52840: 14 November 2026</title>
+<title>nRF52840 Poly1305-32</title>
 <!--
   Self-contained deck: no network access, no external libraries.
   STYLE: the CSS of presentations/rind-rp2040, via presentations/rind-hardware-today.
@@ -160,110 +160,51 @@ p.small{font-size:13.5px;line-height:1.4;color:var(--ink2);margin:8px 0 0}
 <body>
 <div id="deck">
 
-<!-- 1 TITLE -->
 <section class="slide title" data-section="Title">
   <div class="bar"></div>
   <div class="inner">
-    <div class="kicker">rind · nRF52840 · Seeed T1000-E · Cortex-M4F</div>
-    <h1>14 November on the nRF52840: one earlier Poly1305 ratio, and a list of what is not measured yet</h1>
-    <div class="sub">#87 cites the published poly1305-32 compare. It says those ratios were not re-measured on head 6f2866d9.</div>
+    <div class="kicker">rind · nRF52840 · Seeed T1000-E · Cortex-M4F · 64 MHz</div>
+    <h1>Poly1305-32 compare. Not re-measured on #87.</h1>
+    <div class="sub">Head 6f2866d9 cites this compare and says the ratios were not re-measured on that commit. The images match rind-hardware 7a14b38. Counter is DWT_CYCCNT. 3 runs, known-answer checks 21/21.</div>
   </div>
   <div class="meta">steelhead99x/rind-results · results/nrf52840/diag/poly1305-32<br>14 November 2026</div>
-  <div class="foot"><span class="src">steelhead99x/rind#87 body · results/nrf52840/diag/poly1305-32/compare.md and README.md</span><span class="num"></span></div>
+  <div class="foot"><span class="src">steelhead99x/rind#87 body · results/nrf52840/diag/poly1305-32/README.md</span><span class="num"></span></div>
 </section>
 
-<!-- 2 WHAT THE PR SAYS -->
-<section class="slide" data-section="#87">
-  <div class="kicker">14 November · <a href="https://github.com/steelhead99x/rind/pull/87">steelhead99x/rind#87</a> · head 6f2866d9</div>
-  <h2 class="s28">26-bit Poly1305 is the 32-bit path. This board's ratio is from an earlier image</h2>
-  <div class="callout warn">The hardware numbers were not re-measured on this trim. They are prebuilt images of rind-hardware <code>patches/poly1305-32</code>. Re-measure on this commit before treating the ratios as current.</div>
-  <ul class="b" style="margin-top:16px">
-    <li>The PR's sentence for this board: ChaCha20-Poly1305 seal 16 KB is 0.698 of the HACL* image.</li>
-    <li>The same compare, which the PR points at, records that rind row as 895,189 → 624,562 cycles. Open 16 KB is 918,865 → 648,242 (0.705).</li>
-    <li>Rind long-input ChaCha median is 0.698 (range 0.691 to 0.705). Short-input median is 0.690 (0.658 to 0.699). Known-answer checks 21/21 on both images, 3 runs each.</li>
-    <li>Board: Seeed T1000-E, Cortex-M4F, 64 MHz, DWT_CYCCNT. Image sha256 matched rind-hardware <code>7a14b38</code> <code>patches/poly1305-32/SHA256SUMS</code>. The images were not rebuilt for #87.</li>
-  </ul>
-  <div class="foot"><span class="src">#87 body · results/nrf52840/diag/poly1305-32/README.md and compare.md (2026-11-12)</span><span class="num"></span></div>
-</section>
-
-<!-- 3 TABLE -->
 <section class="slide" data-section="Compare">
-  <div class="kicker">Published compare the PR cites · not a re-run of 6f2866d9</div>
-  <h2 class="s28">Rind is faster at every ChaCha size in that compare. XChaCha 32 B barely moves</h2>
+  <div class="kicker">Published compare · rind versus the HACL* image · cycles · below 1 is faster</div>
+  <h2 class="s28">ChaCha seal 16 KB is 0.698×. XChaCha 32 B is 0.987×.</h2>
+  <p class="lede s15">Long-input ChaCha median 0.698 (0.691 to 0.705). Short-input median 0.690 (0.658 to 0.699).</p>
   <table class="t d14">
     <tr><th>row</th><th class="n">HACL* cycles</th><th class="n">poly1305-32</th><th class="n">ratio</th></tr>
-    <tr><td>chacha seal 32 B</td><td class="n">9,877</td><td class="n">6,503</td><td class="n">0.658</td></tr>
-    <tr><td>chacha open 32 B</td><td class="n">10,046</td><td class="n">6,667</td><td class="n">0.664</td></tr>
-    <tr><td>chacha seal 1200 B</td><td class="n">72,818</td><td class="n">50,334</td><td class="n">0.691</td></tr>
-    <tr><td>chacha seal 1350 B</td><td class="n">82,315</td><td class="n">57,410</td><td class="n">0.697</td></tr>
-    <tr class="hl"><td>chacha seal 16 KB</td><td class="n">895,189</td><td class="n">624,562</td><td class="n">0.698</td></tr>
-    <tr><td>chacha open 16 KB</td><td class="n">918,865</td><td class="n">648,242</td><td class="n">0.705</td></tr>
-    <tr><td>xchacha 16 KB</td><td class="n">1,098,677</td><td class="n">838,153</td><td class="n">0.763</td></tr>
-    <tr><td>xchacha 32 B</td><td class="n">222,925</td><td class="n">219,949</td><td class="n">0.987</td></tr>
+    <tr><td>ChaCha seal 32 B</td><td class="n">9,877</td><td class="n">6,503</td><td class="n">0.658</td></tr>
+    <tr><td>ChaCha open 32 B</td><td class="n">10,046</td><td class="n">6,667</td><td class="n">0.664</td></tr>
+    <tr><td>ChaCha seal 1200 B</td><td class="n">72,818</td><td class="n">50,334</td><td class="n">0.691</td></tr>
+    <tr><td>ChaCha seal 1350 B</td><td class="n">82,315</td><td class="n">57,410</td><td class="n">0.697</td></tr>
+    <tr><td>ChaCha seal 16 KB</td><td class="n">895,189</td><td class="n">624,562</td><td class="n">0.698</td></tr>
+    <tr><td>ChaCha open 16 KB</td><td class="n">918,865</td><td class="n">648,242</td><td class="n">0.705</td></tr>
+    <tr><td>XChaCha 16 KB</td><td class="n">1,098,677</td><td class="n">838,153</td><td class="n">0.763</td></tr>
+    <tr><td>XChaCha 32 B</td><td class="n">222,925</td><td class="n">219,949</td><td class="n">0.987</td></tr>
   </table>
-  <p class="small">Below 1 is faster in the poly1305-32 image. The PR also prints the ESP32-S3 table (ChaCha seal 16 KB 0.735, XChaCha 32 B 0.490). That board is the XIAO, not this one. Those ESP32 figures were not re-measured on <code>6f2866d9</code> either.</p>
-  <div class="foot"><span class="src">results/nrf52840/diag/poly1305-32/compare.md · #87 body for the 0.698 citation and the "not re-measured" line</span><span class="num"></span></div>
-</section>
-
-<!-- 4 OTHER -->
-<section class="slide" data-section="Other">
-  <div class="kicker">14 November · other pulls</div>
-  <h2 class="s28">The rest of today's work is not measured on the nRF52840</h2>
-  <table class="t" style="font-size:14.5px">
-    <tr><th>Pull</th><th>On this board</th></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/84">#84</a> bare-metal no_std</td><td>M-profile (<code>thumbv7em</code>, this chip's class) gets the portable backend. Lint includes <code>thumbv7em-none-eabihf</code>. 764 lib tests passed. No nRF timing.</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/69">#69</a> rolled SHA-512</td><td>Measured on the XIAO at 0.033×. Not measured here.</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/96">#96</a> and <a href="https://github.com/steelhead99x/rind/pull/98">#98</a></td><td>ESP-IDF Xtensa IRAM only. Not this board.</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/76">#76</a> portable mul_add</td><td>Unnamed host, 2056 tracks 2048 within about 1%. Not measured here.</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/82">#82</a> and <a href="https://github.com/steelhead99x/rind/pull/79">#79</a></td><td>aarch64. Not this core.</td></tr>
-  </table>
-  <div class="foot"><span class="src">#84, #98, #87, #82, #79 bodies · #69 comment 6875774312 · #76 comment 6874901551</span><span class="num"></span></div>
-</section>
-
-<!-- 5 OPEN -->
-<section class="slide" data-section="Open">
-  <div class="kicker">Still open</div>
-  <h2 class="s28">Not measured yet on this nRF52840</h2>
-  <ul class="b">
-    <li>#87 head <code>6f2866d9</code>. The 0.698 ratio is the 12 November image, not this commit.</li>
-    <li>#84 on the chip. The portable M-profile backend is the one this board would run, and it has no new timing.</li>
-    <li>#69 rolled SHA-512, #76 <code>mul_add</code>, and any IRAM SHA-256. IRAM placement is Xtensa.</li>
-    <li>A watchdog note from 12 November is already published: a leftover 90 s Meshtastic watchdog reset the first image, and the firmware now feeds it. That is not a 14 November change.</li>
-  </ul>
-  <div class="foot"><span class="src">#87 body · #84 body · results/diag/nrf52840-watchdog-2026-11-12/README.md (the 12 November watchdog, already on the boards deck)</span><span class="num"></span></div>
-</section>
-
-<!-- 6 SOURCES -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources</div>
-  <h2 class="s28">The 0.698 is the pull request. The other rows are the compare it cites</h2>
-  <table class="t" style="font-size:15px">
-    <tr><th>What</th><th>File</th></tr>
-    <tr><td>#87 statement and the "not re-measured" line</td><td><a href="https://github.com/steelhead99x/rind/pull/87">steelhead99x/rind#87</a> body, head <code>6f2866d9</code></td></tr>
-    <tr><td>Cycle table</td><td><code>results/nrf52840/diag/poly1305-32/compare.md</code></td></tr>
-    <tr><td>Board, clock, image pin</td><td><code>results/nrf52840/diag/poly1305-32/README.md</code></td></tr>
-    <tr><td>ESP32-S3 companion numbers</td><td>#87 body, sourced there to <code>results/esp32s3/diag/poly1305-32</code></td></tr>
-  </table>
-  <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind</span><span class="num"></span></div>
+  <p class="small">#69, #96, #97, #98, #76, and #84 have no nRF timing. The ESP32-S3 companion table is on the boards deck.</p>
+  <div class="foot"><span class="src">results/nrf52840/diag/poly1305-32/compare.md · #87 body for the 0.698 sentence and the not-remeasured line</span><span class="num"></span></div>
 </section>
 
 </div>
 <div id="hud"></div>
 <script>
-
 (function(){
   const $=s=>document.querySelector(s);
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
   slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
   let cur=0;
   function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
-  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N}`; }
   addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
   $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
   addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
   fit(); show((parseInt(location.hash.slice(1))||1)-1);
 })();
-
 </script>
 </body>
 </html>
