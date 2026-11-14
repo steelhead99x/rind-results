@@ -73,7 +73,8 @@ enum Cmd {
         #[arg(long)]
         rind: PathBuf,
     },
-    /// Measure one board: host, Android capture, or bare-metal images.
+    /// Measure one board: a filesystem-safe host id (default: this CPU's slug),
+    /// an Android capture, or bare-metal images.
     Bench(bench::Args),
     /// Unpack the staged Jetson toolchain under ~/rind-bench-orin.
     OrinSetup {
