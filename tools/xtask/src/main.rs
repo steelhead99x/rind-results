@@ -458,6 +458,7 @@ fn check() -> Result<(), String> {
 const RESULT_DIRS: &[&str] = &[
     "results",
     "results/intel-core-ultra-9-275hx",
+    "results/pi5-nofan-1p5ghz",
     "results/efr32mg24",
     "results/diag/esp32s3-second-host-2026-11-12",
     "hosts/pi5/ab-narrow-mul",
