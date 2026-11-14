@@ -487,23 +487,13 @@ fn ci() -> Result<(), String> {
     ] {
         cargo_ok(args)?;
     }
-    // Published trees and provenance, then every results directory.
-    run_verify(&[], &[])?;
-    run_verify(&result_dirs()?, &[])?;
-    cargo_deny()
-}
-
-fn result_dirs() -> Result<Vec<PathBuf>, String> {
-    let root = root();
-    let mut dirs = Vec::with_capacity(RESULT_DIRS.len());
-    for rel in RESULT_DIRS {
-        let path = root.join(rel);
-        if !path.is_dir() {
-            return Err(format!("results directory {rel} is missing"));
-        }
-        dirs.push(path);
+    // Cargo rebuilds the current verifier, even when an older standalone
+    // `verify` binary sits beside xtask. The CI gate must not reuse that binary.
+    cargo_ok(&["verify"])?;
+    for dir in RESULT_DIRS {
+        cargo_ok(&["verify", "--dir", dir])?;
     }
-    Ok(dirs)
+    cargo_deny()
 }
 
 fn cargo_bin() -> String {
