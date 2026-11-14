@@ -53,6 +53,16 @@ New publishes use `results/<host>/<upstream-sha>/`. This is the first Linux host
 |---|---|---|
 | [pi2b-bench](../results/pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) | Raspberry Pi 2 Model B Rev 1.1, BCM2836 Cortex-A7, 900 MHz, armv7 | [RESULTS.md](../results/pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) at rind `a6577cb4` |
 
+## Comparable-set host (rind `d6ca9a75`)
+
+New publishes use `results/<host>/<upstream-sha>/`. A host id is any filesystem-safe name; the recommended one is a slug of the CPU model.
+
+| Board or host | Hardware | Where the numbers are |
+|---|---|---|
+| [intel-core-ultra-9-275hx](../results/intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md) | Intel Core Ultra 9 275HX laptop, x86_64, Oracle Linux Server 10.2 | [RESULTS.md](../results/intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md) at rind `d6ca9a75` |
+
+The laptop was on battery (power-saving governor) for run 1 and part of run 2, then on AC. bench-report's noisy flag is false on every run. See [NOTES.md](../results/intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/NOTES.md).
+
 ## Later findings (2026-11-12, America/Los_Angeles)
 
 These sit beside the published sets. None of them changes a gap verdict on the published 16 KB-cache ESP32-S3 tables.
