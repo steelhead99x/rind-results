@@ -480,11 +480,12 @@ fn ci() -> Result<(), String> {
             "clippy",
             "--workspace",
             "--all-targets",
+            "--locked",
             "--",
             "-D",
             "warnings",
         ],
-        &["test", "--workspace"],
+        &["test", "--workspace", "--locked"],
     ] {
         cargo_ok(args)?;
     }
