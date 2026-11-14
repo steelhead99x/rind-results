@@ -52,6 +52,14 @@ These are not rind `98568332` and are not the comparable set at `d6ca9a75`.
 |---|---|---|
 | Arduino Uno R3 | ATmega328P, 16 MHz, bare metal | [results/uno-r3/](../results/uno-r3/README.md). A `no_std` port of rind's generic primitives from `c08c91ea`, not the full crate. |
 
+## Later Linux host (rind `a6577cb4`)
+
+New publishes use `results/<host>/<upstream-sha>/`. This is the first Linux host in that layout.
+
+| Board or host | Hardware | Where the numbers are |
+|---|---|---|
+| [pi2b-bench](../results/pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) | Raspberry Pi 2 Model B Rev 1.1, BCM2836 Cortex-A7, 900 MHz, armv7 | [RESULTS.md](../results/pi2b-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) at rind `a6577cb4` |
+
 ## Later findings (2026-11-12, America/Los_Angeles)
 
 These sit beside the published sets. None of them changes a gap verdict on the published 16 KB-cache ESP32-S3 tables.
