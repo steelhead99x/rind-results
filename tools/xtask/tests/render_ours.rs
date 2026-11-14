@@ -146,3 +146,174 @@ fn skipped_hosts_match_the_script() {
     assert_eq!(so, fixture("skipped.stdout"));
     assert_eq!(sums(&r.join("render")), fixture("skipped.sha256"));
 }
+
+/// A bench-report with no HOSTS attribute, as rind draws hosts after the
+/// CPU-slug change. The published four stay first when they exist, and any
+/// other filesystem-safe id is included. `tiers.json` and a directory that is
+/// only an alias (`box`) are not hosts.
+#[test]
+fn cpu_slug_hosts_are_drawn_with_the_published_ones() {
+    let tmp = Path::new(env!("CARGO_TARGET_TMPDIR")).join("render-ours-slug");
+    let _ = fs::remove_dir_all(&tmp);
+    let rind = tmp.join("rind");
+    let res = tmp.join("res");
+    let out = tmp.join("out");
+    fs::create_dir_all(rind.join("admin")).unwrap();
+    fs::create_dir_all(rind.join("benchmarks/data")).unwrap();
+    fs::write(rind.join("admin/bench-report"), STUB_BENCH_REPORT).unwrap();
+    for name in ["nixos", "desktop", "nixos2", "kixtop", "ovh-iad", "ovh-sea"] {
+        fs::write(
+            rind.join("benchmarks/data").join(format!("{name}.json")),
+            host_body(name, Some("ok"), None),
+        )
+        .unwrap();
+    }
+    fs::write(
+        rind.join("benchmarks/data/amd-ryzen-9-7950x.json"),
+        host_body("amd-ryzen-9-7950x", Some("ok"), Some("repo slug")),
+    )
+    .unwrap();
+    fs::write(rind.join("benchmarks/data/tiers.json"), r#"{"tiers":[]}"#).unwrap();
+    fs::create_dir_all(res.join("box")).unwrap();
+    fs::write(
+        res.join("box/box.json"),
+        host_body("xeon-vm", Some("ok"), None),
+    )
+    .unwrap();
+    fs::create_dir_all(res.join("intel-core-ultra-9-275hx")).unwrap();
+    fs::write(
+        res.join("intel-core-ultra-9-275hx/intel-core-ultra-9-275hx.json"),
+        host_body("intel-core-ultra-9-275hx", Some("ok"), Some("nested slug")),
+    )
+    .unwrap();
+    fs::write(
+        res.join("apple-m3-max.json"),
+        host_body("apple-m3-max", Some("ok"), Some("flat json")),
+    )
+    .unwrap();
+    fs::create_dir_all(res.join("amd-ryzen-9-5900xt")).unwrap();
+    fs::write(
+        res.join("amd-ryzen-9-5900xt/amd-ryzen-9-5900xt.json"),
+        host_body("amd-ryzen-9-5900xt", Some("refused"), Some("busy")),
+    )
+    .unwrap();
+    fs::create_dir_all(res.join("Jetson")).unwrap();
+    fs::write(
+        res.join("Jetson/Jetson.json"),
+        host_body("Jetson", Some("ok"), None),
+    )
+    .unwrap();
+    fs::create_dir_all(res.join("_bad")).unwrap();
+    fs::write(
+        res.join("_bad/_bad.json"),
+        host_body("_bad", Some("ok"), None),
+    )
+    .unwrap();
+    fs::write(res.join("tiers.json"), r#"{"tiers":[]}"#).unwrap();
+    fs::write(
+        res.join("Has Space.json"),
+        host_body("has space", Some("ok"), None),
+    )
+    .unwrap();
+
+    let (so, se) = xtask(
+        &[
+            "render-ours",
+            "--rind",
+            rind.to_str().unwrap(),
+            "--res",
+            res.to_str().unwrap(),
+            "--out",
+            out.to_str().unwrap(),
+        ],
+        &[],
+    );
+    assert!(
+        se.contains("skip amd-ryzen-9-5900xt: refused:"),
+        "stderr: {se}"
+    );
+    assert!(
+        so.starts_with(
+            "ours: ['xeon-vm', 'apple-m3-max', 'intel-core-ultra-9-275hx'] repo: ['nixos', 'desktop', 'nixos2', 'kixtop', 'ovh-iad', 'ovh-sea', 'amd-ryzen-9-7950x']\n"
+        ),
+        "stdout: {so}"
+    );
+    assert!(!so.contains("box"));
+    assert!(!so.contains("Jetson"));
+    assert!(!so.contains("tiers"));
+    assert!(!so.contains("_bad"));
+    let md = fs::read_to_string(out.join("STATS.md")).unwrap();
+    assert!(md.contains("### `xeon-vm`"));
+    assert!(md.contains("Cloud VM: 8 vCPUs"));
+    assert!(md.contains("apple-m3-max: flat json"));
+    assert!(md.contains("intel-core-ultra-9-275hx: nested slug"));
+    assert!(md.contains("| x25519-ecdh | `apple-m3-max` | 1.25× (ring) |"));
+    assert!(md.contains("| x25519-ecdh | `intel-core-ultra-9-275hx` | 1.50× (ring) |"));
+    let apple = md.find("apple-m3-max").unwrap();
+    let intel = md.find("intel-core-ultra-9-275hx").unwrap();
+    assert!(
+        apple < intel,
+        "slug hosts stay in name order after the published ones"
+    );
+    let overview = fs::read_to_string(out.join("benchmarks/overview-all.svg")).unwrap();
+    assert_eq!(
+        overview,
+        "nixos,desktop,nixos2,kixtop,ovh-iad,ovh-sea,amd-ryzen-9-7950x,xeon-vm,apple-m3-max,intel-core-ultra-9-275hx"
+    );
+    assert!(!overview.contains("box"));
+    assert!(!overview.contains("tiers"));
+    assert!(!overview.contains("5900xt"));
+}
+
+fn host_body(host: &str, status: Option<&str>, note: Option<&str>) -> String {
+    let status = status.unwrap_or("ok");
+    let note = match note {
+        Some(n) if status == "ok" => format!(r#","note":"{n}""#),
+        Some(n) => format!(r#","reason":"{n}""#),
+        None => String::new(),
+    };
+    format!(
+        r#"{{"status":"{status}","host":"{host}","results":[],"started":"2026-11-13T00:00:00Z","commit":"0123456789abcdef0123456789abcdef01234567","os":"Linux","cpu":{{"model":"{host}","arch":"x86_64"}},"toolchain":{{"rustc":"rustc 1.98.1"}}{note}}}"#
+    )
+}
+
+const STUB_BENCH_REPORT: &str = r###"
+REPORT = "STATS.md"
+REPORT_DIR = "benchmarks"
+COLUMNS = {"rind": "rind", "ring": "ring"}
+OPERATIONS = ["x25519-ecdh/{lib}"]
+VARIANTS = []
+SLOWER = 1.1
+GENERATED = "<!-- Generated by `admin/bench-report render` from benchmarks/data, benchmarks/verified.toml, and benchmarks/gaps.toml. -->"
+PINNED = "Each host builds with the pinned toolchain in the Nix dev shell, and runs `admin/bench-report` only when idle. Times are criterion's estimates."
+
+def load_verified():
+    return []
+
+def label(row):
+    return row
+
+def row_name(op):
+    return op.replace("/{lib}", "")
+
+def gaps_of(hosts, tiers):
+    out = {}
+    if "apple-m3-max" in hosts:
+        out[("x25519-ecdh", "apple-m3-max")] = (1.25, "ring")
+    if "intel-core-ultra-9-275hx" in hosts:
+        out[("x25519-ecdh", "intel-core-ultra-9-275hx")] = (1.5, "ring")
+    return out
+
+def overview_svg(hosts, verified, theme):
+    return ",".join(hosts.keys())
+
+def report(hosts, tiers, verified, gaps):
+    lines = ["# Benchmarks", "", GENERATED, "", PINNED, ""]
+    for name, host in hosts.items():
+        lines.append("#" * 3 + " `" + name + "`")
+        note = host.get("note")
+        if note:
+            lines.append(name + ": " + note)
+    lines += ["", "## CPU tiers", "", "x", "", "## Verified code", "", "y", ""]
+    return {REPORT: "\n".join(lines)}
+"###;
