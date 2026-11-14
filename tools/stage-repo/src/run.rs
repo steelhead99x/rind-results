@@ -64,10 +64,11 @@ pub fn run(args: &Args) -> Result<PathBuf, String> {
             map.insert("host".into(), Value::String(name.clone()));
         }
         let dest = out.join(&name);
-        fs::create_dir_all(&dest).map_err(|e| io_err(&dest, e))?;
+        create_dir(out)?;
+        create_dir(&dest)?;
         let json_path = dest.join(format!("{name}.json"));
         let pretty = dumps_pretty(&host).map_err(|e| format!("stage-repo: {e}"))?;
-        fs::write(&json_path, pretty).map_err(|e| io_err(&json_path, e))?;
+        write_text(&json_path, &pretty)?;
 
         let mut extra = String::new();
         if let Some(note_path) = notes.get(&name) {
@@ -78,7 +79,7 @@ pub fn run(args: &Args) -> Result<PathBuf, String> {
         }
         let notes_path = dest.join("NOTES.md");
         let body = format!("{}{extra}", scrub.scrub(&notes_for(&host)));
-        fs::write(&notes_path, body).map_err(|e| io_err(&notes_path, e))?;
+        write_text(&notes_path, &body)?;
 
         if let Some(log_path) = logs.get(&name) {
             let raw = read_text_replace(log_path)?;
@@ -91,7 +92,7 @@ pub fn run(args: &Args) -> Result<PathBuf, String> {
                 body.push('\n');
             }
             let dest_log = dest.join(file_name(log_path));
-            fs::write(&dest_log, scrub.scrub(&body)).map_err(|e| io_err(&dest_log, e))?;
+            write_text(&dest_log, &scrub.scrub(&body))?;
         }
     }
 
@@ -111,9 +112,9 @@ pub fn run(args: &Args) -> Result<PathBuf, String> {
             ));
         };
         let readme = out.join("README.md");
-        fs::create_dir_all(out).map_err(|e| io_err(out, e))?;
+        create_dir(out)?;
         let text = read_text(sheet.as_path())?;
-        fs::write(&readme, scrub.scrub(&text)).map_err(|e| io_err(&readme, e))?;
+        write_text(&readme, &scrub.scrub(&text))?;
         let benchmarks = render.join("benchmarks");
         if benchmarks.is_dir() {
             copy_tree_text(&benchmarks, &out.join("benchmarks"), &scrub)?;
@@ -140,7 +141,11 @@ fn load_host(path: &Path, scrub: &Scrubber) -> Result<Value, String> {
 }
 
 fn is_host_token(name: &str) -> bool {
-    !name.is_empty() && !name.chars().any(|ch| ch.is_whitespace() || ch == '`')
+    !name.is_empty()
+        && !matches!(name, "." | "..")
+        && name
+            .bytes()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, b'.' | b'_' | b'-'))
 }
 
 fn split_pair(item: &str, prefix: &str, require_right: bool) -> Result<(String, String), String> {
@@ -164,7 +169,8 @@ fn read_text_replace(path: &Path) -> Result<String, String> {
 }
 
 fn copy_tree_text(source: &Path, dest: &Path, scrub: &Scrubber) -> Result<(), String> {
-    fs::create_dir_all(dest).map_err(|e| io_err(dest, e))?;
+    refuse_symlink(source)?;
+    create_dir(dest)?;
     copy_tree_inner(source, source, dest, scrub)
 }
 
@@ -177,20 +183,43 @@ fn copy_tree_inner(
     for entry in fs::read_dir(source).map_err(|e| io_err(source, e))? {
         let entry = entry.map_err(|e| io_err(source, e))?;
         let path = entry.path();
+        refuse_symlink(&path)?;
         let rel = path.strip_prefix(root).unwrap();
         let target = dest.join(rel);
         if path.is_dir() {
-            fs::create_dir_all(&target).map_err(|e| io_err(&target, e))?;
+            create_dir(&target)?;
             copy_tree_inner(root, &path, dest, scrub)?;
         } else if path.is_file() {
             if let Some(parent) = target.parent() {
-                fs::create_dir_all(parent).map_err(|e| io_err(parent, e))?;
+                create_dir(parent)?;
             }
             let text = read_text_replace(&path)?;
-            fs::write(&target, scrub.scrub(&text)).map_err(|e| io_err(&target, e))?;
+            write_text(&target, &scrub.scrub(&text))?;
         }
     }
     Ok(())
+}
+
+fn refuse_symlink(path: &Path) -> Result<(), String> {
+    match fs::symlink_metadata(path) {
+        Ok(meta) if meta.file_type().is_symlink() => Err(format!(
+            "stage-repo: refusing symbolic link {}",
+            path.display()
+        )),
+        Ok(_) => Ok(()),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(io_err(path, err)),
+    }
+}
+
+fn create_dir(path: &Path) -> Result<(), String> {
+    refuse_symlink(path)?;
+    fs::create_dir_all(path).map_err(|err| io_err(path, err))
+}
+
+fn write_text(path: &Path, text: &str) -> Result<(), String> {
+    refuse_symlink(path)?;
+    fs::write(path, text).map_err(|err| io_err(path, err))
 }
 
 fn file_name(path: &Path) -> PathBuf {

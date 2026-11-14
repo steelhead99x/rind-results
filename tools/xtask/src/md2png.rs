@@ -34,6 +34,7 @@ fn section(text: &str, heading: &str) -> Result<String, String> {
 }
 
 pub fn run(a: Args) -> Result<(), String> {
+    let content_width = a.width.checked_sub(48).ok_or("width must be at least 48")?;
     let mut text =
         std::fs::read_to_string(&a.src).map_err(|e| format!("{}: {e}", a.src.display()))?;
     if let Some(s) = &a.section {
@@ -46,10 +47,10 @@ pub fn run(a: Args) -> Result<(), String> {
          table{{border-collapse:collapse;margin:12px 0}}th,td{{border:1px solid #d1d9e0;padding:4px 10px}}\n\
          tr:nth-child(2n){{background:#f6f8fa}}code{{background:#eff1f3;padding:1px 4px;border-radius:4px;font-size:90%}}\n\
          pre{{background:#f6f8fa;padding:12px;overflow:auto}}h1,h2{{border-bottom:1px solid #d1d9e0;padding-bottom:4px}}",
-        a.width - 48
+        content_width
     );
-    let dir = std::env::temp_dir().join(format!("md2png-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let scratch = TempDir::new()?;
+    let dir = &scratch.0;
     let page = dir.join("page.html");
     std::fs::write(
         &page,
@@ -63,19 +64,13 @@ pub fn run(a: Args) -> Result<(), String> {
     let height = 16000.min(200 + 40 * n);
     let out = std::path::absolute(&a.out).map_err(|e| e.to_string())?;
     let st = Command::new(&chrome)
-        .args([
-            "--headless=new",
-            "--disable-gpu",
-            "--no-sandbox",
-            "--hide-scrollbars",
-        ])
+        .args(["--headless=new", "--disable-gpu", "--hide-scrollbars"])
         .arg(format!("--user-data-dir={}/p", dir.display()))
         .arg(format!("--window-size={},{height}", a.width))
         .arg(format!("--screenshot={}", out.display()))
         .arg(format!("file://{}", page.display()))
         .output()
         .map_err(|e| format!("{chrome}: {e}"))?;
-    let _ = std::fs::remove_dir_all(&dir);
     if !st.status.success() {
         return Err(format!(
             "{chrome} failed: {}",
@@ -83,6 +78,33 @@ pub fn run(a: Args) -> Result<(), String> {
         ));
     }
     crop(&out)
+}
+
+/// An atomically created, private browser profile and page directory.
+struct TempDir(PathBuf);
+
+impl TempDir {
+    fn new() -> Result<Self, String> {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|err| err.to_string())?
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("md2png-{}-{nonce}", std::process::id()));
+        let mut builder = std::fs::DirBuilder::new();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            builder.mode(0o700);
+        }
+        builder.create(&path).map_err(|err| err.to_string())?;
+        Ok(Self(path))
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
 }
 
 /// Crops the screenshot to 24 px below its last non-white row, as RGB.

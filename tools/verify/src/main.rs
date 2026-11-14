@@ -16,7 +16,7 @@
 
 use regex::Regex;
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -1366,12 +1366,14 @@ fn check_host_at(dir: &Path, name: &str, rep: &mut Report) {
     // The median JSON.
     let host: Value =
         serde_json::from_str(&read(&dir.join(format!("{name}.json")))).expect("host json");
-    let mut seen = 0;
+    let mut seen = BTreeSet::new();
     for r in host["results"].as_array().into_iter().flatten() {
         let (op, l) = (s(&r["operation"]), s(&r["library"]));
         match by.get(&op).and_then(|t| t.get(&l)) {
             Some(xs) => {
-                seen += 1;
+                if !seen.insert((op.clone(), l.clone())) {
+                    rep.bad(name, format!("{name}.json {op} {l}: duplicate result"));
+                }
                 if (fv(&r["ns"]) - med(xs)).abs() > 1e-9 * med(xs) {
                     rep.bad(
                         name,
@@ -1386,10 +1388,13 @@ fn check_host_at(dir: &Path, name: &str, rep: &mut Report) {
             None => rep.bad(name, format!("{name}.json {op} {l}: not in the raw runs")),
         }
     }
-    if seen != n {
+    if seen.len() != n {
         rep.bad(
             name,
-            format!("{name}.json has {seen} results, the raw runs {n}"),
+            format!(
+                "{name}.json has {} unique results, the raw runs {n}",
+                seen.len()
+            ),
         );
     }
     // RESULTS.md.
