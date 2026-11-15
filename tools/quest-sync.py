@@ -70,6 +70,12 @@ def labels_for(fm):
     return out
 
 
+def related(path):
+    text = open(path, encoding="utf-8").read()
+    m = re.search(r"^## Related PRs\n\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+    return m.group(1).strip() if m else "- none open"
+
+
 def body_for(fm, path):
     url = f"https://github.com/{REPO}/blob/{REF}/{path}"
     hw = fm["hardware"] if isinstance(fm["hardware"], list) else [fm["hardware"]]
@@ -77,6 +83,7 @@ def body_for(fm, path):
         f"Quest file: [`{path}`]({url})\n\n"
         f"- Priority: {fm['priority']}\n- Size: {fm['size']}\n- Hardware: {', '.join(hw)}\n"
         f"- Status: {fm['status']}\n- Claimable by: {fm['claimable_by']}\n\n"
+        f"Related PRs:\n\n{related(path)}\n\n"
         "The quest file is the spec; this issue mirrors its frontmatter and is "
         "rewritten by `quest-sync` on every change. Quests are maintainer-only for "
         "now; comments and result PRs are welcome.\n"
