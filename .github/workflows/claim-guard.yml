@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+name: claim-guard
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  guard:
+    if: >-
+      !github.event.issue.pull_request &&
+      contains(github.event.issue.labels.*.name, 'quest') &&
+      github.event.comment.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reply to claims from non-maintainers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          perm=$(gh api "repos/$REPO/collaborators/$AUTHOR/permission" --jq .permission 2>/dev/null || echo none)
+          case "$perm" in admin|maintain|write) exit 0 ;; esac
+          if ! printf '%s' "$BODY" | grep -qiE "i'?ll take|i will take|\bclaim(ing|ed)?\b|assign (it to )?me|working on (it|this)"; then
+            exit 0
+          fi
+          gh issue comment "$ISSUE" -R "$REPO" --body "Thanks @$AUTHOR. Quests are maintainer-only for now, so this one stays unassigned. Comments here and PRs with results are welcome; see https://github.com/$REPO/blob/main/CONTRIBUTING.md#quests."
