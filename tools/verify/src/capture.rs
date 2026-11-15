@@ -228,14 +228,29 @@ fn parse_bench(line_no: usize, rest: &str) -> Result<(String, Bench), String> {
             ));
         };
         match key {
-            "cycles" => cycles = Some(parse_u64(line_no, op, key, value)?),
-            "us" => us = Some(parse_u64(line_no, op, key, value)?),
+            "cycles" => {
+                let parsed = parse_u64(line_no, op, key, value)?;
+                if cycles.is_some() {
+                    return Err(format!("line {line_no}: BENCH {op} repeats cycles"));
+                }
+                cycles = Some(parsed);
+            }
+            "us" => {
+                let parsed = parse_u64(line_no, op, key, value)?;
+                if us.is_some() {
+                    return Err(format!("line {line_no}: BENCH {op} repeats us"));
+                }
+                us = Some(parsed);
+            }
             "digest" => {
                 if value.is_empty()
                     || value.len() % 2 != 0
                     || !value.chars().all(|c| c.is_ascii_hexdigit())
                 {
                     return Err(format!("line {line_no}: BENCH {op} digest is not hex"));
+                }
+                if digest.is_some() {
+                    return Err(format!("line {line_no}: BENCH {op} repeats digest"));
                 }
                 digest = Some(value.to_ascii_lowercase());
             }
@@ -356,16 +371,22 @@ fn check_published_digest(
             false
         }
     };
-    let Some(digest) = rec.get("digest").and_then(|v| v.as_str()) else {
-        if verified {
-            rep.bad(
-                label,
-                format!("{op}: digest_verified is set and digest is missing"),
-            );
+    let digest = match rec.get("digest") {
+        None => {
+            if verified {
+                rep.bad(
+                    label,
+                    format!("{op}: digest_verified is set and digest is missing"),
+                );
+            }
+            return;
         }
-        return;
+        Some(Value::String(s)) => s.to_ascii_lowercase(),
+        Some(_) => {
+            rep.bad(label, format!("{op}: digest is not a string"));
+            return;
+        }
     };
-    let digest = digest.to_ascii_lowercase();
     for (i, row) in rows.iter().enumerate() {
         match &row.digest {
             Some(got) if got == &digest => {}
@@ -833,6 +854,54 @@ mod tests {
         let rep = verify(&dir);
         assert!(rep.problems.is_empty(), "{}", rep.problems.join("\n"));
         assert!(rep.notes.iter().any(|n| n.contains("1 BENCH rows")));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn repeated_bench_field_cannot_select_the_later_cycle() {
+        let dir = scratch();
+        // The tables agree on 161. The log prints cycles twice; the later value
+        // is 161. Taking the last field would hide 160.
+        let json = sha_tree(SHA256_32, true)
+            .replace("\"cycles_all\": [160]", "\"cycles_all\": [161]")
+            .replace("\"cycles_median\": 160", "\"cycles_median\": 161")
+            .replace("\"cycles_min\": 160", "\"cycles_min\": 161")
+            .replace("\"cycles_max\": 160", "\"cycles_max\": 161");
+        let log = sha_log(SHA256_32).replace("cycles=160", "cycles=160 cycles=161");
+        write_tree(&dir, &json, &log);
+        std::fs::write(
+            dir.join("RUNS.md"),
+            "| operation | run 1 | median | spread |\n|---|---:|---:|---:|\n| `sha256/32B` | 161 | 161 | 0.00% |\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("RESULTS.md"),
+            "| Operation | cycles | range | µs |\n|---|---:|---:|---:|\n| sha256/32B | 161 | 161–161 | 10 |\n",
+        )
+        .unwrap();
+        let rep = verify(&dir);
+        assert!(
+            rep.problems.iter().any(|p| p.contains("repeats cycles")),
+            "{:?}",
+            rep.problems
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn non_string_digest_is_rejected() {
+        let dir = scratch();
+        let json = sha_tree(SHA256_32, false)
+            .replace(&format!("\"digest\": \"{SHA256_32}\""), "\"digest\": 1");
+        write_tree(&dir, &json, &sha_log(SHA256_32));
+        let rep = verify(&dir);
+        assert!(
+            rep.problems
+                .iter()
+                .any(|p| p.contains("sha256/32B") && p.contains("digest is not a string")),
+            "{:?}",
+            rep.problems
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
