@@ -11,8 +11,13 @@
 //! `cargo verify --dir <tree>` checks that directory instead of the published
 //! paths: a host tree (`raw/run-*.json` plus its median JSON and RESULTS.md),
 //! a board tree (jsonl under the directory, `raw/`, or a sibling `raw-<name>/`),
-//! an `x86-host-c`-style `summary.md`, a `rind-results/ab-v1` directory, or a
-//! parent of those. With no arguments the published paths are checked, as before.
+//! an `x86-host-c`-style `summary.md`, a `rind-results/ab-v1` directory, a
+//! cycle-median tree, or a parent of those. A cycle-median tree that still
+//! has `raw/capture.log` (or `capture.log`) is recomputed from that serial
+//! capture: per-run cycles, the µs field, published digests, omitted rows,
+//! and known-answer lines. SHA-256, SHA-512, and the Uno R3 Poly1305 pattern
+//! are hashed again when `digest_verified` is set. The log is not rewritten.
+//! With no arguments the published paths are checked, as before.
 
 use regex::Regex;
 use serde_json::Value;
@@ -20,6 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod capture;
 mod tree;
 
 const NOT_RIVALS: &[&str] = &["rind", "esp32s3-hw"];
