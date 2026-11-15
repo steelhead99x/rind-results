@@ -1,19 +1,21 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # Presentations
 
-One tree on main, collected from the `docs/*-deck` branches. Each deck is
-self-contained HTML. Open `index.html` in a browser.
+Each deck is self-contained HTML at 1280×720. Open `index.html` in a browser.
+Arrow keys move between slides. `#N` opens slide N.
 
-| Deck | What it covers | Source branch (newest files used) |
+| Deck | Slides | What it shows |
 |---|---|---|
-| [rind-hardware-today](rind-hardware-today/) | 12 November board improvements: Poly1305-32, layout and cache, flash and watchdog, RP2040, the move to rind-hardware, and a timeline; plus an unpublished late-evening ESP32-S3 run that closed the SHA-512, HMAC/HKDF, ChaCha/XChaCha and SHA-256-spread I-cache gaps | `docs/esp32s3-gaps-deck` |
-| [rind-rp2040](rind-rp2040/) | RP2040 port, SysTick fix, SHA-512/GHASH findings, no_std split | `docs/rp2040-deck-r3` |
-| [rind-systick](rind-systick/) | SysTick and timing across the benched hardware, including the 12 November harness fixes | `docs/systick-deck` |
-| [rind-aarch64-perf](rind-aarch64-perf/) | rind aarch64 work, phase by phase. Some slides cite data that still lives only on the `results/*` branches listed in that deck's README | `docs/perf-phases-deck` |
-| [rind-spake2plus](rind-spake2plus/) | SPAKE2+ in rind (RFC 9383, Matter PASE) | `docs/spake2plus-deck` |
+| [rind-hardware-today](rind-hardware-today/) | 12 | ESP32-S3 and nRF52840 measurements, including the 14 November XIAO runs of #69, #96, #97, and #98 |
+| [rind-aarch64-perf](rind-aarch64-perf/) | 8 | Pi 5 and M1 Pro tables: narrow schedules, Argon2id, #82, and #79 |
+| [rind-jetson](rind-jetson/) | 3 | Jetson Orin Nano published set at rind `98568332`. #82 and #79 are not measured there |
+| [rind-nrf52840](rind-nrf52840/) | 2 | nRF52840 Poly1305-32 compare. Not re-measured on #87 |
+| [rind-rp2040](rind-rp2040/) | 3 | What `hosts/rp2040/` records. No published Pico timing |
+| [rind-systick](rind-systick/) | 4 | Which counter each measured board used |
+| [rind-spake2plus](rind-spake2plus/) | 2 | No SPAKE2+ timing on 14 November. #64's Ed25519 CCTV count |
 
-Older copies of the same decks on `docs/rp2040-deck`, `docs/rp2040-deck-r2`,
-`docs/rp2040-deck-r3`, `docs/systick-deck`, `docs/perf-phases-deck` and
-`docs/spake2plus-deck` are superseded by this tree for anything already on
-main. Those branches also carry an older xtask serial-port change that main
-already has, so they were not merged as branches.
+A number on a slide comes from a file in this repo or from a linked
+[steelhead99x/rind](https://github.com/steelhead99x/rind) pull comment.
+The 14 November XIAO benches are comments on #96, #98, and #97. They are
+not a new `results/` publish. Pico cycle counts and the 12 November evening
+I-cache run are not in this repo, so they are not on the slides.
