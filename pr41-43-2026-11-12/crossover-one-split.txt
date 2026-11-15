@@ -1,0 +1,36 @@
+One-split Karatsuba crossover measurement
+Date: 2026-11-12 (America/Los_Angeles)
+Host: AMD Ryzen 5 7535HS (family 25, model 68), 12 threads
+Governor: performance; timed with taskset -c 0
+Build: cargo test -p rind --lib --release, default x86_64 backend (test binary
+compiles both limb32 and limb64 mont.rs)
+Method: for each even length n, median of three interleaved rounds of
+schoolbook then one Karatsuba split (crossover=n, so halves use schoolbook).
+Each timed loop ~200 ms. Times are nanoseconds/iter printed in microseconds.
+
+These numbers are the ones recorded in the #41 quest and mont.rs comments.
+The earlier crossover-recursive-cutoff2 file used crossover=2 and was not used.
+
+test low::generic::limb32::mont::tests::measure_karatsuba_crossover ... measure_karatsuba_crossover limb_bits=32 host=AMD Ryzen 5 7535HS (family 25, model 68)
+n=32 iters=363990 mul_sb=0.513us mul_ka=0.575us mul_ratio=1.120 sqr_sb=0.318us sqr_ka=0.409us sqr_ratio=1.286 sqr+redc_sb=0.918us sqr+redc_ka=1.015us redc_ratio=1.105
+n=48 iters=159230 mul_sb=1.210us mul_ka=1.102us mul_ratio=0.910 sqr_sb=0.666us sqr_ka=0.744us sqr_ratio=1.116 sqr+redc_sb=2.027us sqr+redc_ka=2.108us redc_ratio=1.040
+n=64 iters=87450 mul_sb=2.221us mul_ka=1.868us mul_ratio=0.841 sqr_sb=1.169us sqr_ka=1.173us sqr_ratio=1.003 sqr+redc_sb=3.588us sqr+redc_ka=3.586us redc_ratio=0.999
+n=80 iters=55785 mul_sb=3.517us mul_ka=2.912us mul_ratio=0.828 sqr_sb=1.835us sqr_ka=1.725us sqr_ratio=0.940 sqr+redc_sb=5.611us sqr+redc_ka=5.516us redc_ratio=0.983
+n=96 iters=38415 mul_sb=5.113us mul_ka=4.082us mul_ratio=0.798 sqr_sb=2.637us sqr_ka=2.384us sqr_ratio=0.904 sqr+redc_sb=8.063us sqr+redc_ka=7.742us redc_ratio=0.960
+n=112 iters=28315 mul_sb=6.999us mul_ka=5.637us mul_ratio=0.805 sqr_sb=3.668us sqr_ka=3.169us sqr_ratio=0.864 sqr+redc_sb=11.011us sqr+redc_ka=10.515us redc_ratio=0.955
+n=128 iters=20765 mul_sb=9.268us mul_ka=7.275us mul_ratio=0.785 sqr_sb=4.807us sqr_ka=3.995us sqr_ratio=0.831 sqr+redc_sb=14.847us sqr+redc_ka=13.819us redc_ratio=0.931
+n=160 iters=13625 mul_sb=14.593us mul_ka=11.416us mul_ratio=0.782 sqr_sb=7.597us sqr_ka=6.109us sqr_ratio=0.804 sqr+redc_sb=22.813us sqr+redc_ka=21.202us redc_ratio=0.929
+n=192 iters=9445 mul_sb=21.093us mul_ka=16.340us mul_ratio=0.775 sqr_sb=11.095us sqr_ka=8.535us sqr_ratio=0.769 sqr+redc_sb=32.760us sqr+redc_ka=30.369us redc_ratio=0.927
+n=224 iters=6580 mul_sb=29.697us mul_ka=22.485us mul_ratio=0.757 sqr_sb=15.195us sqr_ka=11.699us sqr_ratio=0.770 sqr+redc_sb=45.641us sqr+redc_ka=42.395us redc_ratio=0.929
+n=256 iters=5150 mul_sb=38.937us mul_ka=29.555us mul_ratio=0.759 sqr_sb=20.180us sqr_ka=15.554us sqr_ratio=0.771 sqr+redc_sb=59.465us sqr+redc_ka=54.896us redc_ratio=0.923
+test low::generic::limb64::mont::tests::measure_karatsuba_crossover ... measure_karatsuba_crossover limb_bits=64 host=AMD Ryzen 5 7535HS (family 25, model 68)
+n=16 iters=766190 mul_sb=0.236us mul_ka=0.277us mul_ratio=1.175 sqr_sb=0.149us sqr_ka=0.198us sqr_ratio=1.327 sqr+redc_sb=0.408us sqr+redc_ka=0.464us redc_ratio=1.138
+n=24 iters=373050 mul_sb=0.513us mul_ka=0.522us mul_ratio=1.018 sqr_sb=0.301us sqr_ka=0.350us sqr_ratio=1.162 sqr+redc_sb=0.861us sqr+redc_ka=0.908us redc_ratio=1.055
+n=32 iters=211145 mul_sb=0.897us mul_ka=0.878us mul_ratio=0.979 sqr_sb=0.519us sqr_ka=0.550us sqr_ratio=1.061 sqr+redc_sb=1.474us sqr+redc_ka=1.503us redc_ratio=1.020
+n=40 iters=139105 mul_sb=1.444us mul_ka=1.299us mul_ratio=0.899 sqr_sb=0.774us sqr_ka=0.787us sqr_ratio=1.017 sqr+redc_sb=2.271us sqr+redc_ka=2.276us redc_ratio=1.002
+n=48 iters=100345 mul_sb=1.990us mul_ka=1.788us mul_ratio=0.899 sqr_sb=1.086us sqr_ka=1.074us sqr_ratio=0.989 sqr+redc_sb=3.169us sqr+redc_ka=3.139us redc_ratio=0.990
+n=64 iters=56120 mul_sb=3.522us mul_ka=3.052us mul_ratio=0.866 sqr_sb=1.946us sqr_ka=1.748us sqr_ratio=0.898 sqr+redc_sb=5.559us sqr+redc_ka=5.419us redc_ratio=0.975
+n=80 iters=36190 mul_sb=5.579us mul_ka=4.643us mul_ratio=0.832 sqr_sb=2.883us sqr_ka=2.613us sqr_ratio=0.906 sqr+redc_sb=8.636us sqr+redc_ka=8.335us redc_ratio=0.965
+n=96 iters=25625 mul_sb=7.853us mul_ka=6.490us mul_ratio=0.826 sqr_sb=4.163us sqr_ka=3.595us sqr_ratio=0.864 sqr+redc_sb=12.506us sqr+redc_ka=11.713us redc_ratio=0.937
+n=128 iters=14440 mul_sb=14.637us mul_ka=11.402us mul_ratio=0.779 sqr_sb=7.478us sqr_ka=6.164us sqr_ratio=0.824 sqr+redc_sb=22.419us sqr+redc_ka=21.038us redc_ratio=0.938
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 755 filtered out; finished in 73.01s

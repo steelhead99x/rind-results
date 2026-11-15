@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# Staging only for the comparable ESP32-S3 set at kixel-ai/rind d6ca9a75.
+# Not a published verdict. Each entry exists so `cargo xtask report` can write
+# RESULTS.md; the owner has not decided these gaps. Ratios are from this run
+# (80 MHz flash, 3 runs, 2026-11-13, America/Los_Angeles).
+
+[[gap]]
+operations = ["sha512/{lib}/*"]
+on = ["esp32s3"]
+reason = "Staging only, not a published decision. On this comparable pin (upstream d6ca9a75 plus hardware patches), SHA-512 is about 32.5–33.0× ring at 64B, 1350B and 16KB: the portable unrolled 64-bit HACL* path still streams from flash on a 16 KB I-cache. Same family as the historical 98568332 set."
+
+[[gap]]
+operations = ["sha256/{lib}/64B", "sha256/{lib}/1350B"]
+on = ["esp32s3"]
+reason = "Staging only, not a published decision. One-shot SHA-256 is 2.01× libcrux at 64B and 1.16× at 1350B on this run: 16 KB I-cache layout cost on the long HACL* body, as previously measured."
+
+[[gap]]
+operations = ["hmac-sha256/{lib}/*", "hkdf-sha256/*"]
+on = ["esp32s3"]
+reason = "Staging only, not a published decision. This pin is upstream plus hardware patches, not PR #69's rolled/hybrid SHA-256. hmac-sha256 64B is 2.70× ring; 1350B is 1.38× libcrux; hkdf-sha256 expand is 5.92× ring and extract-expand 4.93× ring."
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/32B", "chacha20poly1305/{lib}/1350B", "chacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Staging only, not a published decision. ChaCha20-Poly1305 is 1.45×, 1.27× and 1.26× ring at 32B, 1350B and 16KB: the historical Poly1305 64-bit-limb cost on Xtensa. Optional poly1305-32 was not in these default images."
+
+[[gap]]
+operations = ["xchacha20poly1305/{lib}/32B", "xchacha20poly1305/{lib}/1350B", "xchacha20poly1305/{lib}/16KB"]
+on = ["esp32s3"]
+reason = "Staging only, not a published decision. XChaCha20-Poly1305 is 7.79×, 2.73× and 1.21× RustCrypto at 32B, 1350B and 16KB: 16 KB I-cache misses on the unrolled HChaCha plus the Poly1305 cost. This pin does not include PR #69's rolled HChaCha or poly1305-32."

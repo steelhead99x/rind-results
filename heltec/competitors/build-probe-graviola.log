@@ -1,0 +1,36 @@
+   Compiling heltec-competitors v0.1.0 (~/rind-results/heltec/competitors/fw)
+   Compiling graviola v0.4.4
+error: This crate only supports x86_64 or aarch64
+   --> ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/graviola-0.4.4/src/low/mod.rs:220:9
+    |
+220 |         compile_error!("This crate only supports x86_64 or aarch64");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+    --> ~/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/graviola-0.4.4/src/high/asn1.rs:508:33
+     |
+ 508 |         Ok(usize::from_be_bytes(bytes))
+     |            -------------------- ^^^^^ expected an array with a size of 4, found one with a size of 8
+     |            |
+     |            arguments to this function are incorrect
+     |
+note: associated function defined here
+    --> ~/.rustup/toolchains/esp/lib/rustlib/src/rust/library/core/src/num/uint_macros.rs:4054:22
+     |
+4054 |           pub const fn from_be_bytes(bytes: [u8; size_of::<Self>()]) -> Self {
+     |                        ^^^^^^^^^^^^^
+     |
+    ::: ~/.rustup/toolchains/esp/lib/rustlib/src/rust/library/core/src/num/mod.rs:1416:5
+     |
+1416 | /     uint_impl! {
+1417 | |         Self = usize,
+1418 | |         ActualT = u32,
+1419 | |         SignedT = isize,
+...    |
+1439 | |         bound_condition = " on 32-bit targets",
+1440 | |     }
+     | |_____- in this macro invocation
+     = note: this error originates in the macro `uint_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `graviola` (lib) due to 2 previous errors

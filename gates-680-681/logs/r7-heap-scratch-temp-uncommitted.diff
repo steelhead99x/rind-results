@@ -1,0 +1,52 @@
+diff --git a/rind/tests/heap_scratch.rs b/rind/tests/heap_scratch.rs
+index 92a78036..9d8b040c 100644
+--- a/rind/tests/heap_scratch.rs
++++ b/rind/tests/heap_scratch.rs
+@@ -56,6 +56,7 @@ fn zeroed<R>(what: &str, op: impl Fn() -> R) {
+ 
+ /// The check sees key-derived bytes left on the heap, so a clean result
+ /// means something.
++#[cfg(not(any(miri, target_family = "wasm")))]
+ #[test]
+ #[should_panic(expected = "holds bytes of the key")]
+ fn detects_a_leak() {
+@@ -64,6 +65,7 @@ fn detects_a_leak() {
+     });
+ }
+ 
++#[cfg(not(any(miri, target_family = "wasm")))]
+ #[test]
+ #[should_panic(expected = "holds bytes of the key")]
+ fn detects_a_leak_in_key_generation() {
+@@ -199,6 +201,7 @@ fn ed25519() {
+     });
+ }
+ 
++#[cfg(not(any(miri, target_family = "wasm")))]
+ #[test]
+ fn ml_dsa() {
+     use aws_lc_rs::signature::{ML_DSA_44_SIGNING, ML_DSA_65_SIGNING, ML_DSA_87_SIGNING};
+@@ -208,6 +211,7 @@ fn ml_dsa() {
+     ml_dsa_set::<MlDsa87>(&ML_DSA_87_SIGNING);
+ }
+ 
++#[cfg(not(any(miri, target_family = "wasm")))]
+ fn ml_dsa_set<P: rind::signature::sign::MlDsaParameterSet>(
+     theirs: &'static aws_lc_rs::signature::PqdsaSigningAlgorithm,
+ ) {
+@@ -235,6 +239,7 @@ fn ml_dsa_set<P: rind::signature::sign::MlDsaParameterSet>(
+ 
+ /// The key `seed` expands to, as PKCS#8 in RFC 9881's expanded form, which
+ /// rind writes only for a key loaded from it, so aws-lc-rs expands it.
++#[cfg(not(any(miri, target_family = "wasm")))]
+ fn ml_dsa_expanded_pkcs8(
+     algorithm: &'static aws_lc_rs::signature::PqdsaSigningAlgorithm,
+     seed: &[u8; 32],
+@@ -252,6 +257,7 @@ fn ml_dsa_expanded_pkcs8(
+ }
+ 
+ /// A DER element of `tag` holding `body`, under 64 KiB.
++#[cfg(not(any(miri, target_family = "wasm")))]
+ fn der(tag: u8, body: &[u8]) -> Vec<u8> {
+     let len = match body.len() {
+         len @ 0..=0x7f => vec![len as u8],

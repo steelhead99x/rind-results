@@ -1,0 +1,323 @@
+use std::io::{Read, Write};
+use std::sync::Arc;
+
+use rustls::crypto::{CryptoProvider, SupportedKxGroup};
+use rustls::crypto::{aws_lc_rs as aws_lc_rs_provider, ring};
+use rustls::pki_types::pem::PemObject;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rustls::sign::CertifiedKey;
+use rustls::{
+    ClientConfig, ClientConnection, HandshakeKind, NamedGroup, RootCertStore, ServerConfig,
+    ServerConnection,
+};
+
+#[test]
+fn all_suites() {
+    let _ = env_logger::try_init();
+
+    for key_type in KeyType::ALL {
+        test_suite(
+            rind_rustls::cipher_suite::TLS13_AES_256_GCM_SHA384,
+            *key_type,
+        );
+        test_suite(
+            rind_rustls::cipher_suite::TLS13_AES_128_GCM_SHA256,
+            *key_type,
+        );
+        test_suite(
+            rind_rustls::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256,
+            *key_type,
+        );
+        test_keys_match(&rind_rustls::default_provider(), *key_type);
+    }
+
+    for key_type in KeyType::RSA {
+        test_suite(
+            rind_rustls::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+            *key_type,
+        );
+        test_suite(
+            rind_rustls::cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+            *key_type,
+        );
+        test_suite(
+            rind_rustls::cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+            *key_type,
+        );
+    }
+
+    for key_type in KeyType::ECDSA {
+        test_suite(
+            rind_rustls::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+            *key_type,
+        );
+        test_suite(
+            rind_rustls::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+            *key_type,
+        );
+        test_suite(
+            rind_rustls::cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+            *key_type,
+        );
+    }
+}
+
+#[test]
+fn all_key_exchanges() {
+    let tls13 = rind_rustls::cipher_suite::TLS13_AES_128_GCM_SHA256;
+    let tls12 = rind_rustls::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256;
+
+    // Not supported by *ring*, and TLS 1.3 only.
+    for group in [
+        rind_rustls::kx_group::X25519MLKEM768,
+        rind_rustls::kx_group::SECP256R1MLKEM768,
+        rind_rustls::kx_group::MLKEM768,
+    ] {
+        for other in [OtherProvider::BaselineAwsLcRs, OtherProvider::SelfTest] {
+            test_key_exchange(group, tls13, other);
+        }
+    }
+
+    for other in OtherProvider::OTHERS {
+        for suite in [tls13, tls12] {
+            test_key_exchange(rind_rustls::kx_group::X25519, suite, *other);
+            test_key_exchange(rind_rustls::kx_group::SECP256R1, suite, *other);
+            test_key_exchange(rind_rustls::kx_group::SECP384R1, suite, *other);
+        }
+    }
+}
+
+/// Runs a handshake each way between `kx` and `other` offering only its own
+/// group of the same name.
+fn test_key_exchange(
+    kx: &'static dyn SupportedKxGroup,
+    suite: rustls::SupportedCipherSuite,
+    other: OtherProvider,
+) {
+    let key_type = KeyType::Rsa2048;
+    let provider: Arc<_> = CryptoProvider {
+        cipher_suites: vec![suite],
+        kx_groups: vec![kx],
+        ..rind_rustls::default_provider()
+    }
+    .into();
+    let other: Arc<_> = CryptoProvider {
+        kx_groups: vec![other.kx_group(kx.name())],
+        ..Arc::unwrap_or_clone(other.into_provider())
+    }
+    .into();
+    test_client(provider.clone(), other.clone(), key_type);
+    test_server(provider, other, key_type);
+}
+
+fn test_suite(suite: rustls::SupportedCipherSuite, key_type: KeyType) {
+    let provider: Arc<_> = CryptoProvider {
+        cipher_suites: vec![suite],
+        ..rind_rustls::default_provider()
+    }
+    .into();
+    for other in key_type.others() {
+        test_client(provider.clone(), other.into_provider(), key_type);
+        test_server(provider.clone(), other.into_provider(), key_type);
+    }
+}
+
+fn test_client(provider: Arc<CryptoProvider>, other: Arc<CryptoProvider>, key_type: KeyType) {
+    let server_config = server_config(other, key_type);
+    let client_config = client_config(provider.clone(), key_type);
+
+    assert!(matches!(
+        exercise(client_config.clone(), server_config.clone()),
+        HandshakeKind::Full | HandshakeKind::FullWithHelloRetryRequest
+    ));
+    println!("FULL: client with {provider:?} {key_type:?} OK");
+
+    assert_eq!(
+        exercise(client_config.clone(), server_config.clone()),
+        HandshakeKind::Resumed
+    );
+    println!("RESUMED: client with {provider:?} {key_type:?} OK");
+}
+
+fn test_server(provider: Arc<CryptoProvider>, other: Arc<CryptoProvider>, key_type: KeyType) {
+    let server_config = server_config(provider.clone(), key_type);
+    let client_config = client_config(other, key_type);
+
+    assert!(matches!(
+        exercise(client_config.clone(), server_config.clone()),
+        HandshakeKind::Full | HandshakeKind::FullWithHelloRetryRequest
+    ));
+    println!("FULL: server with {provider:?} {key_type:?} OK");
+
+    assert_eq!(
+        exercise(client_config, server_config),
+        HandshakeKind::Resumed
+    );
+    println!("RESUMED: server with {provider:?} {key_type:?} OK");
+}
+
+fn server_config(provider: Arc<CryptoProvider>, key_type: KeyType) -> Arc<ServerConfig> {
+    ServerConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .unwrap()
+        .with_no_client_auth()
+        .with_single_cert(key_type.cert_chain(), key_type.key())
+        .unwrap()
+        .into()
+}
+
+fn client_config(provider: Arc<CryptoProvider>, key_type: KeyType) -> Arc<ClientConfig> {
+    ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .unwrap()
+        .with_root_certificates(key_type.ca_certs())
+        .with_no_client_auth()
+        .into()
+}
+
+fn exercise(client_config: Arc<ClientConfig>, server_config: Arc<ServerConfig>) -> HandshakeKind {
+    let mut client = ClientConnection::new(client_config, "localhost".try_into().unwrap()).unwrap();
+    let mut server = ServerConnection::new(server_config).unwrap();
+
+    while client.is_handshaking() && server.is_handshaking() {
+        let mut buf = [0u8; 1024];
+        let wr = client.write_tls(&mut &mut buf[..]).unwrap();
+        server.read_tls(&mut &buf[..wr]).unwrap();
+        server.process_new_packets().unwrap();
+
+        let wr = server.write_tls(&mut &mut buf[..]).unwrap();
+        client.read_tls(&mut &buf[..wr]).unwrap();
+        client.process_new_packets().unwrap();
+    }
+
+    let _ = client.writer().write(b"hello world").unwrap();
+    client.send_close_notify();
+    let mut buf = [0u8; 1024];
+    let wr = client.write_tls(&mut &mut buf[..]).unwrap();
+    server.read_tls(&mut &buf[..wr]).unwrap();
+    server.process_new_packets().unwrap();
+
+    let mut out = vec![];
+    server.reader().read_to_end(&mut out).unwrap();
+    assert_eq!(out, b"hello world");
+
+    let _ = server.writer().write(b"goodbye").unwrap();
+    let wr = server.write_tls(&mut &mut buf[..]).unwrap();
+    client.read_tls(&mut &buf[..wr]).unwrap();
+    client.process_new_packets().unwrap();
+
+    server.handshake_kind().unwrap()
+}
+
+fn test_keys_match(provider: &CryptoProvider, key_type: KeyType) {
+    CertifiedKey::from_der(key_type.cert_chain(), key_type.key(), provider)
+        .unwrap()
+        .keys_match()
+        .unwrap();
+}
+
+#[derive(Clone, Copy, Debug)]
+enum KeyType {
+    Rsa2048,
+    Rsa3072,
+    Rsa4096,
+    EcdsaP256,
+    EcdsaP384,
+    EcdsaP521,
+    Ed25519,
+}
+
+impl KeyType {
+    const ALL: &[Self] = &[
+        Self::Rsa2048,
+        Self::Rsa3072,
+        Self::Rsa4096,
+        Self::EcdsaP256,
+        Self::EcdsaP384,
+        Self::EcdsaP521,
+        Self::Ed25519,
+    ];
+    const RSA: &[Self] = &[Self::Rsa2048, Self::Rsa3072, Self::Rsa4096];
+    // TLS 1.2's ECDHE_ECDSA suites also carry Ed25519 (RFC 8422).
+    const ECDSA: &[Self] = &[
+        Self::EcdsaP256,
+        Self::EcdsaP384,
+        Self::EcdsaP521,
+        Self::Ed25519,
+    ];
+
+    /// The providers that can sign and verify with this key: *ring* has no P-521.
+    fn others(self) -> &'static [OtherProvider] {
+        match self {
+            Self::EcdsaP521 => &[OtherProvider::BaselineAwsLcRs],
+            _ => OtherProvider::OTHERS,
+        }
+    }
+
+    fn slug(self) -> &'static str {
+        match self {
+            Self::Rsa2048 => "rsa-2048",
+            Self::Rsa3072 => "rsa-3072",
+            Self::Rsa4096 => "rsa-4096",
+            Self::EcdsaP256 => "ecdsa-p256",
+            Self::EcdsaP384 => "ecdsa-p384",
+            Self::EcdsaP521 => "ecdsa-p521",
+            Self::Ed25519 => "ed25519",
+        }
+    }
+
+    /// This key's file `name`, from any directory, as the iOS simulator runs
+    /// the tests.
+    fn file(self, name: &str) -> String {
+        let dir = env!("CARGO_MANIFEST_DIR");
+        format!("{dir}/tests/keys/{}/{name}", self.slug())
+    }
+
+    fn cert_chain(self) -> Vec<CertificateDer<'static>> {
+        CertificateDer::pem_file_iter(self.file("end.fullchain"))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+    }
+
+    fn key(self) -> PrivateKeyDer<'static> {
+        PrivateKeyDer::from_pem_file(self.file("end.key")).unwrap()
+    }
+
+    fn ca_certs(self) -> Arc<RootCertStore> {
+        let mut roots = RootCertStore::empty();
+        roots
+            .add(CertificateDer::from_pem_file(self.file("ca.cert")).unwrap())
+            .unwrap();
+        roots.into()
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum OtherProvider {
+    BaselineRing,
+    BaselineAwsLcRs,
+    SelfTest,
+}
+
+impl OtherProvider {
+    fn into_provider(self) -> Arc<CryptoProvider> {
+        match self {
+            Self::BaselineRing => ring::default_provider().into(),
+            Self::BaselineAwsLcRs => aws_lc_rs_provider::default_provider().into(),
+            Self::SelfTest => rind_rustls::default_provider().into(),
+        }
+    }
+
+    const OTHERS: &[Self] = &[Self::BaselineRing, Self::BaselineAwsLcRs];
+
+    /// This provider's own key exchange group named `name`.
+    fn kx_group(self, name: NamedGroup) -> &'static dyn SupportedKxGroup {
+        let all = match self {
+            Self::BaselineRing => ring::ALL_KX_GROUPS,
+            Self::BaselineAwsLcRs => aws_lc_rs_provider::ALL_KX_GROUPS,
+            Self::SelfTest => rind_rustls::ALL_KX_GROUPS,
+        };
+        *all.iter().find(|group| group.name() == name).unwrap()
+    }
+}

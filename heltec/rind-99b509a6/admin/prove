@@ -1,0 +1,866 @@
+#!/usr/bin/env bash
+# Checks rind's proofs: the HOL Light proofs in `proofs/hol-light/` of
+# assembly rind runs, against the object code rind's build emits, then the
+# Lean proofs in `proofs/` of rind's Rust, which it first translates to Lean
+# with Charon and Aeneas, into `proofs/Rind/<Arch>/{Types,Funs}.lean`.
+#
+# Each target's translation is its own namespace, but they share global names,
+# so no Lean module imports both. The aarch64 hand models and its X25519,
+# SHA-512, ChaCha20, Ed25519, SHA-1, SHA-256, HMAC, digest, HKDF, and PBKDF2 proofs are the
+# x86_64 ones with the target renamed, which this writes too, all but each
+# target's own `ShaBlocks.lean` and `HashAxioms.lean`.
+#
+# Usage: admin/prove [bytes | hol-light | cosim | lean]
+#
+# An argument checks only those proofs, `bytes` only that the assembly rind
+# imports is the object code its upstream's proofs checked, and declares
+# each register they let it change. `cosim`, which no other run includes
+# since it needs an x86_64 CPU with AVX2, checks the instructions rind adds
+# to s2n-bignum's x86 model against this CPU. Run it in the flake's `prove`
+# dev shell: `nix develop .#prove --command admin/prove`, or for the HOL
+# Light proofs, the cosimulation, or the bytes alone, `nix develop
+# .#hol-light --command admin/prove hol-light`.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+out=.tmp/prove
+mkdir -p "$out"
+tools=$(rustc --print sysroot)/lib/rustlib/$(rustc -vV | sed -n 's/^host: //p')/bin
+case "${1:-}" in
+'' | bytes | hol-light | cosim | lean) only=${1:-} ;;
+*)
+    echo "usage: admin/prove [bytes | hol-light | cosim | lean]" >&2
+    exit 2
+    ;;
+esac
+
+# Builds rind's release library for `arch` Linux with its assembly, for
+# `asm_block` and `relocation_data` to read.
+build_asm() {
+    local arch=$1
+    cargo rustc -q -p rind --lib --release --target "$arch-unknown-linux-gnu" \
+        --target-dir "$out/asm" -- --emit=asm -C codegen-units=16
+    rm -rf "$out/asm/$arch-units"
+}
+
+# Writes to `dest` the bytes of the one `asm!` block in the Rust function at
+# `path`, as rind's release build for `arch` Linux emits them. The build
+# passes cargo's default 16 codegen units explicitly, since `--emit=asm` would
+# otherwise compile one, and each unit's assembly marks where the block starts
+# and ends, which its object code then gives the bytes of. A relocation in the
+# block fails, unless `layout` is given: then it also writes each
+# instruction's offset in the block to `dest.insns`, and each relocation's
+# offset, type, and target to `dest.relocs`, its bytes left as the object
+# holds them.
+asm_block() {
+    local arch=$1 path=$2 dest=$3 layout=${4:-}
+    local deps=$out/asm/$arch-unknown-linux-gnu/release/deps
+    local found obj sym
+    found=$(rind_symbol "$arch" "$path")
+    read -r obj sym <<<"$found"
+    # The function's asm! blocks, and rustc's instructions before and after
+    # the block, which the block's own count would miss where it spells an
+    # instruction as `.byte`s.
+    local blocks before after count
+    read -r blocks before after < <(awk -v s="$sym:" '
+        $0 == s { p = 1; next }
+        !p { next }
+        /^\.Lfunc_end/ { exit }
+        /^\t(\/\/|#)APP$/ { blocks++; start = n; inside = 1; next }
+        /^\t(\/\/|#)NO_APP$/ { inside = 0; m = 0; next }
+        /^\t[a-z]/ && !inside { n++; m++ }
+        END { print blocks + 0, start + 0, m + 0 }' "$deps/$(basename "${obj%.o}").s")
+    local -a addrs
+    mapfile -t addrs < <("$tools/llvm-objdump" -d --no-show-raw-insn --disassemble-symbols="$sym" "$obj" |
+        sed -n 's/^ *\([0-9a-f]\+\):.*/\1/p')
+    count=$((${#addrs[@]} - before - after))
+    if [[ $blocks != 1 || $count -le 0 ]]; then
+        echo "admin/prove: $path has $blocks asm! blocks, the first of $count instructions" >&2
+        return 1
+    fi
+    local total=${#addrs[@]}
+    local section start end off type target i
+    local value size
+    read -r section value size < <(symbol_bounds "$obj" "$sym")
+    start=$((16#${addrs[before]}))
+    if ((before + count < total)); then
+        end=$((16#${addrs[before + count]}))
+    else
+        end=$((16#$value + 16#$size))
+    fi
+    [[ -z "$layout" ]] || : >"$dest.relocs"
+    while read -r off type target; do
+        if ((16#$off >= start && 16#$off < end)); then
+            if [[ -z "$layout" ]]; then
+                echo "admin/prove: $path's asm! block has a relocation" >&2
+                return 1
+            fi
+            echo "$((16#$off - start)) $type $target" >>"$dest.relocs"
+        fi
+    done < <(relocations "$obj" "$section")
+    if [[ -n "$layout" ]]; then
+        for ((i = before; i < before + count; i++)); do
+            echo $((16#${addrs[i]} - start))
+        done >"$dest.insns"
+    fi
+    "$tools/llvm-objcopy" --dump-section="$section=$dest.section" "$obj" "$dest.o"
+    tail -c +$((start + 1)) "$dest.section" | head -c $((end - start)) >"$dest"
+    rm "$dest.section" "$dest.o"
+}
+
+# Prints the object file in rind's `arch` build that defines the Rust item at
+# `path`, or the symbol `path`, and the item's symbol, failing unless exactly
+# one does.
+rind_symbol() {
+    local arch=$1 path=$2 index found
+    index=$(rind_index "$arch")
+    found=$(awk -F '\t' -v p="$path" '$3 == p || $2 == p { print $1, $2 }' "$index")
+    if [[ -z "$found" ]]; then
+        echo "admin/prove: rind's $arch build defines no $path" >&2
+        return 1
+    elif [[ $(wc -l <<<"$found") != 1 ]]; then
+        echo "admin/prove: rind's $arch build defines $path more than once" >&2
+        return 1
+    fi
+    echo "$found"
+}
+
+# Prints the path of an index of the symbols rind's `arch` build defines, each
+# line its object file, symbol, and demangled symbol, which its first call
+# for `arch` writes from the build's codegen units. The demangled symbol drops
+# the `.llvm.<hash>` suffix LLVM gives a local function that another codegen
+# unit calls, which any change to how items fall into units can add.
+rind_index() {
+    local arch=$1 unit
+    local units=$out/asm/$arch-units
+    if [[ ! -f "$units/index" ]]; then
+        rm -rf "$units"
+        mkdir -p "$units"
+        "$tools/llvm-ar" x --output "$units" "$out/asm/$arch-unknown-linux-gnu/release/deps"/librind-*.rlib
+        for unit in "$units"/*.rcgu.o; do
+            paste <("$tools/llvm-nm" --defined-only "$unit") <("$tools/llvm-nm" --defined-only -C "$unit") |
+                awk -F '\t' -v u="$unit" '{ d = substr($2, 20); sub(/ \(\.llvm\.[0-9]+\)$/, "", d); print u "\t" substr($1, 20) "\t" d }'
+        done >"$units/index.tmp"
+        mv "$units/index.tmp" "$units/index"
+    fi
+    echo "$units/index"
+}
+
+# Prints each relocation in `section` of the object `obj`: its offset in hex,
+# type, and target.
+relocations() {
+    "$tools/llvm-objdump" -r "$1" | awk -v s="[$2]:" '
+        /^RELOCATION RECORDS FOR / { p = $4 == s; next }
+        p && /^[0-9a-f]+ / { print $1, $2, $3 }'
+}
+
+# Writes to `dir/<target>` the bytes of each target of the relocations in
+# `relocs`, from that symbol or section on, through the size of the symbol or
+# of the object starting the section, or else the section's end: from `obj`,
+# where the target is a section of it or a symbol it defines, or else from
+# rind's `arch` build.
+relocation_data() {
+    local obj=$1 relocs=$2 dir=$3 arch=${4:-} target found tobj tsym section value size
+    while read -r _ _ target; do
+        target=${target%[+-]0x*}
+        mkdir -p "$dir"
+        tobj=$obj tsym=$target
+        if [[ $target != .* ]] && [[ -z "$(symbol_bounds "$obj" "$target")" ]]; then
+            found=$(rind_symbol "$arch" "$target")
+            read -r tobj tsym <<<"$found"
+        fi
+        if [[ $target == .* ]]; then
+            # A section holds the object that starts it, where one has a size.
+            section=$target value=0
+            size=$("$tools/llvm-objdump" -t "$tobj" | awk -F '\t' -v s="$target" '
+                { n = split($1, a, " "); m = split($2, b, " ") }
+                a[n] == s && a[1] ~ /^0+$/ && b[1] !~ /^0+$/ && !f { print b[1]; f = 1 }')
+        else
+            read -r section value size < <(symbol_bounds "$tobj" "$tsym")
+        fi
+        "$tools/llvm-objcopy" --dump-section="$section=$dir/section" "$tobj" "$dir/copy.o"
+        if [[ -n "$size" ]]; then
+            tail -c +$((16#$value + 1)) "$dir/section" | head -c $((16#$size)) >"$dir/$target"
+            touch "$dir/$target.sized"
+        else
+            mv "$dir/section" "$dir/$target"
+        fi
+        rm -f "$dir/section" "$dir/copy.o"
+    done <"$relocs"
+}
+
+# Prints the section, value, and size, in hex, of the symbol `sym` the object
+# `obj` defines.
+symbol_bounds() {
+    "$tools/llvm-objdump" -t "$1" | awk -F '\t' -v s="$2" '
+        { n = split($1, a, " "); m = split($2, b, " ") }
+        b[m] == s && a[n] != "*UND*" { print a[n], a[1], b[1] }'
+}
+
+# Writes to `dest` an object holding the naked Rust function at `path`, as
+# rind's release build for `arch` Linux emits it: the function's own section,
+# renamed `.text`, its relocations, and the one read-only data section they
+# all refer to, renamed `.rodata`. s2n-bignum's `define_assert_relocs_from_elf`
+# reads it, failing unless its instructions and relocations are the ones the
+# proof lists, and gives the proof that section's bytes. Anything else fails:
+# a function that is not its whole section, or relocations to other sections.
+asm_function() {
+    local arch=$1 path=$2 dest=$3
+    local found obj sym section size secsize target
+    found=$(rind_symbol "$arch" "$path")
+    read -r obj sym <<<"$found"
+    read -r section _ size < <(symbol_bounds "$obj" "$sym")
+    secsize=$("$tools/llvm-objdump" -h "$obj" | awk -v s="$section" '$2 == s { print $3 }')
+    if [[ $section != ".text.$sym" || $((16#$size)) != $((16#${secsize:-0})) ]]; then
+        echo "admin/prove: $path is not the whole of its own section" >&2
+        return 1
+    fi
+    target=$(relocations "$obj" "$section" | awk '{ sub(/[-+].*/, "", $3); print $3 }' | sort -u)
+    if [[ $(wc -l <<<"$target") != 1 || $target != .rodata.* ]]; then
+        echo "admin/prove: $path's relocations refer to other than one .rodata section:" $target >&2
+        return 1
+    fi
+    "$tools/llvm-objcopy" --only-section="$section" --only-section=".rela$section" \
+        --only-section="$target" --rename-section="$section=.text" --rename-section="$target=.rodata" \
+        "$obj" "$dest"
+}
+
+# Writes to `$out/s2n-bignum` the files of s2n-bignum's x86 model that
+# `proofs/hol-light/s2n-bignum/x86.patch` changes, each the copy that
+# directory vendors or else the submodule's, with the patch applied, which
+# fails unless every hunk applies exactly. HOL Light loads them ahead of both.
+s2n_bignum_model() {
+    local model=$out/s2n-bignum carried=proofs/hol-light/s2n-bignum file
+    git submodule update --init --depth 1 thirdparty/s2n-bignum
+    rm -rf "$model"
+    while read -r file; do
+        mkdir -p "$model/$(dirname "$file")"
+        if [[ -f $carried/$file ]]; then
+            cp "$carried/$file" "$model/$file"
+        else
+            cp "thirdparty/s2n-bignum/$file" "$model/$file"
+        fi
+    done < <(sed -n 's|^+++ b/||p' "$carried/x86.patch")
+    patch --quiet --fuzz=0 --no-backup-if-mismatch -p1 -d "$model" <"$carried/x86.patch"
+}
+
+# rind's own HOL Light proofs, each of the `asm!` block in a Rust function or
+# of a naked one, on s2n-bignum's model, tactics, and specs at its submodule's
+# commit, the revision rind's transliteration pins, with what
+# `proofs/hol-light/s2n-bignum/` carries: the specs of s2n-bignum pull
+# requests not yet merged, and rind's additions to the x86 model.
+# Each `<arch>/<file>.ml` reads its object code from `<arch>/<file>.bin`, the
+# block's bytes, which `asm_block` writes, or `<arch>/<file>.o`, the naked
+# function's object, which `asm_function` writes, and asserts it is what it
+# lists. A target's proofs compile into one program, as s2n-bignum's
+# `tools/build-proof.sh` compiles each of its own, which fails on an error or
+# an axiom beyond HOL Light's.
+hol_light_proofs=(
+    "aarch64 bignum_eq.bin rind::low::aarch64::bignum_eq::bignum_eq"
+    "aarch64 sha256_block_data_order_hw.o rind::low::aarch64::sha256::sha256_block_data_order_hw"
+    "aarch64 ct_compare_bytes.bin rind::low::aarch64::cpu::ct_compare_bytes"
+    "aarch64 ct_compare_16.bin rind::low::aarch64::cpu::ct_compare_16"
+    "x86_64 ct_compare_bytes.bin rind::low::x86_64::cpu::ct_compare_bytes"
+    "x86_64 ct_compare_16.bin rind::low::x86_64::cpu::ct_compare_16"
+)
+hol_light() {
+    local dir=$out/hol-light arches arch file path proof
+    s2n_bignum_model
+    rm -rf "$dir"
+    mkdir -p "$dir"
+    arches=$(printf '%s\n' "${hol_light_proofs[@]}" | cut -d' ' -f1 | sort -u)
+    for arch in $arches; do
+        build_asm "$arch"
+        mkdir -p "$dir/$arch"
+        echo 'let prove_start = Unix.time ();;' >"$dir/$arch.ml"
+    done
+    for proof in "${hol_light_proofs[@]}"; do
+        read -r arch file path <<<"$proof"
+        case $file in
+        *.bin) asm_block "$arch" "$path" "$dir/$arch/$file" ;;
+        *.o) asm_function "$arch" "$path" "$dir/$arch/$file" ;;
+        esac
+        echo "loadt \"$arch/${file%.*}.ml\";;" >>"$dir/$arch.ml"
+    done
+    for arch in $arches; do
+        printf 'check_axioms ();; Printf.printf "%s: %%.0f s\\n" (Unix.time () -. prove_start);;\n' "$arch" >>"$dir/$arch.ml"
+        hol_light_compile "$dir" "$arch"
+        (cd "$dir" && "./$arch.native")
+    done
+}
+
+# Compiles `dir/name.ml` into `dir/name.native`, as s2n-bignum's
+# `tools/build-proof.sh` compiles each of its proofs, with rind's HOL Light
+# files, the model `s2n_bignum_model` writes, what
+# `proofs/hol-light/s2n-bignum/` carries, and the submodule on the load path,
+# in that order.
+hol_light_compile() {
+    local dir=$1 name=$2 root=$PWD
+    (cd "$dir" && HOLLIGHT_LOAD_PATH="$root/proofs/hol-light:$root/$out/s2n-bignum:$root/proofs/hol-light/s2n-bignum:$root/thirdparty/s2n-bignum" \
+        ocaml "$HOLLIGHT_DIR/inline_load.ml" "$name.ml" "$name-inlined.ml")
+    OCAMLRUNPARAM=l=2000000000 ocamlopt.byte -pp "$("$HOLLIGHT_DIR/hol.sh" -pp)" \
+        -I "$HOLLIGHT_DIR" -I +unix -c hol_lib.cmxa "$dir/$name-inlined.ml" -o "$dir/$name.cmx" -w -a
+    ocamlfind ocamlopt -package zarith,unix -linkpkg hol_lib.cmxa -I "$HOLLIGHT_DIR" \
+        "$dir/$name.cmx" -o "$dir/$name.native"
+}
+
+# Cosimulates rind's additions to s2n-bignum's x86 model against this CPU with
+# `proofs/hol-light/s2n-bignum/x86-cosim.ml`, on s2n-bignum's simulator, whose
+# executor assembles each case with the C toolchain. The simulator's list of
+# s2n-bignum's own instructions is empty, so the one case of s2n-bignum's own
+# campaign that loading it runs is one of those it adds by hand.
+cosim() {
+    local dir=$out/cosim root=$PWD
+    if [[ $(uname -m) != x86_64 ]] || ! grep -qw avx2 /proc/cpuinfo; then
+        echo "admin/prove: cosim needs an x86_64 CPU with AVX2" >&2
+        return 1
+    fi
+    s2n_bignum_model
+    rm -rf "$dir"
+    mkdir -p "$dir/tmp" "$out/s2n-bignum/x86"
+    printf 'let iclasses_regreg = [];;\nlet iclasses_simplemem = [];;\n' >"$out/s2n-bignum/x86/x86-insns.ml"
+    echo 'loadt "x86-cosim.ml";;' >"$dir/cosim.ml"
+    hol_light_compile "$dir" cosim
+    (cd "$dir" && TMPDIR="$root/$dir/tmp" S2N_BIGNUM_SEMATEST_CASES=1 \
+        S2N_BIGNUM_X86_64_EXECUTOR="$root/thirdparty/s2n-bignum/tools/simulate-persistent x86" \
+        ./cosim.native)
+}
+
+# Writes to `dest` the bytes of the routine at the symbol `sym` in the object
+# `obj`, through its size or, where it has none, to the next global symbol,
+# with its layout as `asm_block` writes it, and to `dest.data/<target>` the
+# bytes of each relocation's target in `obj`.
+object_routine() {
+    local obj=$1 sym=$2 dest=$3 section value size end off type target
+    read -r section value size < <(symbol_bounds "$obj" "$sym")
+    if ((16#$size == 0)); then
+        end=$("$tools/llvm-objdump" -t "$obj" | awk -F '\t' -v sec="$section" -v v=$((16#$value)) '
+            { n = split($1, a, " "); x = strtonum("0x" a[1]) }
+            a[2] == "g" && a[n] == sec && x > v && (e == "" || x < e) { e = x }
+            END { print e }')
+        [[ -n "$end" ]] || end=$(("0x$("$tools/llvm-objdump" -h "$obj" | awk -v s="$section" '$2 == s { print $3 }')"))
+    else
+        end=$((16#$value + 16#$size))
+    fi
+    routine_layout "$obj" "$section" $((16#$value)) "$end" "$dest"
+    relocation_data "$obj" "$dest.relocs" "$dest.data"
+}
+
+# Writes to `dest` the bytes from `start` to `end` of `section` in `obj`, to
+# `dest.insns` each instruction's offset from `start`, and to `dest.relocs`
+# each relocation's offset, type, and target.
+routine_layout() {
+    local obj=$1 section=$2 start=$3 end=$4 dest=$5 off type target
+    "$tools/llvm-objdump" -d --no-show-raw-insn --section="$section" "$obj" |
+        sed -n 's/^ *\([0-9a-f]\+\):.*/\1/p' | while read -r off; do
+        if ((16#$off >= start && 16#$off < end)); then
+            echo $((16#$off - start))
+        fi
+    done >"$dest.insns"
+    : >"$dest.relocs"
+    while read -r off type target; do
+        if ((16#$off >= start && 16#$off < end)); then
+            echo "$((16#$off - start)) $type $target" >>"$dest.relocs"
+        fi
+    done < <(relocations "$obj" "$section")
+    "$tools/llvm-objcopy" --dump-section="$section=$dest.section" "$obj" "$dest.o"
+    tail -c +$((start + 1)) "$dest.section" | head -c $((end - start)) >"$dest"
+    rm "$dest.section" "$dest.o"
+}
+
+# Each routine rind imports with a published proof, against the object code
+# that proof checked, which `admin/prove-bytes` describes. Vale's and aws-lc's
+# are assembled here from their upstream's text, at the revision of their
+# proofs, with the GNU assembler.
+bytes() {
+    local dir=$out/bytes arch kind path name obj sym target found
+    git submodule update --init --depth 1 thirdparty/s2n-bignum
+    rm -rf "$dir"
+    for arch in x86_64 aarch64; do
+        build_asm "$arch"
+        mkdir -p "$dir/$arch"
+    done
+    local hacl aws_lc
+    hacl=.tmp/upstream/hacl-star aws_lc=.tmp/upstream/aws-lc@$(admin/prove-bytes aws-lc-revision)
+    admin/upstream hacl-star
+    admin/upstream aws-lc "${aws_lc#*@}"
+    # `-L` keeps the local symbols that size aws-lc's tables.
+    x86_64-linux-gnu-as -o "$dir/vale.o" "$hacl/dist/vale/aesgcm-x86_64-linux.S"
+    x86_64-linux-gnu-cpp -I "$aws_lc/include" "$aws_lc/generated-src/linux-x86_64/crypto/fipsmodule/sha512-x86_64.S" |
+        x86_64-linux-gnu-as -L -o "$dir/sha512-x86_64.o"
+    aarch64-linux-gnu-cpp -I "$aws_lc/include" "$aws_lc/generated-src/linux-aarch64/crypto/fipsmodule/sha512-armv8.S" |
+        aarch64-linux-gnu-as -L -o "$dir/sha512-armv8.o"
+    admin/prove-bytes list >"$dir/routines"
+    while read -r arch kind path name obj sym; do
+        # A routine with no symbol is either inlined, which `admin/prove-bytes`
+        # knows from its source, or called by nothing in the library.
+        if ! awk -F '\t' -v p="$path" '$3 == p { f = 1 } END { exit !f }' "$(rind_index "$arch")"; then
+            touch "$dir/$arch/$name.absent"
+            continue
+        fi
+        if [[ $kind == block ]]; then
+            asm_block "$arch" "$path" "$dir/$arch/$name.bin" layout
+        else
+            local rind_obj rind_sym section value size
+            found=$(rind_symbol "$arch" "$path")
+            read -r rind_obj rind_sym <<<"$found"
+            read -r section value size < <(symbol_bounds "$rind_obj" "$rind_sym")
+            routine_layout "$rind_obj" "$section" $((16#$value)) $((16#$value + 16#$size)) "$dir/$arch/$name.bin"
+            object_routine "$dir/$obj" "$sym" "$dir/$arch/$name.proof"
+        fi
+        found=$(rind_symbol "$arch" "$path")
+        relocation_data "${found%% *}" "$dir/$arch/$name.bin.relocs" "$dir/$arch/$name.bin.data" "$arch"
+    done <"$dir/routines"
+    admin/prove-bytes check "$dir"
+}
+if [[ -z $only || $only == bytes ]]; then
+    bytes
+fi
+if [[ -z $only || $only == hol-light ]]; then
+    hol_light
+fi
+if [[ $only == cosim ]]; then
+    cosim
+fi
+if [[ -n $only && $only != lean ]]; then
+    exit 0
+fi
+
+# Each hand model quotes the Rust it models. Fail if that Rust has changed, so
+# the model is reviewed with every change to it: print the first item each line
+# starts, from that line to the closing one at its indentation, or to the `;`
+# that ends an item whose first line ends with `=`, then a blank line.
+items() {
+    local file=$1
+    shift
+    for start in "$@"; do
+        awk -v s="$start" '
+            !p && index($0, s) == 1 { p = 1; ind = substr($0, 1, match($0, /[^ ]/) - 1); eq = /=$/ }
+            p { print }
+            p && (index($0, ind "}") == 1 || (ind == "" && /^[^ }].*;$/) || (eq && /;$/)) { print ""; exit }' "$file"
+    done
+}
+check_quote() {
+    local path=$1 model=${1#*/}
+    shift
+    sed -n '/^```rust$/,/^```$/{//!p}' "proofs/Rind/$path.lean" >"$out/$model.rs"
+    diff -u --label "$model.lean" --label rind/src "$out/$model.rs" <("$@")
+}
+items rind/src/high/agreement.rs 'pub struct Algorithm ' 'pub static X25519:' \
+    'pub static ECDH_P256:' 'pub static ECDH_P384:' 'pub static ECDH_P521:' 'pub struct PrivateKey {' \
+    'impl PrivateKey {' 'struct Keyed<' 'struct Ops<' 'impl<K: Agree> Keyed<K> {' >"$out/agreement.rs"
+items rind/src/low/generic/zeroise.rs 'pub(crate) struct ZeroableRef<' 'impl<T> ZeroableRef<T> {' >"$out/zeroise.rs"
+items rind/src/aead/quic.rs 'pub struct Algorithm ' 'impl Algorithm {' 'pub static CHACHA20:' \
+    'impl HeaderProtectionKey {' 'struct Masker<' 'type MaskFn<' 'impl<C: Mask> Masker<C> {' >"$out/quic.rs"
+check_quote X86_64/Dispatch cat "$out/agreement.rs" "$out/zeroise.rs" "$out/quic.rs"
+p256_items() {
+    items rind/src/mid/p256.rs '    pub(crate) fn new_random(' '    pub(crate) fn generate(rng: &mut dyn'
+    items rind/src/mid/rng.rs 'impl RandomSource for SystemRandom {'
+}
+check_quote Aarch64/P256Dispatch p256_items
+ecdsa_items() {
+    items rind/src/high/curve.rs 'impl Curve for P256 {'
+    items rind/src/mid/p256.rs '    pub(crate) fn generate(rng: &mut dyn'
+    items <(sed -n '/^impl StaticPrivateKey {/,/^}/p' rind/src/mid/p256.rs) '    pub(crate) fn generate('
+    items rind/src/high/signature.rs 'impl<const N: usize> Buffer<N> {' 'macro_rules! with_hash {' \
+        'struct Ecdsa {' 'macro_rules! with_ecdsa {' 'macro_rules! with_curve {' 'trait Encoding {' \
+        'impl Encoding for Fixed {' 'trait EcdsaCurve:' 'macro_rules! ecdsa_curve {' \
+        'ecdsa_curve!(P256, EcdsaP256);' 'struct EcdsaVerifier<' 'impl<C: Curve> EcdsaVerifier<C> {' \
+        'fn parse_ecdsa<' 'const fn ecdsa_verification(' \
+        'const fn ecdsa_signing(' 'pub struct EcdsaSigningAlgorithm {' 'enum EcdsaSource<' \
+        'pub struct EcdsaKeyPair {' 'enum EcdsaKey {' 'struct EcdsaPair<' 'type Write<K> =' \
+        'struct EcdsaOps<' 'impl<C: EcdsaCurve> EcdsaPair<C> {' 'macro_rules! on_ecdsa {' \
+        'impl EcdsaKeyPair {' '    pub static ECDSA_P256_SHA256_FIXED: EcdsaSigningAlgorithm' \
+        '    pub static ECDSA_P256_SHA256_FIXED: VerificationAlgorithm'
+}
+check_quote Aarch64/EcdsaDispatch ecdsa_items
+check_quote X86_64/DigestAlgorithm items rind/src/high/digest.rs 'pub struct Algorithm ' 'impl Algorithm {' \
+    'pub static MD5:' 'pub static SHA1:' 'pub static SHA256:' 'pub static SHA384:' 'pub static SHA512:' \
+    'pub static SHA512_256:' 'pub static SHA3_256:' 'pub static SHA3_384:' 'pub static SHA3_512:' \
+    'pub struct Digest {' 'impl Digest {' 'impl AsRef<[u8]> for Digest {'
+aes_ni_items() {
+    items rind/src/low/x86_64/aes.rs 'const RCON' 'fn aes128_expand(' 'fn aes256_expand(' \
+        'fn sub_rot_word(' 'fn xor_prefix(' 'fn zero()' 'fn aes128_block(' 'fn aes256_block('
+    items rind/src/low/x86_64/ghash.rs 'fn u128_to_m128i(' 'const GF128_POLY_HI:' \
+        'const GF128_POLY_CARRY_MASK:'
+}
+check_quote X86_64/AesNi aes_ni_items
+check_quote X86_64/AeadDispatch items rind/src/aead.rs 'pub struct Algorithm ' 'impl Algorithm {' \
+    'pub static AES_128_GCM:' 'pub static AES_192_GCM:' 'pub static AES_256_GCM:' 'pub static CHACHA20_POLY1305:' 'impl Key {' \
+    'struct Sealer<' 'type Seal<' 'type Open<' 'struct Ops<' 'impl<C: Cipher> Sealer<C> {' \
+    'pub struct Nonce(' 'impl Nonce {' 'pub struct Tag(' 'impl AsRef<[u8]> for Tag {' \
+    'pub struct RandomizedNonceKey(' 'impl RandomizedNonceKey {' 'pub struct RandomNonce(' \
+    'impl AsRef<[u8]> for RandomNonce {' 'impl From<[u8; 24]> for RandomNonce {'
+gcm_items() {
+    items rind/src/cipher.rs 'pub struct Algorithm {' 'pub static AES_128:' 'pub static AES_192:' 'pub static AES_256:'
+    items rind/src/aead/gcm.rs 'pub enum TagLength {' 'impl TagLength {' "pub struct Iv<'a>(&'a [u8]);" \
+        'pub struct Key {' 'impl Key {' 'pub struct Tag {' 'impl AsRef<[u8]> for Tag {'
+}
+check_quote X86_64/GcmKey gcm_items
+check_quote X86_64/DigestDispatch items rind/src/high/digest.rs 'pub fn digest(' 'impl Context {' \
+    'impl State {' 'struct Hashing<' 'struct Ops<' 'impl<C: Variant> Hashing<C> {' 'fn one_shot<' \
+    'trait Variant:'
+check_quote X86_64/HmacDispatch items rind/src/high/hmac.rs 'pub struct Algorithm ' 'impl Algorithm {' \
+    'pub static HMAC_SHA1:' 'pub static HMAC_SHA256:' 'pub static HMAC_SHA384:' 'pub static HMAC_SHA512:' \
+    'pub struct Key(' 'impl Key {' 'pub struct Context(' 'impl Context {' 'pub fn sign(' 'pub fn verify(' \
+    'pub struct Tag(' 'impl AsRef<[u8]> for Tag {' 'enum Keyed {' 'impl Keyed {' \
+    'pub(super) struct Streaming(' 'enum Tagged {' 'impl Streaming {' 'trait HmacHash:' \
+    'macro_rules! hmac_hash {' 'hmac_hash!(LegacySha1' 'hmac_hash!(Sha256' 'hmac_hash!(Sha384' \
+    'hmac_hash!(Sha512' 'struct Keying<' 'struct KeyOps<' \
+    'impl<H: HmacHash> Clone for Keying<H> {' 'impl<H: HmacHash> Keying<H> {' 'struct Tagging<' \
+    'struct TagOps<' 'impl<H: HmacHash> Clone for Tagging<H> {' 'impl<H: HmacHash> Tagging<H> {'
+check_quote X86_64/HkdfExpand items rind/src/high/hkdf.rs '    fn expand_into('
+check_quote X86_64/SignatureDispatch items rind/src/high/signature.rs \
+    'pub struct VerificationAlgorithm(' 'enum Verification {' 'type Verify<K> =' \
+    'struct Verifier<K> {' 'impl<K> Verifier<K> {' 'pub struct PublicKey {' 'enum Parsed {' \
+    'impl PublicKey {' 'impl AsRef<[u8]> for PublicKey {' 'impl fmt::Debug for PublicKey {' \
+    'impl Ed25519KeyPair {' 'fn parse_ed25519(' '    pub static ED25519:'
+# The models' `Ops` hold nothing, since the quoted constructor builds the only
+# one; `Masker<C>` holds only the key, since the quoted `Masker::new` builds
+# each with `C::mask`; and a digest `Algorithm` is which static it is. That
+# holds while the quotes have every match of these: each mention of `Ops`,
+# each `Masker` literal, `impl` on `Masker`, and write to a `mask` field, which
+# only `quic.rs` can make, and each `Algorithm` the source builds. Likewise
+# `Verification::Ed25519` holds nothing and `Parsed::Ed25519` only its key,
+# while the quotes have every mention of each: `ED25519` builds the only one
+# of the first, with `parse_ed25519`, and each of the second has
+# `Ed25519VerifyingKey::verify`. ECDSA's keys are modelled for P-256 with
+# SHA-256 and fixed-length signatures, which holds while the quotes have each
+# `Verification::Ecdsa`, `EcdsaP256`, and `EcdsaKey::`, each `EcdsaOps` and
+# `EcdsaPair` built, which `load` alone builds, and each read of their `ops`.
+# An AEAD `Sealer<C>` is its key, since the quoted `Sealer::expand` builds
+# every `Ops`, of `C`'s own functions, while the quote has each mention of
+# `Ops` in `aead.rs` and each `Algorithm` it builds.
+only_quoted() {
+    local file=$1 quote=$2 pattern=$3
+    if [ "$(grep -oE "$pattern" "$file" | wc -l)" != "$(grep -oE "$pattern" "$quote" | wc -l)" ]; then
+        echo "$file matches $pattern outside $quote" >&2
+        exit 1
+    fi
+}
+only_quoted rind/src/high/agreement.rs "$out/agreement.rs" '\bOps\b'
+only_quoted rind/src/high/agreement.rs "$out/agreement.rs" '= Algorithm \{'
+only_quoted rind/src/aead/quic.rs "$out/quic.rs" 'Masker(<[^>]*>)? *\{'
+only_quoted rind/src/aead/quic.rs "$out/quic.rs" '\.mask *=[^=]'
+only_quoted rind/src/high/digest.rs "$out/DigestDispatch.rs" '\bOps\b'
+only_quoted rind/src/high/digest.rs "$out/DigestAlgorithm.rs" '= Algorithm \{'
+only_quoted rind/src/high/signature.rs "$out/SignatureDispatch.rs" 'Verification::Ed25519\('
+only_quoted rind/src/high/signature.rs "$out/SignatureDispatch.rs" 'Parsed::Ed25519\('
+cat "$out/SignatureDispatch.rs" "$out/EcdsaDispatch.rs" >"$out/signature.rs"
+only_quoted rind/src/high/signature.rs "$out/signature.rs" 'Verification::Ecdsa\('
+only_quoted rind/src/high/signature.rs "$out/signature.rs" 'EcdsaP256\b'
+only_quoted rind/src/high/signature.rs "$out/EcdsaDispatch.rs" 'EcdsaKey::'
+only_quoted rind/src/high/signature.rs "$out/EcdsaDispatch.rs" 'Ecdsa(Ops|Pair) \{'
+only_quoted rind/src/high/signature.rs "$out/EcdsaDispatch.rs" '\.ops\b'
+only_quoted rind/src/high/hmac.rs "$out/HmacDispatch.rs" '\.ops\b'
+only_quoted rind/src/high/hmac.rs "$out/HmacDispatch.rs" '(Key|Tag)Ops \{'
+only_quoted rind/src/high/hmac.rs "$out/HmacDispatch.rs" '= Algorithm \{'
+only_quoted rind/src/aead.rs "$out/AeadDispatch.rs" '\bOps\b'
+only_quoted rind/src/aead.rs "$out/AeadDispatch.rs" '= Algorithm \{'
+
+# The X25519 path, and aarch64's P-256 path, from `high::agreement`'s `Agree`
+# impls down to s2n-bignum's routines, and the SHA-512 family's from
+# `high::digest` and `high::hash` down to aws-lc's. `low` is opaque: its
+# routines are inline assembly, whose proven contracts
+# `proofs/Rind/<Arch>/{S2nBignum,AwsLc}.lean` state. The x86_64 BMI2/ADX
+# dispatch, the SHA-512 dispatch, the padding and buffering in
+# `low::generic::blockwise`, and the constant-time markers are Rust, so they
+# are translated. The other curves' functions are opaque; their types are
+# kept, since the agreement enums hold them. Then ChaCha20 header protection
+# from its `Mask` impl down to HACL*'s rounds, which are Rust and translated
+# too; AES's key and block cipher are opaque. Then Ed25519 from
+# `high::signature`'s key pair and `high::ed25519` down to s2n-bignum's
+# routines and the SHA-512 context. On x86_64, ChaCha20-Poly1305 and
+# XChaCha20-Poly1305 from their keys down to the call of aws-lc's one-pass
+# routine, which is opaque, as are the separate passes CPUs without SSE4.1
+# run, with HChaCha20 over HACL*'s rounds.
+#
+# Aeneas cannot translate function pointers, through which `PrivateKey`
+# reaches each curve's `Agree` impl, `HeaderProtectionKey` each cipher's
+# `Mask` impl, `digest::Context` each hash's, and `signature::PublicKey` each
+# algorithm's parser and verifier, so the translation starts below that
+# dispatch, and `proofs/Rind/X86_64/Dispatch.lean`, `DigestDispatch.lean`, and
+# `SignatureDispatch.lean` model it by hand. `agreement::Algorithm` holds the
+# agreement API's, and its `PublicKey` holds an `Algorithm`, so it is opaque,
+# and `Dispatch.lean` models it. `digest::Algorithm` holds the
+# digest API's, so it is opaque too, and `DigestAlgorithm.lean` models it;
+# `signature::PublicKey` holds the signature API's, so no translated function
+# reaches it, and `SignatureDispatch.lean` defines it. SHA-1's and SHA-256's
+# padding is translated down to their block functions, which are opaque.
+# MD5 and SHA-3's sponge, which no proof covers, are opaque.
+# P-256's key generation draws through a `dyn RandomSource`, so it is opaque
+# too, and `proofs/Rind/Aarch64/P256Dispatch.lean` models it above the
+# translated `PrivateKey::from_bytes`, as `EcdsaDispatch.lean` does for ECDSA,
+# with the signature API's ECDSA key pairs and statics, which hold function
+# pointers too. The generator table is translated, so
+# `proofs/Rind/Aarch64/P256Table.lean` can prove it holds what s2n-bignum's
+# proof assumes. HMAC's keyed states are translated over any hash, and its
+# `Key` and `Context`, which hold function pointers, are not.
+# See UPSTREAM.md, "Aeneas cannot translate several kinds of Rust".
+extract() {
+    local arch=$1 dir=$2
+    shift 2
+    (cd rind && charon cargo --preset=aeneas \
+        --start-from '{impl crate::high::agreement::Agree for crate::high::agreement::X25519Curve}' \
+        --start-from '{impl crate::high::agreement::Agree for crate::high::curve::P256}' \
+        --start-from '{impl crate::high::agreement::Agree for crate::high::curve::P384}' \
+        --start-from '{impl crate::high::agreement::Agree for crate::high::curve::P521}' \
+        --start-from '{impl core::convert::AsRef for crate::high::agreement::PublicKey}' \
+        --start-from '{impl core::convert::AsRef for crate::high::agreement::SharedSecret}' \
+        --start-from crate::high::agreement::PrivateKey \
+        --start-from crate::high::agreement::AlgorithmId \
+        --start-from '{impl crate::high::digest::Variant for _}' \
+        --start-from '{impl crate::high::hash::Hash for _}' \
+        --start-from '{impl core::convert::AsRef for crate::high::digest::Digest}' \
+        --start-from crate::high::digest::Context \
+        --start-from crate::mid::sha2::Sha512_256Context::truncate \
+        --start-from '{impl crate::aead::quic::Mask for crate::mid::chacha20::ChaCha20}' \
+        --start-from '{impl crate::aead::quic::Mask for crate::mid::aes::Aes}' \
+        --start-from crate::aead::quic::HeaderProtectionKey \
+        --start-from crate::aead::quic::AlgorithmId \
+        --start-from crate::mid::chacha20::ChaCha20::new \
+        --start-from 'crate::high::hmac::HmacKey::_' \
+        --start-from 'crate::high::hmac::Hmac::_' \
+        --start-from crate::low::generic::ct_equal::ct_equal \
+        --start-from '{impl core::clone::Clone for crate::high::hmac::Hmac<_>}' \
+        --start-from crate::high::ed25519::Ed25519VerifyingKey::from_bytes \
+        --start-from crate::high::ed25519::Ed25519VerifyingKey::verify \
+        --start-from crate::high::ed25519::Ed25519VerifyingKey::as_bytes \
+        --start-from crate::high::ed25519::Ed25519SigningKey::generate \
+        --start-from crate::high::ed25519::Ed25519SigningKey::from_bytes \
+        --start-from crate::high::ed25519::Ed25519SigningKey::sign \
+        --start-from crate::high::ed25519::Ed25519SigningKey::public_key \
+        --start-from crate::high::signature::Ed25519KeyPair::generate \
+        --start-from crate::high::signature::Ed25519KeyPair::from_seed_and_public_key \
+        --start-from crate::high::signature::Ed25519KeyPair::sign \
+        --start-from '{impl core::convert::AsRef for crate::high::signature::Signature}' \
+        --start-from crate::high::signature::Buffer::copy_from \
+        --opaque crate::high::agreement::Algorithm \
+        --opaque crate::high::agreement::Ops \
+        --opaque crate::high::agreement::x25519_from_pkcs8 \
+        --opaque crate::high::agreement::x25519_to_pkcs8 \
+        --opaque crate::high::sec1::decode \
+        --opaque crate::high::sec1::decode_pkcs8 \
+        --opaque crate::high::sec1::encode \
+        --opaque crate::high::sec1::encode_pkcs8 \
+        --opaque 'crate::high::agreement::_::encode_pkcs8' \
+        --opaque 'crate::high::agreement::_::encode_scalar' \
+        --opaque '{impl crate::high::agreement::Agree for crate::high::curve::P521}::load' \
+        --opaque crate::aead::quic::Masker \
+        --opaque crate::mid::aes \
+        --opaque crate::high::digest::Ops \
+        --opaque crate::high::digest::Algorithm \
+        --opaque crate::high::digest::Digest \
+        --opaque 'crate::high::digest::_::zeroed' \
+        --opaque 'crate::high::digest::_::as_mut' \
+        --opaque 'crate::high::digest::_::ct_equal' \
+        --opaque 'crate::high::digest::_::as_ref' \
+        --opaque 'crate::high::digest::_::output_len' \
+        --opaque crate::high::digest::MD5 \
+        --opaque crate::high::digest::SHA1 \
+        --opaque crate::high::digest::SHA256 \
+        --opaque crate::high::digest::SHA384 \
+        --opaque crate::high::digest::SHA512 \
+        --opaque crate::high::digest::SHA512_256 \
+        --opaque crate::high::digest::SHA3_256 \
+        --opaque crate::high::digest::SHA3_384 \
+        --opaque crate::high::digest::SHA3_512 \
+        --opaque crate::mid::md5 \
+        --opaque crate::mid::sha3 \
+        --opaque crate::low \
+        --opaque 'crate::mid::p384::_::generate' \
+        --opaque 'crate::high::curve::_::oid' \
+        --opaque 'crate::mid::p384::_::new_random' \
+        --opaque 'crate::mid::p521::_::_' \
+        --include 'crate::mid::p521::_::BYTES' \
+        --include crate::low::ct \
+        --include crate::low::generic::blockwise \
+        --include crate::low::generic::ct_equal \
+        --include crate::low::generic::chacha20 \
+        --include "crate::low::$arch::sha512::sha512_compress_blocks" \
+        "$@" \
+        --dest-file "$PWD/../$out/$arch.llbc" \
+        -- -p rind --lib --target "$arch-unknown-linux-gnu")
+    rm -rf "$out/lean"
+    aeneas -backend lean -split-files -abort-on-error \
+        -no-progress-bar -dest "$out/lean" -subdir "Rind/$dir" \
+        -namespace "rind.$arch" "$out/$arch.llbc"
+    cp "$out/lean/Rind/$dir/Types.lean" "$out/lean/Rind/$dir/Funs.lean" "proofs/Rind/$dir/"
+}
+
+# HKDF and PBKDF2, in a second translation above the HMAC API, whose dispatch
+# `proofs/Rind/X86_64/HmacDispatch.lean` models on the first's `HmacKey` and
+# `Hmac`: one translation's external declarations precede all of its code, so
+# none of its code can call a model built on it. This one has its own
+# namespace, under the first's, whose names it reaches for what it leaves
+# opaque, and `proofs/Rind/X86_64/Kdf/{Types,Funs}External.lean` define the
+# rest. HKDF-Expand's loop over `info`, a slice of borrowed slices, is opaque,
+# and `proofs/Rind/X86_64/HkdfExpand.lean` models it.
+extract_kdf() {
+    local arch=$1 dir=$2
+    shift 2
+    (cd rind && charon cargo --preset=aeneas \
+        --start-from crate::high::hkdf::Salt::new \
+        --start-from crate::high::hkdf::Salt::extract \
+        --start-from crate::high::hkdf::Prk::expand \
+        --start-from crate::high::hkdf::Okm::fill \
+        --start-from crate::high::pbkdf2::Secret::new \
+        --start-from crate::high::pbkdf2::Secret::derive \
+        --start-from crate::high::pbkdf2::Secret::verify \
+        --start-from '{impl core::convert::From for crate::aead::quic::HeaderProtectionKey}' \
+        --start-from '{impl core::convert::From for crate::high::hmac::Key}' \
+        --start-from '{impl core::convert::From for crate::high::hkdf::Prk}' \
+        --opaque 'crate::high::hkdf::_::expand_into' \
+        --opaque crate::high::hmac \
+        --opaque crate::high::digest \
+        --opaque crate::low \
+        --opaque crate::mid \
+        --opaque crate::aead \
+        "$@" \
+        --dest-file "$PWD/../$out/$arch-kdf.llbc" \
+        -- -p rind --lib --target "$arch-unknown-linux-gnu")
+    rm -rf "$out/lean"
+    aeneas -backend lean -split-files -abort-on-error \
+        -no-progress-bar -dest "$out/lean" -subdir "Rind/$dir/Kdf" \
+        -namespace "rind.$arch.kdf" "$out/$arch-kdf.llbc"
+    mkdir -p "proofs/Rind/$dir/Kdf"
+    # Aeneas names both of `ZeroablePrimitive`'s `Copy` clauses, which
+    # `NonZeroU32::get` brings in, `markerCopyInst`, which Lean refuses as a
+    # duplicate field. Nothing reads them, so rename the second.
+    # See UPSTREAM.md, "Aeneas emits a duplicate `markerCopyInst` field".
+    sed 's/"markerCopyInst", "markerCopyInst"/"markerCopyInst", "markerCopyInst1"/;
+        s/^  markerCopyInst : core.marker.Copy Self_NonZeroInner$/  markerCopyInst1 : core.marker.Copy Self_NonZeroInner/' \
+        "$out/lean/Rind/$dir/Kdf/Types.lean" >"proofs/Rind/$dir/Kdf/Types.lean"
+    sed 's/^  markerCopyInst := core.num.niche_types.NonZeroU32Inner.Insts.CoreMarkerCopy$/  markerCopyInst1 := core.num.niche_types.NonZeroU32Inner.Insts.CoreMarkerCopy/' \
+        "$out/lean/Rind/$dir/Kdf/Funs.lean" >"proofs/Rind/$dir/Kdf/Funs.lean"
+}
+
+extract x86_64 X86_64 \
+    --opaque '{impl crate::high::agreement::Agree for crate::high::curve::P256}::load' \
+    --opaque 'crate::mid::p256::_::_' \
+    --include crate::low::x86_64::adx_mux::bignum_demont_p384 \
+    --include crate::low::x86_64::adx_mux::bignum_montmul_p384 \
+    --include crate::low::x86_64::adx_mux::bignum_montsqr_p384 \
+    --include crate::low::x86_64::adx_mux::bignum_tomont_p384 \
+    --include crate::low::x86_64::adx_mux::p384_montjadd \
+    --include crate::low::x86_64::adx_mux::p384_montjdouble \
+    --include crate::low::x86_64::adx_mux::p384_montjmixadd \
+    --include crate::low::x86_64::adx_mux::p384_montjscalarmul \
+    --include crate::low::x86_64::adx_mux::curve25519_x25519 \
+    --include crate::low::x86_64::adx_mux::curve25519_x25519base \
+    --include crate::low::x86_64::adx_mux::edwards25519_decode \
+    --include crate::low::x86_64::adx_mux::edwards25519_scalarmulbase \
+    --include crate::low::x86_64::adx_mux::edwards25519_scalarmuldouble \
+    --include crate::low::x86_64::adx_mux::bignum_madd_n25519 \
+    --include crate::low::x86_64::sha1_mux \
+    --opaque crate::low::x86_64::sha1_mux::path \
+    --opaque crate::low::x86_64::sha1_mux::sha1_compress_blocks \
+    --include crate::low::x86_64::sha256_mux \
+    --opaque crate::low::x86_64::sha256_mux::path \
+    --include crate::low::x86_64::sha512::Path \
+    --opaque crate::low::x86_64::sha512::path \
+    --start-from '{impl crate::aead::Cipher for crate::mid::aes_gcm::AesGcm}' \
+    --start-from crate::aead::Key \
+    --start-from crate::aead::AlgorithmId \
+    --opaque crate::aead::Algorithm \
+    --opaque crate::aead::Sealer \
+    --opaque crate::aead::Ops \
+    --start-from '{impl crate::aead::Cipher for crate::mid::chacha20poly1305::ChaCha20Poly1305}' \
+    --start-from crate::mid::xchacha20poly1305::XChaCha20Poly1305::new \
+    --start-from crate::mid::xchacha20poly1305::XChaCha20Poly1305::encrypt \
+    --start-from crate::mid::xchacha20poly1305::XChaCha20Poly1305::decrypt \
+    --include crate::low::x86_64::chacha20poly1305::seal \
+    --include crate::low::x86_64::chacha20poly1305::open \
+    --include crate::mid::aes::expand_key \
+    --include crate::mid::aes::check_gcm_lengths \
+    --include crate::mid::aes::check_counter \
+    --include crate::low::x86_64::aes \
+    --opaque crate::low::x86_64::aes::aes128_expand \
+    --opaque crate::low::x86_64::aes::aes192_expand \
+    --opaque crate::low::x86_64::aes::aes256_expand \
+    --opaque crate::low::x86_64::aes::aes128_block \
+    --opaque crate::low::x86_64::aes::aes256_block \
+    --opaque crate::low::x86_64::aes::aes_block \
+    --opaque crate::low::x86_64::aes::HwKey::round_keys_512 \
+    --opaque crate::low::x86_64::aes::RoundKeys512 \
+    --include crate::low::x86_64::ghash \
+    --opaque '{crate::low::x86_64::ghash::GhashTableAvx512}::new' \
+    --opaque 'crate::low::x86_64::ghash::_::from_powers' \
+    --opaque 'crate::low::x86_64::ghash::_::add' \
+    --opaque 'crate::low::x86_64::ghash::_::add_tail' \
+    --opaque 'crate::low::x86_64::ghash::_::mul_h' \
+    --opaque crate::low::x86_64::ghash::Ghash \
+    --opaque crate::low::x86_64::ghash::u128_to_m128i \
+    --opaque crate::low::x86_64::ghash::GF128_POLY_HI \
+    --opaque crate::low::x86_64::ghash::GF128_POLY_CARRY_MASK \
+    --include crate::low::x86_64::aes_gcm::seal \
+    --include crate::low::x86_64::aes_gcm::open \
+    --include crate::low::x86_64::aes_gcm::vale \
+    --include crate::low::x86_64::aes_gcm::AVX_VALE_SEAL_FROM \
+    --include crate::low::x86_64::aes_gcm::VAES_AVX2_VALE_OPEN_BELOW \
+    --include crate::low::x86_64::aes_gcm::VAES_AVX2_VALE_SEAL_BELOW \
+    --include crate::low::x86_64::aes_gcm_avx \
+    --opaque crate::low::x86_64::aes_gcm_avx::counter_block \
+    --opaque crate::low::x86_64::aes_gcm_avx::aead
+extract aarch64 Aarch64 \
+    --start-from crate::mid::p256::PrivateKey::from_bytes \
+    --start-from crate::high::ecdsa::VerifyingKey::from_x962_uncompressed \
+    --start-from crate::high::ecdsa::VerifyingKey::verify \
+    --start-from crate::high::ecdsa::SigningKey::new \
+    --start-from crate::high::ecdsa::SigningKey::generate \
+    --start-from '{impl core::clone::Clone for crate::high::ecdsa::VerifyingKey<_>}' \
+    --start-from '{impl core::clone::Clone for crate::mid::p256::VerifyingKey}' \
+    --start-from '{impl crate::high::hash::SignatureHash for crate::high::hash::Sha256}' \
+    --start-from crate::high::ecdsa::SigningKey::from_private_key_and_public_key \
+    --start-from crate::high::ecdsa::SigningKey::public_key_uncompressed \
+    --start-from '{impl core::convert::AsRef for crate::high::ecdsa::EncodedPoint}' \
+    --start-from crate::high::ecdsa::SigningKey::sign \
+    --opaque crate::high::hmac_drbg \
+    --start-from crate::high::ecdsa::hash_to_scalar \
+    --start-from '{impl crate::high::curve::Curve for crate::high::curve::P256}' \
+    --start-from '{impl crate::high::curve::PrivateKey for crate::mid::p256::StaticPrivateKey}' \
+    --start-from '{impl crate::high::curve::PublicKey for crate::mid::p256::VerifyingKey}' \
+    --start-from '{impl crate::high::curve::Scalar for crate::mid::p256::Scalar}' \
+    --start-from crate::mid::p256::StaticPrivateKey::from_bytes \
+    --opaque 'crate::high::curve::_::generate_random_key' \
+    --opaque 'crate::mid::p256::_::generate' \
+    --opaque 'crate::mid::p256::_::new_random' \
+    --include crate::low::aarch64::sha1::sha1_compress_padded \
+    --include crate::low::aarch64::sha256 \
+    --opaque crate::low::aarch64::sha256::compress_hw \
+    --opaque crate::low::aarch64::sha256::compress_nohw
+
+# The AEAD key's conversion is x86_64's alone: the AEAD API's model and proofs
+# are x86_64's, as AES-GCM's are.
+extract_kdf x86_64 X86_64 --start-from '{impl core::convert::From for crate::aead::Key}'
+extract_kdf aarch64 Aarch64
+
+mkdir -p proofs/Rind/Aarch64/Kdf
+for file in Dispatch X25519 P384 DigestAlgorithm DigestDispatch Sha512 ChaCha20 SignatureDispatch Ed25519 \
+    Blockwise Sha Hmac HmacDispatch HkdfExpand Kdf/TypesExternal Kdf/FunsExternal \
+    CtEqual HmacApi DigestApi Hkdf Pbkdf2; do
+    sed 's/X86_64/Aarch64/g; s/x86_64/aarch64/g' "proofs/Rind/X86_64/$file.lean" >"proofs/Rind/Aarch64/$file.lean"
+done
+# The AEAD model imports nothing aarch64 has, and no aarch64 translation reaches it.
+sed -i '/Rind.Aarch64.AeadDispatch/d' proofs/Rind/Aarch64/Kdf/TypesExternal.lean
+sed -i '/-- BEGIN aead/,/-- END aead/d' proofs/Rind/Aarch64/Kdf/FunsExternal.lean
+
+[ "${PROVE_TRANSLATE_ONLY:-}" ] && exit 0
+# Each hand model of a CPU intrinsic, a `core.core_arch` definition but its
+# vector types' own, is tested against the instruction on this CPU:
+# `admin/simd-vectors.rs` runs each and writes `#guard`s that the models
+# compute the same, which Lean checks once the proofs build. Fail on a model
+# it does not test, so a new one cannot go untested.
+rustc --edition 2024 -O -o "$out/simd-vectors" admin/simd-vectors.rs
+"$out/simd-vectors" >"$out/SimdVectors.lean"
+untested=$(grep -rhoE '^def core\.core_arch\.[^ ]+' proofs/Rind | sed 's/^def //' | grep -v '\.__m' | sort -u |
+    while read -r model; do grep -qF " $model " "$out/SimdVectors.lean" || echo "$model"; done)
+if [[ -n $untested ]]; then
+    echo "admin/prove: no vectors test these intrinsic models:" $untested >&2
+    exit 1
+fi
+
+cd proofs
+lake exe cache get
+lake build
+lake env lean "../$out/SimdVectors.lean"

@@ -1,0 +1,43 @@
+name: coverage
+
+on:
+  schedule:
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/vectors
+
+      - uses: ./.github/actions/nix
+
+      # The dev shell's `sde` runs Intel's binaries in a bubblewrap sandbox,
+      # which needs the unprivileged user namespaces Ubuntu's AppArmor denies
+      # an unprofiled program.
+      # See UPSTREAM.md, "Ubuntu's AppArmor denies Intel SDE's sandbox".
+      - name: Allow user namespaces
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      # The summary table in the log is the report.
+      - name: Measure coverage
+        run: nix develop .#coverage --command ./admin/coverage

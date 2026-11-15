@@ -1,0 +1,58 @@
+diff --git a/skills/rind-git/SKILL.md b/skills/rind-git/SKILL.md
+index 73f83c4..d45ae0b 100644
+--- a/skills/rind-git/SKILL.md
++++ b/skills/rind-git/SKILL.md
+@@ -39,10 +39,32 @@ each PR's files). The development fork's PR #1 (SPAKE2+) rewrote
+ ## Updating a pushed branch
+ 
+ Merge `up/main` into the branch. Never rebase, amend, or force-push a
+-branch that has already been pushed.
++branch that has already been pushed. Do not use `--force` or
++`--force-with-lease` unless the fork owner has explicitly approved
++rewriting the named branch. A revert removes the unwanted tree from the
++tip but leaves the commits in the pull request's history; cleaning that
++history is a force-push and needs the same approval.
+ 
+ Never merge the fork's `main` into an upstream-bound branch: the fork's
+-`main` can carry files upstream does not.
++`main` can carry fork-only files (an extra algorithm, for example) that
++upstream does not, and those files would appear on an upstream pull
++request.
++
++A fork branch that is already the head of an open upstream pull request
++is in that category even when the change first landed on the fork.
++Never merge the fork's `main` into it, and never include it in a bulk
++update of fork branches. Before any such sweep, list those heads and
++exclude them:
++
++```shell
++gh pr list --repo moq-dev/rind --author <fork-owner> --state open --json headRefName
++```
++
++`<fork-owner>` is the account that opened the fork's upstream pull
++requests (`gh api user --jq .login` when that account is logged in).
++Branches meant to go upstream take updates from upstream `main` only.
++
++Before every push, confirm the target branch is not one of those heads.
+ 
+ When merging `up/main` into a feature branch, resolve a conflict in a
+ shared list (the README's algorithm table, for example) by keeping both
+diff --git a/skills/rind-quest-run/SKILL.md b/skills/rind-quest-run/SKILL.md
+index 1a383c1..adc1c0f 100644
+--- a/skills/rind-quest-run/SKILL.md
++++ b/skills/rind-quest-run/SKILL.md
+@@ -320,3 +320,14 @@ Check upstream open PRs and `quest/*` branches, not just claim commits,
+ before claiming, again partway through, and again before marking ready.
+ When upstream takes a quest, stop and hold the fork PR with a comment.
+ Prefer quests whose files show no recent upstream activity.
++
++On Nov 12, 2026, a bulk update merged the fork's `main` into
++`spake2plus-up-r7`, the head of open upstream
++[moq-dev/rind#685](https://github.com/moq-dev/rind/pull/685).
++The fork's `main` carried fork-only files, which then appeared on the
++upstream pull request. The merge was reverted, and the history was
++later rewritten with the fork owner's approval. Before any sweep,
++list the head branches of the fork owner's open upstream pull requests
++and exclude them. Those branches take updates from upstream `main`
++only, never the fork's `main`. The rule is in
++[Updating a pushed branch](../rind-git/SKILL.md#updating-a-pushed-branch).

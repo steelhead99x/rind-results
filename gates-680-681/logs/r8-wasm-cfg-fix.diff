@@ -1,0 +1,55 @@
+diff --git a/rind/src/high/spake2plus.rs b/rind/src/high/spake2plus.rs
+index e3c49bb9..b00cd729 100644
+--- a/rind/src/high/spake2plus.rs
++++ b/rind/src/high/spake2plus.rs
+@@ -986,7 +986,7 @@ mod tests {
+ 
+     /// A handshake pakery-spake2plus has not published as a vector.
+     #[test]
+-    #[cfg(not(miri))]
++    #[cfg(not(any(miri, target_family = "wasm")))]
+     fn matches_pakery() {
+         use p256::elliptic_curve::ff::PrimeField;
+         use pakery_crypto::{
+@@ -1074,6 +1074,7 @@ mod tests {
+         assert_eq!(key.as_ref(), their_key.session_key.as_bytes());
+     }
+ 
++    #[cfg(not(any(miri, target_family = "wasm")))]
+     fn scalar_bytes(bytes: &[u8; 32]) -> Scalar {
+         Scalar::from_be_reduced(bytes).unwrap()
+     }
+@@ -1303,7 +1304,7 @@ mod tests {
+     /// its test scalars. The context is SHA-256 of "CHIP PAKE V1 Commissioning",
+     /// and both identities are empty.
+     #[test]
+-    #[cfg(not(miri))]
++    #[cfg(not(any(miri, target_family = "wasm")))]
+     fn matches_matter_crypto() {
+         use core::num::NonZeroU32;
+ 
+diff --git a/rind/src/mid/p256.rs b/rind/src/mid/p256.rs
+index 9cfa1178..46d68bb6 100644
+--- a/rind/src/mid/p256.rs
++++ b/rind/src/mid/p256.rs
+@@ -1712,9 +1712,9 @@ mod tests {
+     /// Lengths 1 through 128, including 128 itself, lengths past 33 that are
+     /// not multiples of 32, and `n - 1`, against aws-lc's `BN_div`.
+     ///
+-    /// `aws-lc-sys` is a dev-dependency only outside Miri.
++    /// `aws-lc-sys` is a dev-dependency only outside Miri and wasm.
+     #[test]
+-    #[cfg(not(miri))]
++    #[cfg(not(any(miri, target_family = "wasm")))]
+     fn be_reduced_matches_aws_lc() {
+         let order = util::u64x4_to_big_endian(&CURVE_ORDER);
+         let mut n_minus_1 = order;
+@@ -1760,7 +1760,7 @@ mod tests {
+     }
+ 
+     /// `bytes mod n` by aws-lc, or `Err` when the residue is zero.
+-    #[cfg(not(miri))]
++    #[cfg(not(any(miri, target_family = "wasm")))]
+     #[allow(unsafe_code)]
+     fn aws_reduce(bytes: &[u8]) -> Result<[u8; 32], ()> {
+         use aws_lc_sys::{

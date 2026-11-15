@@ -1,0 +1,50 @@
+[workspace]
+resolver = "2"
+members = [
+  "rind",
+  "rind-aws-lc-rs",
+  "rind-bench",
+  "rind-cpuid",
+  "rind-dart",
+  "rind-timing",
+  "rind-dimpl",
+  "rind-object-store",
+  "rind-rcgen",
+  "rind-ring",
+  "rind-rustls",
+  "rind-str0m",
+  "rind-jsonwebtoken",
+  "rind-python",
+  "fuzz"
+]
+
+[workspace.package]
+rust-version = "1.90"
+
+[profile.dev.build-override]
+# Left unset, cargo gives a build dependency debuginfo only when the same
+# build also compiles it for runtime, which `cargo test` does and clippy does
+# not. libc's hash then differs, and aws-lc-sys's C build runs once for each.
+debug = false
+
+[profile.bench]
+lto = "thin"
+debug = true
+
+# Debug builds of these dependencies branch on secrets, which ctgrind refuses:
+# fiat-crypto's plain arithmetic is proven never to overflow but still checks
+# the flags, as does base64ct's on 8-bit values in 16-bit lanes, curve25519-dalek
+# checks its arithmetic and asserts on scalar digits, and subtle asserts that
+# each `Choice` is 0 or 1.
+[profile.dev.package.fiat-crypto]
+overflow-checks = false
+
+[profile.dev.package.base64ct]
+overflow-checks = false
+
+[profile.dev.package.curve25519-dalek]
+debug-assertions = false
+overflow-checks = false
+
+[profile.dev.package.subtle]
+debug-assertions = false

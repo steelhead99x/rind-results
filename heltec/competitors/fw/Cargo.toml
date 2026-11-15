@@ -1,0 +1,72 @@
+cargo-features = ["profile-rustflags"]
+
+[package]
+name = "heltec-competitors"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "heltec-competitors"
+harness = false
+
+[profile.release]
+opt-level = 3
+debug = true
+
+[profile.dev]
+opt-level = "s"
+
+# Xtensa LLVM aborts on libcrux-hacl-rs at opt-level 3 (as ~/rind-bench/esp32 found).
+[profile.release.package.libcrux-hacl-rs]
+opt-level = 2
+# libcrux-p256 overflows Xtensa's l32r literal range at opt-level 3 (same source).
+[profile.release.package.libcrux-p256]
+opt-level = "s"
+
+# WORKAROUND (labeled): rind 99b509a6's portable MD5 uses an empty asm!, which is
+# feature-gated on Xtensa. Enable the gate for the rind crate only; rind's source is untouched.
+[profile.release.package.rind]
+rustflags = ["-Zcrate-attr=feature(asm_experimental_arch)"]
+
+[dependencies]
+esp-idf-svc = { version = "0.53", default-features = false, features = ["std", "binstart", "native"] }
+rind = { path = "../../rind-99b509a6/rind", optional = true }
+# ring's SystemRandom on ESP-IDF needs ring's own documented opt-in feature.
+ring = { version = "=0.17.14", features = ["less-safe-getrandom-espidf"], optional = true }
+aes-gcm = { version = "=0.11.1", optional = true }
+chacha20poly1305 = { version = "=0.11.0", optional = true }
+sha2 = { version = "=0.11.1", optional = true }
+x25519-dalek = { version = "=3.0.0", features = ["getrandom"], optional = true }
+ed25519-dalek = { version = "=3.0.0", features = ["alloc", "rand_core"], optional = true }
+p256 = { version = "=0.14.0", features = ["ecdh", "getrandom"], optional = true }
+libcrux-aes = { version = "=0.0.10", optional = true }
+libcrux-chacha20poly1305 = { version = "=0.0.10", optional = true }
+libcrux-sha2 = { version = "=0.0.9", optional = true }
+libcrux-ecdh = { version = "=0.0.9", optional = true }
+libcrux-ecdsa = { version = "=0.0.9", optional = true }
+libcrux-ed25519 = { version = "=0.0.10", features = ["rand"], optional = true }
+getrandom = { version = "0.4", features = ["sys_rng"] }
+# Build probes only (rind-bench pins): not used by the harness.
+aws-lc-rs = { version = "=1.19.0", features = ["non-fips"], default-features = false, optional = true }
+aws-lc-sys = { version = "=0.47.0", default-features = false, optional = true }
+openssl = { version = "=0.10.82", optional = true }
+graviola = { version = "=0.4.4", optional = true }
+
+[features]
+default = ["rind", "ring", "rustcrypto", "libcrux"]
+rind = ["dep:rind"]
+ring = ["dep:ring"]
+rustcrypto = ["dep:aes-gcm", "dep:chacha20poly1305", "dep:sha2", "dep:x25519-dalek", "dep:ed25519-dalek", "dep:p256"]
+libcrux = ["dep:libcrux-aes", "dep:libcrux-chacha20poly1305", "dep:libcrux-sha2", "dep:libcrux-ecdh", "dep:libcrux-ecdsa", "dep:libcrux-ed25519"]
+
+awslc = ["dep:aws-lc-rs", "dep:aws-lc-sys"]
+openssl = ["dep:openssl"]
+openssl-vendored = ["openssl", "openssl/vendored"]
+graviola = ["dep:graviola"]
+
+[build-dependencies]
+embuild = "0.33"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(espidf_time64)'] }

@@ -1,0 +1,1511 @@
+===== START Thu, 12 Nov 2026 21:05:27 -0800 =====
+HEAD=7c29ef48e2a62c1d8e9de65bdfc75d0fda38910a
+7c29ef48 fix(frost): declassify test secrets so unfiltered ctgrind is clean
+TMPDIR=~/tmp/bestprac-20261112/tmp CARGO_TARGET_DIR=~/rind-frost-51-ctgrind-portable-target
+RUSTFLAGS=--cfg rind_portable --cfg curve25519_dalek_backend="serial"
+after fetch HEAD=7c29ef48e2a62c1d8e9de65bdfc75d0fda38910a origin/PR=7c29ef48e2a62c1d8e9de65bdfc75d0fda38910a
+===== nix develop .#ctgrind --command env RUSTFLAGS=... admin/ctgrind unit =====
+   Compiling rind v0.3.2 (~/tmp/bestprac-20261112/pr51/rind)
+warning: function `classify` is never used
+  --> rind/src/low/ct_binsec.rs:24:15
+   |
+24 | pub(crate) fn classify(value: *mut u8, len: usize) {
+   |               ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `declassify` is never used
+  --> rind/src/low/ct_binsec.rs:30:15
+   |
+30 | pub(crate) fn declassify(value: *mut u8, len: usize) {
+   |               ^^^^^^^^^^
+
+warning: method `scalar_bytes` is never used
+   --> rind/src/high/frost/mod.rs:273:35
+    |
+219 | impl SigningShare {
+    | ----------------- method in this implementation
+...
+273 |     pub(in crate::high::frost) fn scalar_bytes(&self) -> &[u8; 32] {
+    |                                   ^^^^^^^^^^^^
+
+warning: function `signature_from_bytes` is never used
+   --> rind/src/high/frost/mod.rs:789:31
+    |
+789 | pub(in crate::high::frost) fn signature_from_bytes(
+    |                               ^^^^^^^^^^^^^^^^^^^^
+
+warning: `rind` (lib test) generated 4 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.33s
+     Running unittests src/lib.rs (~/rind-frost-51-ctgrind-portable-target/debug/deps/rind-7ec328873f162901)
+==1894125== Memcheck, a memory error detector
+==1894125== Copyright (C) 2002-2026, and GNU GPL'd, by Julian Seward et al.
+==1894125== Using Valgrind-3.27.1 and LibVEX; rerun with -h for copyright info
+==1894125== Command: ~/rind-frost-51-ctgrind-portable-target/debug/deps/rind-7ec328873f162901
+==1894125== 
+
+running 457 tests
+test aead::gcm::tests::refuses_malformed_input ... ok
+test aead::gcm::tests::tags_are_prefixes ... ok
+test aead::quic::tests::key_length_must_match_algorithm ... ok
+test aead::gcm::tests::acvp ... ok
+test aead::quic::tests::rfc9001 ... ok
+test aead::tests::key_length_must_match_algorithm ... ==1894125== Thread 4 high::agreement:
+==1894125== Conditional jump or move depends on uninitialised value(s)
+==1894125==    at 0x4B08725: <curve25519_dalek::montgomery::MontgomeryPoint>::mul_bits_be::<core::iter::adapters::skip::Skip<core::iter::adapters::rev::Rev<core::iter::adapters::map::Map<core::ops::range::Range<usize>, <curve25519_dalek::scalar::Scalar>::bits_le::{closure#0}>>>> (montgomery.rs:194)
+==1894125==    by 0x4B0D053: <&curve25519_dalek::montgomery::MontgomeryPoint as core::ops::arith::Mul<&curve25519_dalek::scalar::Scalar>>::mul (montgomery.rs:491)
+==1894125==    by 0x4B0D128: <&curve25519_dalek::scalar::Scalar as core::ops::arith::Mul<&curve25519_dalek::montgomery::MontgomeryPoint>>::mul (montgomery.rs:505)
+==1894125==    by 0x4B0D73D: <curve25519_dalek::scalar::Scalar as core::ops::arith::Mul<curve25519_dalek::montgomery::MontgomeryPoint>>::mul (macros.rs:108)
+==1894125==    by 0x4B0920B: <curve25519_dalek::montgomery::MontgomeryPoint>::mul_clamped (montgomery.rs:161)
+==1894125==    by 0x4406B20: rind::low::portable::curve25519::curve25519_x25519 (curve25519.rs:13)
+==1894125==    by 0x44E7DAE: <rind::mid::x25519::PrivateKey>::diffie_hellman (x25519.rs:62)
+==1894125==    by 0x46E07C4: <rind::high::agreement::X25519Curve as rind::high::agreement::Agree>::agree (agreement.rs:368)
+==1894125==    by 0x43064D2: <rind::high::agreement::Keyed<rind::high::agreement::X25519Curve>>::agree (agreement.rs:324)
+==1894125==    by 0x46DEADE: <rind::high::agreement::PrivateKey>::agree (agreement.rs:177)
+==1894125==    by 0x43F71B9: rind::high::agreement::tests::acvp_x25519 (agreement.rs:677)
+==1894125==    by 0x46D24A6: rind::high::agreement::tests::acvp_x25519::{closure#0} (agreement.rs:672)
+==1894125== 
+ok
+test aead::tests::open_refuses_input_shorter_than_tag ... ok
+test aead::tests::randomized_nonce_key ... ok
+test aead::tests::tag_must_be_whole ... ok
+test error::tests::key_rejected_displays_its_reason ... ok
+test aead::tests::seal_and_open ... ok
+test fips_rng::tests::cast_passes ... ok
+test fips_rng::tests::fills_across_requests ... ok
+test fips_rng::tests::threads_draw_independently ... ok
+test high::agreement::tests::acvp_x25519 ... ok
+test high::agreement::tests::acvp_x25519_key_gen ... ok
+test high::agreement::tests::acvp_x25519_key_ver ... ok
+test high::agreement::tests::agrees ... ok
+test high::agreement::tests::decompresses_points ... ok
+test high::agreement::tests::loads_ecdsa_keys ... ok
+test high::agreement::tests::loads_in_constant_time ... ok
+test aead::gcm::tests::cavp has been running for over 60 seconds
+test high::agreement::tests::public_keys_round_trip ... ok
+test high::agreement::tests::cavp_ecdh has been running for over 60 seconds
+test high::agreement::tests::refuses_scalars ... ok
+test high::agreement::tests::round_trips ... ok
+test high::agreement::tests::cavp_ecdh ... ok
+test high::agreement::tests::wycheproof_p256 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_p384 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_p521 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_x25519 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_x25519_pkcs8 has been running for over 60 seconds
+test high::agreement::tests::x25519_pkcs8 has been running for over 60 seconds
+test high::agreement::tests::x25519_pkcs8 ... ok
+test high::asn1::pkix::tests::parse_ec_spki has been running for over 60 seconds
+test high::asn1::pkix::tests::parse_ec_spki ... ok
+test high::asn1::pkix::tests::parse_pkcs8_key ... ok
+test high::asn1::pkix::tests::parse_pkcs8_v2_key ... ok
+test high::asn1::pkix::tests::parse_pkcs8_v2_key_with_attributes ... ok
+test high::asn1::pkix::tests::parse_private_key ... ok
+test high::agreement::tests::wycheproof_x25519 ... ok
+test high::asn1::pkix::tests::parse_public_key ... ok
+test high::asn1::pkix::tests::parse_rsa_spki ... ok
+test high::asn1::pkix::tests::parse_sec1_key ... ok
+test high::asn1::tests::test_any has been running for over 60 seconds
+test high::asn1::tests::test_canonical_length_requirements has been running for over 60 seconds
+test high::asn1::tests::test_any ... ok
+test high::asn1::tests::test_context_tag has been running for over 60 seconds
+test high::asn1::tests::test_encode_errors has been running for over 60 seconds
+test high::asn1::tests::test_encode_len has been running for over 60 seconds
+test high::asn1::tests::test_encode_len_limit has been running for over 60 seconds
+test high::asn1::tests::test_enum has been running for over 60 seconds
+test high::asn1::tests::test_canonical_length_requirements ... ok
+test high::asn1::tests::test_error_display has been running for over 60 seconds
+test high::agreement::tests::wycheproof_x25519_pkcs8 ... ok
+test high::asn1::tests::test_integer_as_usize has been running for over 60 seconds
+test high::asn1::tests::test_context_tag ... ok
+test high::asn1::tests::test_integer_encoding has been running for over 60 seconds
+test high::asn1::tests::test_encode_errors ... ok
+test high::asn1::tests::test_encode_len ... ok
+test high::asn1::tests::test_encode_len_limit - should panic ... ok
+test high::asn1::tests::test_invalid_bitstring_encodings has been running for over 60 seconds
+test high::asn1::tests::test_invalid_integer_encodings has been running for over 60 seconds
+test high::asn1::tests::test_null has been running for over 60 seconds
+test high::asn1::tests::test_enum ... ok
+test high::asn1::tests::test_oid has been running for over 60 seconds
+test high::asn1::tests::test_error_display ... ok
+test high::asn1::tests::test_integer_as_usize ... ok
+test high::asn1::tests::test_integer_encoding ... ok
+test high::agreement::tests::wycheproof_p256 ... ok
+test high::asn1::tests::test_invalid_integer_encodings ... ok
+test high::asn1::tests::test_invalid_bitstring_encodings ... ok
+test high::asn1::tests::test_null ... ok
+test high::asn1::tests::test_oid ... ok
+test high::asn1::tests::test_optional ... ok
+test high::blind_rsa::tests::blind_sign_refuses_bad_requests ... ok
+test high::blind_rsa::tests::refuses_a_key_sharing_a_factor_with_the_message ... ok
+test high::blind_rsa::tests::refuses_other_keys ... ok
+test high::blind_rsa::tests::rfc9578_token ... ok
+test high::blind_rsa::tests::debug_shows_no_secrets ... ok
+test high::constant_time::tests::contents_stay_secret ... ok
+test high::constant_time::tests::unequal_lengths ... ok
+test high::blind_rsa::tests::blinding_rejects_bad_blinds ... ok
+test high::blind_rsa::tests::finalize_refuses_bad_replies has been running for over 60 seconds
+test high::blind_rsa::tests::rfc9474_vectors has been running for over 60 seconds
+test high::curve::tests::non_canonical_coordinates ... ok
+test high::blind_rsa::tests::round_trip has been running for over 60 seconds
+test high::blind_rsa::tests::signatures_are_bound_to_their_variant has been running for over 60 seconds
+test high::blind_rsa::tests::stays_secret has been running for over 60 seconds
+test high::curve::tests::cavp_keypair has been running for over 60 seconds
+test high::curve::tests::cavp_pkv has been running for over 60 seconds
+test high::curve::tests::is_zero has been running for over 60 seconds
+test high::curve::tests::is_zero ... ok
+test high::curve::tests::private_key_encode_error has been running for over 60 seconds
+test high::curve::tests::cavp_keypair ... ok
+test high::blind_rsa::tests::finalize_refuses_bad_replies ... ok
+test high::curve::tests::cavp_pkv ... ok
+test high::digest::tests::acvp_sha256 has been running for over 60 seconds
+test high::blind_rsa::tests::stays_secret ... ok
+test high::digest::tests::acvp_sha384 has been running for over 60 seconds
+test high::blind_rsa::tests::signatures_are_bound_to_their_variant ... ok
+test high::digest::tests::acvp_sha3_256 has been running for over 60 seconds
+test high::digest::tests::acvp_sha3_384 has been running for over 60 seconds
+test high::curve::tests::private_key_encode_error ... ok
+test high::digest::tests::acvp_sha3_512 has been running for over 60 seconds
+test high::digest::tests::acvp_sha512 has been running for over 60 seconds
+test high::digest::tests::acvp_sha512_256 has been running for over 60 seconds
+test high::digest::tests::acvp_sha3_256 ... ok
+test high::digest::tests::acvp_sha3_512 ... ok
+test high::digest::tests::acvp_sha3_384 ... ok
+test high::digest::tests::cavp_monte_carlo ... ok
+test high::digest::tests::finish_resets ... ok
+test high::digest::tests::rfc1321 ... ok
+test high::digest::tests::cavp has been running for over 60 seconds
+test high::digest::tests::secret_message ... ok
+test high::ecdsa::tests::acvp_det_sig_gen has been running for over 60 seconds
+test high::ecdsa::tests::acvp_det_sig_gen ... ok
+test high::ecdsa::tests::acvp_key_gen has been running for over 60 seconds
+test high::ecdsa::tests::acvp_key_ver has been running for over 60 seconds
+test high::ecdsa::tests::acvp_key_ver ... ok
+test high::ecdsa::tests::acvp_key_gen ... ok
+test high::ecdsa::tests::acvp_sig_gen has been running for over 60 seconds
+test high::blind_rsa::tests::round_trip ... ok
+test high::ecdsa::tests::acvp_sig_ver has been running for over 60 seconds
+test high::ecdsa::tests::acvp_sig_gen ... ok
+test high::ecdsa::tests::aws_lc_sign has been running for over 60 seconds
+test high::digest::tests::acvp_sha384 ... ok
+test high::ecdsa::tests::aws_lc_verify has been running for over 60 seconds
+test high::ecdsa::tests::acvp_sig_ver ... ok
+test high::ecdsa::tests::cavp_sigver has been running for over 60 seconds
+test high::ecdsa::tests::digest_signing_matches_message_signing has been running for over 60 seconds
+test high::ecdsa::tests::digest_signing_matches_message_signing ... ok
+test high::ecdsa::tests::aws_lc_sign ... ok
+test high::ecdsa::tests::rejects_invalid_asn1_sigs ... ok
+test high::ecdsa::tests::rfc6979_p521_test_vectors has been running for over 60 seconds
+test high::ecdsa::tests::rfc6979_p521_test_vectors ... ok
+test high::ecdsa::tests::aws_lc_verify ... ok
+test high::ecdsa::tests::rfc6979_test_vectors has been running for over 60 seconds
+test high::ecdsa::tests::rfc6979_test_vectors ... ok
+test high::ecdsa::tests::sign_retries_when_s_is_zero has been running for over 60 seconds
+test high::ecdsa::tests::sign_retries_when_s_is_zero ... ok
+test high::ecdsa::tests::smoke_test_ecdsa_sign ... ok
+test high::digest::tests::acvp_sha256 ... ok
+test high::ed25519::tests::acvp_key_ver ... ok
+test high::ed25519::tests::acvp_key_gen ... ok
+test high::ed25519::tests::acvp_sig_gen ... ok
+test high::ecdsa::tests::smoke_test_loading_keys ... ok
+test high::ed25519::tests::acvp_sig_ver ... ok
+test high::agreement::tests::wycheproof_p521 ... ok
+test high::ed25519::tests::decode_pkcs8_v1 ... ok
+test high::ed25519::tests::pairwise ... ok
+test high::ed25519::tests::round_trip_pkcs8_v2 ... ok
+test high::ed25519::tests::small_order ... ok
+test high::ed25519::tests::pkcs8_public_key_wrong ... ok
+test high::ed25519::tests::spki_encode_length ... ok
+test high::ed25519::tests::verifying_key_from_bytes ... ok
+test high::frost::api_tests::hostile_input_is_refused ... ok
+test high::frost::api_tests::each_suite_signs_and_verifies ... ok
+test high::frost::api_tests::encodings_reject_malformed_inputs ... ok
+test high::frost::api_tests::an_altered_share_names_its_participant ... ok
+test high::frost::api_tests::secret_dealing_and_signing ... ok
+test high::frost::api_tests::sign_reports_a_nonce_commitment_mismatch ... ok
+test high::frost::vectors::refuses_a_bad_commitment has been running for over 60 seconds
+test high::frost::vectors::rfc9591_ed25519 has been running for over 60 seconds
+test high::frost::vectors::rfc9591_encodings_match_the_vectors has been running for over 60 seconds
+test high::frost::vectors::refuses_a_bad_commitment ... ok
+test high::frost::vectors::rfc9591_p256 has been running for over 60 seconds
+test high::frost::vectors::rfc9591_ristretto255 has been running for over 60 seconds
+test high::ecdsa::tests::cavp_sigver ... ok
+test high::hkdf::tests::acvp_kda has been running for over 60 seconds
+test high::frost::vectors::rfc9591_p256 ... ok
+test high::frost::vectors::rfc9591_ristretto255 ... ok
+test high::hkdf::tests::keys_match_filled_bytes has been running for over 60 seconds
+test high::frost::vectors::rfc9591_ed25519 ... ok
+test high::hkdf::tests::lengths has been running for over 60 seconds
+test high::frost::vectors::rfc9591_encodings_match_the_vectors ... ok
+test high::hkdf::tests::rfc5869 has been running for over 60 seconds
+test high::hkdf::tests::keys_match_filled_bytes ... ok
+test high::hkdf::tests::rfc9001_initial_secrets has been running for over 60 seconds
+test high::hkdf::tests::lengths ... ok
+test high::hkdf::tests::secret_ikm has been running for over 60 seconds
+test high::hkdf::tests::rfc5869 ... ok
+test high::hmac::tests::acvp has been running for over 60 seconds
+test high::hkdf::tests::rfc9001_initial_secrets ... ok
+test high::hmac::tests::cavp has been running for over 60 seconds
+test high::hmac::tests::secret_key_and_message has been running for over 60 seconds
+test high::hkdf::tests::secret_ikm ... ok
+test high::digest::tests::acvp_sha512 ... ok
+test high::hmac::tests::secret_key_and_message ... ok
+test high::hmac::tests::smoke has been running for over 60 seconds
+test high::hmac::tests::smoke ... ok
+test high::digest::tests::acvp_sha512_256 ... ok
+test high::hmac::tests::verify_whole_tags_only has been running for over 60 seconds
+test high::hmac_drbg::tests::cavp has been running for over 60 seconds
+test high::hmac_drbg::tests::rfc6979_example has been running for over 60 seconds
+test high::hmac::tests::verify_whole_tags_only ... ok
+test high::hmac_drbg::tests::secret_entropy_and_state has been running for over 60 seconds
+test high::hmac_drbg::tests::rfc6979_example ... ok
+test high::hmac_drbg::tests::secret_entropy_and_state ... ok
+test high::hmac_drbg::tests::zeroise_wipes_the_state_under_wipe has been running for over 60 seconds
+test high::hmac_drbg::tests::zeroise_wipes_the_state_under_wipe ... ok
+test high::hpke::tests::debug_shows_no_secret has been running for over 60 seconds
+test high::hpke::tests::derives_from_any_length has been running for over 60 seconds
+test high::hpke::tests::every_suite_round_trips has been running for over 60 seconds
+test high::hpke::tests::debug_shows_no_secret ... ok
+test high::hmac::tests::acvp ... ok
+test high::hpke::tests::derives_from_any_length ... ok
+test high::hpke::tests::failed_open_keeps_sequence ... ok
+test high::hpke::tests::every_suite_round_trips ... ok
+test high::hpke::tests::message_limit has been running for over 60 seconds
+test high::hpke::tests::opens_compressed_enc has been running for over 60 seconds
+test high::hpke::tests::message_limit ... ok
+test high::hpke::tests::opens_compressed_enc ... ok
+test high::hpke::tests::panicking_append_spends_nonce ... ok
+test high::hpke::tests::refuses_malformed_keys ... ok
+test high::hpke::tests::secret_key_derivation ... ok
+test high::hpke::tests::secret_decapsulation ... ok
+test high::hpke::tests::suite_and_info_bind ... ok
+test high::agreement::tests::wycheproof_p384 ... ok
+test high::hpke::tests::wycheproof_decrypt ... ok
+test high::hpke::tests::wycheproof_encap ... ok
+test high::hpke::tests::rfc9180 has been running for over 60 seconds
+test high::hmac::tests::cavp ... ok
+test high::kem::tests::cctv_modulus ... ok
+test high::kem::tests::cctv_intermediate ... ok
+test high::hpke::tests::wycheproof_sequence has been running for over 60 seconds
+test high::kem::tests::boringssl has been running for over 60 seconds
+test high::kem::tests::cctv_strcmp ... ok
+test high::kem::tests::cctv_accumulated has been running for over 60 seconds
+test high::kem::tests::cctv_unlucky_sample ... ok
+test high::kem::tests::crosscheck::encapsulated_by_theirs ... ok
+test high::hpke::tests::wycheproof_sequence ... ok
+test high::kem::tests::boringssl ... ok
+test high::oaep::tests::every_failure_is_the_same ... ok
+test high::oaep::tests::refuses_small_public_keys ... ok
+test high::kem::tests::wycheproof_decaps has been running for over 60 seconds
+test high::kem::tests::wycheproof_encaps has been running for over 60 seconds
+test high::kem::tests::wycheproof_keygen has been running for over 60 seconds
+test high::oaep::tests::stays_secret ... ok
+test high::oaep::tests::round_trip has been running for over 60 seconds
+test high::pbkdf2::tests::lengths ... ok
+test high::pbkdf2::tests::secret_password ... ok
+test high::pbkdf2::tests::verify_checks_every_byte ... ok
+test high::hmac_drbg::tests::cavp ... ok
+test high::pkcs1::tests::digestinfos_are_correct ... ok
+test high::pkcs1::tests::oaep_refuses_wrong_label_and_nonzero_first_byte ... ok
+test high::pkcs1::tests::oaep_needs_two_hashes_and_two_bytes ... ok
+test high::pkcs1::tests::pss_encode_test ... ok
+test high::pkcs8::tests::construct_ed25519 ... ok
+test high::pkcs8::tests::rejects_unknown_version ... ok
+test high::pkcs8::tests::round_trip_ed25519_v2 ... ok
+test high::pkcs8::tests::rejects_wrong_version_for_public_key ... ok
+test high::pkcs8::tests::skips_attributes ... ok
+test high::hpke::tests::rfc9180 ... ok
+test high::rsa::tests::acvp_sig_gen ... ok
+test high::rsa::tests::i2osp_refuses_what_does_not_fit ... ok
+test high::kem::tests::wycheproof_keygen ... ok
+test high::rsa::tests::acvp_sig_ver ... ok
+test high::rsa::tests::key_generation_known_answer has been running for over 60 seconds
+test high::rsa::tests::key_generation_matches_aws_lc has been running for over 60 seconds
+test high::rsa::tests::loads_d_above_lcm has been running for over 60 seconds
+test high::rsa::tests::key_generation_matches_aws_lc ... ok
+test high::rsa::tests::loads_d_above_lcm ... ok
+test high::rsa::tests::loads_q_above_p has been running for over 60 seconds
+test high::rsa::tests::loads_unbalanced_primes has been running for over 60 seconds
+test high::kem::tests::wycheproof_encaps ... ok
+test high::kem::tests::wycheproof_decaps ... ok
+test high::rsa::tests::pairwise_key_formatting ... ok
+test high::rsa::tests::loads_unbalanced_primes ... ok
+test high::rsa::tests::loads_q_above_p ... ok
+test high::oaep::tests::round_trip ... ok
+test high::rsa::tests::pairwise_odd_size_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2048_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2048_sign_verify_pkcs8 has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2560_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2048_sign_verify ... ok
+test high::rsa::tests::pairwise_rsa3072_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2048_sign_verify_pkcs8 ... ok
+test high::rsa::tests::pairwise_rsa4096_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_odd_size_sign_verify ... ok
+test high::rsa::tests::pairwise_rsa6144_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa8192_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pss_salt_must_fit_modulus ... ok
+test high::rsa::tests::pairwise_rsa3072_sign_verify ... ok
+test high::rsa::tests::pairwise_rsa2560_sign_verify ... ok
+test high::rsa::tests::refuses_a_faulty_signature has been running for over 60 seconds
+test high::rsa::tests::refuses_a_faulty_signature ... ok
+test high::rsa::tests::refuses_even_unit_or_wide_exponent has been running for over 60 seconds
+test high::rsa::tests::refuses_mismatched_private_key has been running for over 60 seconds
+test high::rsa::tests::refuses_even_unit_or_wide_exponent ... ok
+test high::rsa::tests::key_generation_known_answer ... ok
+test high::rsa::tests::signs_with_crt_half_above_p has been running for over 60 seconds
+test high::rsa::tests::signs_with_crt_half_above_p ... ok
+test high::rsa::tests::refuses_mismatched_private_key ... ok
+test high::signature::tests::digests_refused_as_unsupported ... ok
+test high::rsa::tests::verify_rejects_signature_not_modulus_length has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa4096_sign_verify ... ok
+test high::signature::tests::ecdsa_key_is_bound_to_its_curve ... ok
+test high::signature::tests::ecdsa_generated_public_key_agrees_whichever_reads_first ... ok
+test high::signature::tests::ecdsa_private_key_round_trips ... ok
+test high::signature::tests::ecdsa_p256_refuses_the_negated_point ... ok
+test high::signature::tests::ecdsa_sec1_round_trips has been running for over 60 seconds
+test high::signature::tests::ecdsa_signs_and_verifies_any_digest has been running for over 60 seconds
+test high::signature::tests::ecdsa_sec1_round_trips ... ok
+test high::signature::tests::ecdsa_signs_and_verifies_any_digest ... ok
+test high::signature::tests::ecdsa_spki_decompresses ... ok
+test high::signature::tests::ecdsa_verification_matches_aws_lc_rs ... ok
+test high::hkdf::tests::acvp_kda ... ok
+test high::signature::tests::ed25519_seed_loads_alone ... ok
+test high::signature::tests::ecdsa_verifies_only_under_its_algorithm has been running for over 60 seconds
+test high::signature::tests::ed25519_seed_and_public_key has been running for over 60 seconds
+test high::signature::tests::ed25519_seed_and_public_key ... ok
+test high::signature::tests::ed25519_seed_round_trips has been running for over 60 seconds
+test high::signature::tests::encodings_fit_the_largest_keys has been running for over 60 seconds
+test high::signature::tests::ecdsa_verifies_only_under_its_algorithm ... ok
+test high::signature::tests::ed25519_seed_round_trips ... ok
+test high::signature::tests::key_loaders_refuse_trailing_bytes ... ok
+test high::signature::tests::public_key_refuses_malformed_keys ... ok
+test high::signature::tests::ml_dsa_encodings ... ok
+test high::signature::tests::public_keys_round_trip_through_spki ... ok
+test high::signature::tests::encodings_fit_the_largest_keys ... ok
+test high::signature::tests::rsa_public_key_components has been running for over 60 seconds
+test high::signature::tests::rsa_signs_as_long_as_the_modulus has been running for over 60 seconds
+test high::vrf::tests::generated_keys_round_trip has been running for over 60 seconds
+test high::vrf::tests::refuses_altered_proofs has been running for over 60 seconds
+test high::rsa::tests::verify_rejects_signature_not_modulus_length ... ok
+test high::vrf::tests::refuses_bad_public_keys has been running for over 60 seconds
+test high::signature::tests::rsa_public_key_components ... ok
+test high::signature::tests::rsa_signs_as_long_as_the_modulus ... ok
+test high::vrf::tests::generated_keys_round_trip ... ok
+test high::vrf::tests::refuses_bad_public_keys ... ok
+test high::vrf::tests::refuses_bad_secret_keys has been running for over 60 seconds
+test high::vrf::tests::refuses_bad_secret_keys ... ok
+test high::vrf::tests::refuses_unreduced_s ... ok
+test high::vrf::tests::stays_secret ... ok
+test high::vrf::tests::rfc9381_vectors has been running for over 60 seconds
+test high::vrf::tests::rfc9381_vectors ... ok
+test low::cpu::tests::has_aes_hardware_matches_keys has been running for over 60 seconds
+test low::cpu::tests::has_aes_hardware_matches_keys ... ok
+test low::cpu::tests::missing_feature_names_it ... ok
+test low::ct_binsec::tests::ct_binsec_planted_branch ... ignored, admin/ct-binsec runs it under BINSEC
+test high::rsa::tests::pairwise_rsa6144_sign_verify ... ok
+test low::ct_binsec::tests::ct_binsec_planted_index ... ignored, admin/ct-binsec runs it under BINSEC
+test low::generic::chacha20::tests::hchacha_test_vectors ... ok
+test low::generic::ct_copy::tests::cond_false_copies_if_false ... ok
+test low::generic::ct_copy::tests::cond_true_keeps_output ... ok
+test low::generic::ct_copy::tests::empty_arrays_are_a_no_op ... ok
+test low::generic::ct_copy::tests::equal_inputs_unchanged_either_way ... ok
+test low::generic::ct_copy::tests::larger_buffer ... ok
+test low::generic::ct_copy::tests::select_bit_unset_returns_if_unset ... ok
+test low::generic::ct_copy::tests::select_bit_set_returns_if_set ... ok
+test low::generic::ct_copy::tests::select_covers_full_i16_range ... ok
+test low::generic::ct_copy::tests::select_does_not_mix_arms ... ok
+test low::generic::ct_copy::tests::select_equal_inputs ... ok
+test low::generic::ct_copy::tests::selects_every_byte_independently has been running for over 60 seconds
+test low::generic::ct_copy::tests::single_byte has been running for over 60 seconds
+test low::generic::ct_equal::tests::matches_eq has been running for over 60 seconds
+test low::generic::ct_copy::tests::selects_every_byte_independently ... ok
+test low::generic::ct_copy::tests::single_byte ... ok
+test low::generic::ghash::tests::test_double ... ok
+test low::generic::ghash::tests::test_mul ... ok
+test low::generic::mldsa_poly::tests::port_meets_contracts ... ok
+test low::generic::mldsa_poly::tests::backend_matches_port has been running for over 60 seconds
+test low::generic::mlkem::tests::output_is_at_most_12_bits ... ok
+test low::generic::mldsa_poly::tests::backend_matches_port ... ok
+test low::generic::mlkem::tests::unpacks_known_values ... ok
+test low::generic::poly1305::tests::aws_lc ... ok
+test low::generic::poly1305::tests::test_vectors ... ok
+test low::generic::reuse_cache::tests::builds_now_on_first_use ... ok
+test low::generic::reuse_cache::tests::builds_on_second_use ... ok
+test low::generic::reuse_cache::tests::never_keeps_beside_a_build ... ok
+test low::generic::poly1305::tests::split_updates ... ok
+test low::portable::ghash_nohw::tests::matches_ssse3_and_model ... ok
+test low::portable::aes_nohw::tests::fips197 ... ok
+test low::generic::reuse_cache::tests::shared_across_threads ... ok
+test low::portable::ghash_nohw::tests::multiplies_match ... ok
+test low::portable::aes_nohw::tests::modes_match_blocks ... ok
+test low::portable::keccak::tests::zero_state ... ok
+test low::generic::zeroise::tests::zero_bytes_clears_only_its_range ... ok
+test low::posint::tests::basics ... ok
+test low::posint::tests::from_bytes ... ok
+test low::posint::tests::is_coprime ... ok
+test low::posint::tests::mul ... ok
+test low::portable::poly1305::tests::hacl_matches_generic ... ok
+test low::posint::tests::aws_lc_mod_mul ... ok
+test low::posint::tests::aws_lc_mod_exp has been running for over 60 seconds
+test low::posint::tests::mont_exp_matches_square_and_multiply has been running for over 60 seconds
+test low::posint::tests::mul_word_mod ... ok
+test low::posint::tests::pub_montifier ... ok
+test low::posint::tests::reduce_even_by_a_word ... ok
+test low::posint::tests::sub_narrower ... ok
+test low::posint::tests::mont_exp_matches_square_and_multiply ... ok
+test low::posint::tests::test_reduce_even ... ok
+test low::posint::tests::to_bytes ... ok
+test mid::aes::tests::aes_ctr_refuses_counter_reuse ... ok
+test mid::aes::tests::counter_bits_match_model ... ok
+test mid::aes::tests::acvp_ctr has been running for over 60 seconds
+test mid::aes::tests::acvp_ctr ... ok
+test mid::aes::tests::acvp_ecb has been running for over 60 seconds
+test mid::aes::tests::cavp has been running for over 60 seconds
+test mid::aes::tests::counter_bits_must_be_1_to_128 ... ok
+test mid::aes::tests::gcm_length_limits ... ok
+test mid::aes::tests::key_length_must_match_algorithm ... ok
+test mid::aes::tests::rfc3686 ... ok
+test mid::aes::tests::sp800_38a ... ok
+test mid::aes::tests::srtp_aes_cm has been running for over 60 seconds
+test mid::aes_cbc::tests::acvp has been running for over 60 seconds
+test low::posint::tests::aws_lc_mod_exp ... ok
+test mid::aes::tests::srtp_aes_cm ... ok
+test mid::aes_cbc::tests::debug_shows_only_the_algorithm ... ok
+test mid::aes_cbc::tests::key_length_must_match_algorithm ... ok
+test mid::aes_cbc::tests::lengths ... ok
+test mid::aes_cbc::tests::padding has been running for over 60 seconds
+test mid::aes_cbc::tests::padding ... ok
+test high::kem::tests::cctv_accumulated ... ok
+test mid::aes_cbc::tests::sp800_38a has been running for over 60 seconds
+test mid::aes_cbc::tests::sp800_38a ... ok
+test mid::aes_gcm::tests::compositions_match_model ... ok
+test mid::aes_gcm::tests::long_round_trip has been running for over 60 seconds
+test mid::aes_gcm::tests::long_round_trip ... ok
+test mid::aes_gcm::tests::smoketest has been running for over 60 seconds
+test mid::aes::tests::acvp_ecb ... ok
+test mid::aes_gcm::tests::smoketest ... ok
+test mid::aes_kw::tests::acvp_kw has been running for over 60 seconds
+test mid::aes_kw::tests::lengths ... ok
+test mid::aes_kw::tests::padded ... ok
+test mid::aes_kw::tests::acvp_kwp has been running for over 60 seconds
+test mid::aes_kw::tests::rfc3394 ... ok
+test mid::aes_kw::tests::rfc5649 ... ok
+test mid::aes_kw::tests::unwrap_failure_clears_key ... ok
+test mid::chacha20::tests::counter_limits has been running for over 60 seconds
+test mid::chacha20::tests::counter_limits ... ok
+test high::vrf::tests::refuses_altered_proofs ... ok
+test mid::chacha20::tests::rfc8439 has been running for over 60 seconds
+test mid::chacha20::tests::rfc8439 ... ok
+test mid::chacha20poly1305::tests::test_vector has been running for over 60 seconds
+test mid::chacha20poly1305::tests::test_vector ... ok
+test mid::hash_to_curve::tests::expand_message_xmd_lengths has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa8192_sign_verify ... ok
+test mid::hash_to_curve::tests::expand_message_xmd_lengths ... ok
+test mid::aes::tests::cavp ... ok
+test mid::hash_to_curve::tests::expand_message_xmd_oversize_dst ... ok
+test low::generic::ct_equal::tests::matches_eq ... ok
+test mid::hash_to_curve::tests::expand_message_xmd_vectors has been running for over 60 seconds
+test mid::md5::tests::length_past_32_bit_usize has been running for over 60 seconds
+test mid::md5::tests::length_past_32_bit_usize ... ok
+test mid::md5::tests::length_wraps_at_2_64_bits has been running for over 60 seconds
+test mid::md5::tests::rfc1321 has been running for over 60 seconds
+test mid::mldsa::tests::acvp_key_gen has been running for over 60 seconds
+test mid::hash_to_curve::tests::expand_message_xmd_vectors ... ok
+test mid::md5::tests::length_wraps_at_2_64_bits ... ok
+test mid::md5::tests::rfc1321 ... ok
+test mid::mldsa::tests::sign_verify_round_trip ... ok
+test mid::aes_cbc::tests::acvp ... ok
+test mid::mlkem768::sample_ntt::tests::twelve_bit_samples_span_blocks ... ok
+test mid::mlkem768::tests::encaps_modulus_test ... ok
+test mid::mlkem768::tests::pairwise ... ok
+test high::digest::tests::cavp ... ok
+test mid::mldsa::tests::acvp_sig_gen has been running for over 60 seconds
+test mid::mlkem768::tests::acvp_key_gen ... ok
+test mid::mlkem768::tests::shared_secret_debug ... ok
+test mid::p256::hash_to_curve::tests::constants ... ok
+test mid::p256::hash_to_curve::tests::crosscheck ... ok
+test mid::p256::hash_to_curve::tests::from_wide ... ok
+test mid::p256::hash_to_curve::tests::hashes_in_constant_time ... ok
+test mid::mlkem768::tests::acvp_encap_decap ... ok
+test mid::mldsa::tests::acvp_key_gen ... ok
+test mid::p256::hash_to_curve::tests::pow_c1 ... ok
+test mid::p256::hash_to_curve::tests::scalar_in_constant_time ... ok
+test mid::p256::hash_to_curve::tests::rfc9380 ... ok
+test mid::mldsa::tests::acvp_sig_ver has been running for over 60 seconds
+test mid::p256::hash_to_curve::tests::sum ... ok
+test mid::p256::tests::curve_field_elements_as_mont ... ok
+test mid::mldsa::tests::wycheproof has been running for over 60 seconds
+test mid::p256::tests::generate_key_1 ... ok
+test mid::p256::tests::base_point_precomp ... ok
+test mid::p256::tests::generate_key_2 ... ok
+test mid::p256::tests::generate_key_known_answer ... ok
+test mid::p256::tests::generator_on_curve ... ok
+test mid::p256::tests::multiply_matches_double_and_add ... ok
+test mid::p256::tests::point_double ... ok
+test mid::p256::tests::private_key_debug ... ok
+test mid::p256::tests::private_key_in_range ... ok
+test mid::p256::tests::test_raw_ecdsa_sign ... ok
+test mid::p256::tests::twin_multiply_exceptional ... ok
+test mid::p384::hash_to_curve::tests::constants ... ok
+test mid::p384::hash_to_curve::tests::crosscheck ... ok
+test mid::p384::hash_to_curve::tests::from_wide ... ok
+test mid::p384::hash_to_curve::tests::hashes_in_constant_time ... ok
+test mid::p384::hash_to_curve::tests::pow_c1 ... ok
+test mid::p384::hash_to_curve::tests::scalar_in_constant_time ... ok
+test mid::p384::hash_to_curve::tests::rfc9380 ... ok
+test mid::p384::hash_to_curve::tests::sum ... ok
+test mid::p384::tests::base_point_precomp_comb ... ok
+test mid::p384::tests::curve_field_elements_as_mont ... ok
+test mid::p384::tests::generate_key_99999999 ... ok
+test mid::p384::tests::generate_key_2 ... ok
+test mid::p384::tests::generate_key_3 ... ok
+test mid::p384::tests::generate_key_1 ... ok
+test mid::p384::tests::generate_key_known_answer ... ok
+test mid::p384::tests::generator_on_curve ... ok
+test mid::p384::tests::point_double ... ok
+test mid::p384::tests::private_key_debug ... ok
+test mid::p384::tests::private_key_in_range ... ok
+test mid::p384::tests::test_raw_ecdsa_sign ... ok
+test mid::p384::tests::multiply_matches_double_and_add ... ok
+test mid::p384::tests::test_scalar ... ok
+test mid::p384::tests::twin_multiply_exceptional ... ok
+test mid::p521::hash_to_curve::tests::constants ... ok
+test mid::p521::hash_to_curve::tests::from_wide ... ok
+test mid::p521::hash_to_curve::tests::hashes_in_constant_time ... ok
+test mid::p521::hash_to_curve::tests::pow_c1 ... ok
+test mid::p521::hash_to_curve::tests::crosscheck ... ok
+test mid::p521::hash_to_curve::tests::rfc9380 ... ok
+test mid::p521::hash_to_curve::tests::scalar_in_constant_time ... ok
+test mid::p521::hash_to_curve::tests::sum ... ok
+test mid::p521::tests::base_point_precomp_comb ... ok
+test mid::p521::tests::generate_key_known_answer ... ok
+test mid::p521::tests::generate_takes_leftmost_521_bits ... ok
+test mid::p521::tests::generator_on_curve ... ok
+test mid::p521::tests::montifier ... ok
+test mid::p521::tests::private_key_debug ... ok
+test mid::p521::tests::private_key_in_range ... ok
+test mid::p521::tests::multiplications_match_double_and_add has been running for over 60 seconds
+test mid::p521::tests::public_add_affine_edges ... ok
+test mid::mldsa::tests::acvp_sig_ver ... ok
+test mid::p521::tests::test_scalar ... ok
+test mid::ristretto255_tests::constant_time ... ok
+test mid::ristretto255_tests::matches_dalek ... ok
+test mid::p521::tests::twin_multiply_exceptional has been running for over 60 seconds
+test mid::p521::tests::twin_multiply_exceptional ... ok
+test mid::ristretto255_tests::rfc9496_from_uniform_bytes ... ok
+test mid::ristretto255_tests::rfc9496_invalid_encodings has been running for over 60 seconds
+test mid::ristretto255_tests::rfc9496_invalid_encodings ... ok
+test mid::ristretto255_tests::rfc9496_multiples_of_the_generator has been running for over 60 seconds
+test mid::ristretto255_tests::rfc9497_oprf has been running for over 60 seconds
+test mid::ristretto255_tests::scalar_bounds has been running for over 60 seconds
+test mid::ristretto255_tests::rfc9496_multiples_of_the_generator ... ok
+test mid::ristretto255_tests::wycheproof_scalar_invert has been running for over 60 seconds
+test mid::ristretto255_tests::rfc9497_oprf ... ok
+test mid::rng::tests::fill_writes_every_byte has been running for over 60 seconds
+test mid::ristretto255_tests::scalar_bounds ... ok
+test mid::rsa_priv::exponents::tests::divides_by_gcd has been running for over 60 seconds
+test mid::ristretto255_tests::wycheproof_scalar_invert ... ok
+test mid::rsa_priv::exponents::tests::inverts_e has been running for over 60 seconds
+test mid::rng::tests::fill_writes_every_byte ... ok
+test mid::rsa_priv::exponents::tests::divides_by_gcd ... ok
+test mid::rsa_priv::exponents::tests::inverts_e ... ok
+test mid::rsa_priv::exponents::tests::reduces_e ... ok
+test mid::rsa_priv::exponents::tests::shifts_right_secret ... ok
+test mid::rsa_priv::generate::tests::test_hosed_rng ... ok
+test mid::rsa_priv::generate::tests::aws_lc_miller_rabin ... ok
+test mid::rsa_priv::generate::tests::test_invalid_primes has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_p_q_close has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_p_q_equal has been running for over 60 seconds
+test mid::p521::tests::multiplications_match_double_and_add ... ok
+test mid::rsa_priv::generate::tests::test_phi_not_coprime_e has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_valid_primes has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_p_q_equal ... ok
+test mid::rsa_priv::generate::tests::test_p_q_close ... ok
+test mid::rsa_priv::tests::acvp_decryption_primitive has been running for over 60 seconds
+test mid::rsa_priv::tests::short_prime_refused ... ok
+test mid::rsa_priv::tests::acvp_signature_primitive has been running for over 60 seconds
+test mid::rsa_pub::tests::smoke ... ok
+test mid::sha1::tests::length_past_32_bit_usize ... ok
+test mid::aes_kw::tests::acvp_kwp ... ok
+test mid::rsa_priv::generate::tests::test_phi_not_coprime_e ... ok
+test mid::sha2::tests::hello ... ok
+test mid::sha2::tests::length_past_32_bit_usize ... ok
+test mid::sha2::tests::sha256_all_lengths ... ok
+test mid::sha2::tests::sha512_all_lengths ... ok
+test mid::sha2::tests::sha512_long ... ok
+test mid::sha3::tests::one_shot_batch_matches_single ... ok
+test mid::sha3::tests::cavp_shake has been running for over 60 seconds
+test mid::sha3::tests::sha3_256_all_lengths ... ok
+test mid::sha3::tests::sha3_512_all_lengths ... ok
+test mid::sha3::tests::shake4x_matches_single ... ok
+test mid::sha3::tests::squeezing_sponge_4x_shake128_matches_single ... ok
+test mid::util::tests::naf ... ok
+test mid::sha3::tests::shake_incremental_read ... ok
+test mid::x25519::tests::base_mul ... ok
+test mid::x25519::tests::random_keys ... ok
+test mid::x25519::tests::rfc7748_2 ... ok
+test mid::x25519::tests::rfc7748_1 ... ok
+test mid::xchacha20poly1305::tests::test_vector ... ok
+test mid::x25519::tests::rfc7748_3 has been running for over 60 seconds
+test mid::rsa_priv::tests::acvp_decryption_primitive ... ok
+test mid::x25519::tests::rfc7748_3 ... ok
+test test::binsec::ct_binsec_aes has been running for over 60 seconds
+test test::binsec::ct_binsec_aes ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_aes_cbc ... ignored, admin/ct-binsec runs it under BINSEC
+test mid::aes_kw::tests::acvp_kw ... ok
+test test::binsec::ct_binsec_aes_gcm ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_aes_kw ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_chacha20 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_chacha20_poly1305 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_constant_time_verify ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_digest ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdh_p256 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdh_p384 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdh_p521 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdsa_p256 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdsa_p384 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdsa_p521 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ed25519 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_hkdf ... ignored, admin/ct-binsec runs it under BINSEC
+test mid::rsa_priv::generate::tests::test_valid_primes ... ok
+test test::binsec::ct_binsec_hmac ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_mlkem768 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_mont_mul ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_pbkdf2 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_quic_header_protection ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_reduce_even ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_rsa_oaep_padding ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_x25519 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_xchacha20_poly1305 ... ignored, admin/ct-binsec runs it under BINSEC
+test mid::mldsa::tests::acvp_sig_gen ... ok
+test mid::rsa_priv::tests::acvp_signature_primitive ... ok
+test high::blind_rsa::tests::rfc9474_vectors ... ok
+test mid::sha3::tests::cavp_shake ... ok
+test mid::rsa_priv::generate::tests::test_invalid_primes ... ok
+test aead::gcm::tests::cavp ... ok
+test mid::mldsa::tests::wycheproof ... ok
+
+test result: ok. 430 passed; 0 failed; 27 ignored; 0 measured; 0 filtered out; finished in 8595.05s
+
+==1894125== 
+==1894125== HEAP SUMMARY:
+==1894125==     in use at exit: 808 bytes in 15 blocks
+==1894125==   total heap usage: 4,770,209 allocs, 4,770,194 frees, 1,014,313,465 bytes allocated
+==1894125== 
+==1894125== LEAK SUMMARY:
+==1894125==    definitely lost: 192 bytes in 12 blocks
+==1894125==    indirectly lost: 0 bytes in 0 blocks
+==1894125==      possibly lost: 48 bytes in 1 blocks
+==1894125==    still reachable: 568 bytes in 2 blocks
+==1894125==         suppressed: 0 bytes in 0 blocks
+==1894125== Rerun with --leak-check=full to see details of leaked memory
+==1894125== 
+==1894125== Use --track-origins=yes to see where uninitialised values come from
+==1894125== For lists of detected and suppressed errors, rerun with: -s
+==1894125== ERROR SUMMARY: 570774 errors from 1 contexts (suppressed: 0 from 0)
+ctgrind: memcheck failed; rerunning with --track-origins=yes
+==1989809== Memcheck, a memory error detector
+==1989809== Copyright (C) 2002-2026, and GNU GPL'd, by Julian Seward et al.
+==1989809== Using Valgrind-3.27.1 and LibVEX; rerun with -h for copyright info
+==1989809== Command: ~/rind-frost-51-ctgrind-portable-target/debug/deps/rind-7ec328873f162901
+==1989809== 
+
+running 457 tests
+test aead::tests::tag_must_be_whole ... ok
+test aead::gcm::tests::tags_are_prefixes ... ok
+test aead::tests::key_length_must_match_algorithm ... ok
+test aead::tests::open_refuses_input_shorter_than_tag ... ok
+test aead::quic::tests::rfc9001 ... ok
+==1989809== Thread 2 high::agreement:
+==1989809== Conditional jump or move depends on uninitialised value(s)
+==1989809==    at 0x4B08725: <curve25519_dalek::montgomery::MontgomeryPoint>::mul_bits_be::<core::iter::adapters::skip::Skip<core::iter::adapters::rev::Rev<core::iter::adapters::map::Map<core::ops::range::Range<usize>, <curve25519_dalek::scalar::Scalar>::bits_le::{closure#0}>>>> (montgomery.rs:194)
+==1989809==    by 0x4B0D053: <&curve25519_dalek::montgomery::MontgomeryPoint as core::ops::arith::Mul<&curve25519_dalek::scalar::Scalar>>::mul (montgomery.rs:491)
+==1989809==    by 0x4B0D128: <&curve25519_dalek::scalar::Scalar as core::ops::arith::Mul<&curve25519_dalek::montgomery::MontgomeryPoint>>::mul (montgomery.rs:505)
+==1989809==    by 0x4B0D73D: <curve25519_dalek::scalar::Scalar as core::ops::arith::Mul<curve25519_dalek::montgomery::MontgomeryPoint>>::mul (macros.rs:108)
+==1989809==    by 0x4B0920B: <curve25519_dalek::montgomery::MontgomeryPoint>::mul_clamped (montgomery.rs:161)
+==1989809==    by 0x4406B20: rind::low::portable::curve25519::curve25519_x25519 (curve25519.rs:13)
+==1989809==    by 0x44E7DAE: <rind::mid::x25519::PrivateKey>::diffie_hellman (x25519.rs:62)
+==1989809==    by 0x46E07C4: <rind::high::agreement::X25519Curve as rind::high::agreement::Agree>::agree (agreement.rs:368)
+==1989809==    by 0x43064D2: <rind::high::agreement::Keyed<rind::high::agreement::X25519Curve>>::agree (agreement.rs:324)
+==1989809==    by 0x46DEADE: <rind::high::agreement::PrivateKey>::agree (agreement.rs:177)
+==1989809==    by 0x43F71B9: rind::high::agreement::tests::acvp_x25519 (agreement.rs:677)
+==1989809==    by 0x46D24A6: rind::high::agreement::tests::acvp_x25519::{closure#0} (agreement.rs:672)
+==1989809==  Uninitialised value was created by a client request
+==1989809==    at 0x47A720C: valgrind_client_request_expr (native.c:17)
+==1989809==    by 0x44F6FE9: mark_memory (src/requests/mod.rs:17)
+==1989809==    by 0x44F6FE9: rind::low::ct::into_secret::<[u64; 4]> (ct.rs:37)
+==1989809==    by 0x46CE8DE: <rind::mid::x25519::PrivateKey>::from_bytes::{closure#0} (x25519.rs:22)
+==1989809==    by 0x45EE122: <core::option::Option<[u64; 4]>>::map::<rind::mid::x25519::PrivateKey, <rind::mid::x25519::PrivateKey>::from_bytes::{closure#0}> (library/core/src/option.rs:1163)
+==1989809==    by 0x44E7A24: <rind::mid::x25519::PrivateKey>::from_bytes (x25519.rs:22)
+==1989809==    by 0x46E04C7: <rind::high::agreement::X25519Curve as rind::high::agreement::Agree>::load (agreement.rs:350)
+==1989809==    by 0x4306308: <rind::high::agreement::Keyed<rind::high::agreement::X25519Curve>>::load (agreement.rs:300)
+==1989809==    by 0x46DEA47: <rind::high::agreement::PrivateKey>::from_scalar (agreement.rs:135)
+==1989809==    by 0x43F6F4D: rind::high::agreement::tests::acvp_x25519 (agreement.rs:675)
+==1989809==    by 0x46D24A6: rind::high::agreement::tests::acvp_x25519::{closure#0} (agreement.rs:672)
+==1989809==    by 0x4367A55: <rind::high::agreement::tests::acvp_x25519::{closure#0} as core::ops::function::FnOnce<()>>::call_once (library/core/src/ops/function.rs:250)
+==1989809==    by 0x47A724A: call_once<fn() -> core::result::Result<(), alloc::string::String>, ()> (function.rs:250)
+==1989809==    by 0x47A724A: test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> (lib.rs:724)
+==1989809== 
+test aead::tests::seal_and_open ... ok
+test aead::tests::randomized_nonce_key ... ok
+test error::tests::key_rejected_displays_its_reason ... ok
+test aead::gcm::tests::refuses_malformed_input ... ok
+test aead::quic::tests::key_length_must_match_algorithm ... ok
+test fips_rng::tests::cast_passes ... ok
+test aead::gcm::tests::acvp ... ok
+test aead::gcm::tests::cavp has been running for over 60 seconds
+test fips_rng::tests::fills_across_requests has been running for over 60 seconds
+test fips_rng::tests::fills_across_requests ... ok
+test fips_rng::tests::threads_draw_independently has been running for over 60 seconds
+test high::agreement::tests::acvp_x25519 has been running for over 60 seconds
+test high::agreement::tests::acvp_x25519_key_gen has been running for over 60 seconds
+test high::agreement::tests::acvp_x25519_key_ver has been running for over 60 seconds
+test high::agreement::tests::agrees has been running for over 60 seconds
+test high::agreement::tests::cavp_ecdh has been running for over 60 seconds
+test high::agreement::tests::decompresses_points has been running for over 60 seconds
+test fips_rng::tests::threads_draw_independently ... ok
+test high::agreement::tests::loads_ecdsa_keys has been running for over 60 seconds
+test high::agreement::tests::acvp_x25519 ... ok
+test high::agreement::tests::acvp_x25519_key_gen ... ok
+test high::agreement::tests::agrees ... ok
+test high::agreement::tests::acvp_x25519_key_ver ... ok
+test high::agreement::tests::decompresses_points ... ok
+test high::agreement::tests::loads_ecdsa_keys ... ok
+test high::agreement::tests::loads_in_constant_time has been running for over 60 seconds
+test high::agreement::tests::public_keys_round_trip has been running for over 60 seconds
+test high::agreement::tests::refuses_scalars has been running for over 60 seconds
+test high::agreement::tests::round_trips has been running for over 60 seconds
+test high::agreement::tests::wycheproof_p256 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_p384 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_p521 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_x25519 has been running for over 60 seconds
+test high::agreement::tests::wycheproof_x25519_pkcs8 has been running for over 60 seconds
+test high::agreement::tests::loads_in_constant_time ... ok
+test high::agreement::tests::public_keys_round_trip ... ok
+test high::agreement::tests::x25519_pkcs8 has been running for over 60 seconds
+test high::agreement::tests::refuses_scalars ... ok
+test high::agreement::tests::round_trips ... ok
+test high::agreement::tests::cavp_ecdh ... ok
+test high::agreement::tests::x25519_pkcs8 ... ok
+test high::asn1::pkix::tests::parse_ec_spki has been running for over 60 seconds
+test high::asn1::pkix::tests::parse_ec_spki ... ok
+test high::asn1::pkix::tests::parse_pkcs8_key ... ok
+test high::asn1::pkix::tests::parse_pkcs8_v2_key ... ok
+test high::asn1::pkix::tests::parse_pkcs8_v2_key_with_attributes ... ok
+test high::asn1::pkix::tests::parse_private_key ... ok
+test high::agreement::tests::wycheproof_x25519_pkcs8 ... ok
+test high::asn1::pkix::tests::parse_public_key ... ok
+test high::asn1::pkix::tests::parse_rsa_spki ... ok
+test high::asn1::tests::test_any ... ok
+test high::agreement::tests::wycheproof_x25519 ... ok
+test high::asn1::pkix::tests::parse_sec1_key ... ok
+test high::asn1::tests::test_canonical_length_requirements has been running for over 60 seconds
+test high::asn1::tests::test_context_tag has been running for over 60 seconds
+test high::asn1::tests::test_encode_errors has been running for over 60 seconds
+test high::asn1::tests::test_canonical_length_requirements ... ok
+test high::asn1::tests::test_context_tag ... ok
+test high::asn1::tests::test_encode_errors ... ok
+test high::asn1::tests::test_encode_len ... ok
+test high::asn1::tests::test_encode_len_limit - should panic ... ok
+test high::asn1::tests::test_enum ... ok
+test high::asn1::tests::test_integer_as_usize ... ok
+test high::asn1::tests::test_error_display has been running for over 60 seconds
+test high::asn1::tests::test_integer_encoding has been running for over 60 seconds
+test high::asn1::tests::test_invalid_bitstring_encodings has been running for over 60 seconds
+test high::asn1::tests::test_invalid_integer_encodings has been running for over 60 seconds
+test high::asn1::tests::test_null has been running for over 60 seconds
+test high::asn1::tests::test_oid has been running for over 60 seconds
+test high::asn1::tests::test_error_display ... ok
+test high::asn1::tests::test_optional has been running for over 60 seconds
+test high::blind_rsa::tests::blind_sign_refuses_bad_requests has been running for over 60 seconds
+test high::asn1::tests::test_integer_encoding ... ok
+test high::blind_rsa::tests::blinding_rejects_bad_blinds has been running for over 60 seconds
+test high::asn1::tests::test_null ... ok
+test high::blind_rsa::tests::debug_shows_no_secrets has been running for over 60 seconds
+test high::asn1::tests::test_invalid_integer_encodings ... ok
+test high::asn1::tests::test_invalid_bitstring_encodings ... ok
+test high::asn1::tests::test_oid ... ok
+test high::blind_rsa::tests::finalize_refuses_bad_replies has been running for over 60 seconds
+test high::blind_rsa::tests::blind_sign_refuses_bad_requests ... ok
+test high::blind_rsa::tests::refuses_a_key_sharing_a_factor_with_the_message has been running for over 60 seconds
+test high::blind_rsa::tests::refuses_other_keys has been running for over 60 seconds
+test high::asn1::tests::test_optional ... ok
+test high::blind_rsa::tests::blinding_rejects_bad_blinds ... ok
+test high::blind_rsa::tests::debug_shows_no_secrets ... ok
+test high::agreement::tests::wycheproof_p256 ... ok
+test high::blind_rsa::tests::refuses_a_key_sharing_a_factor_with_the_message ... ok
+test high::blind_rsa::tests::refuses_other_keys ... ok
+test high::constant_time::tests::contents_stay_secret ... ok
+test high::blind_rsa::tests::rfc9474_vectors has been running for over 60 seconds
+test high::blind_rsa::tests::rfc9578_token has been running for over 60 seconds
+test high::blind_rsa::tests::round_trip has been running for over 60 seconds
+test high::blind_rsa::tests::signatures_are_bound_to_their_variant has been running for over 60 seconds
+test high::blind_rsa::tests::stays_secret has been running for over 60 seconds
+test high::constant_time::tests::unequal_lengths has been running for over 60 seconds
+test high::curve::tests::cavp_keypair has been running for over 60 seconds
+test high::constant_time::tests::unequal_lengths ... ok
+test high::curve::tests::cavp_pkv has been running for over 60 seconds
+test high::blind_rsa::tests::rfc9578_token ... ok
+test high::blind_rsa::tests::finalize_refuses_bad_replies ... ok
+test high::curve::tests::cavp_pkv ... ok
+test high::curve::tests::cavp_keypair ... ok
+test high::blind_rsa::tests::stays_secret ... ok
+test high::curve::tests::is_zero ... ok
+test high::curve::tests::non_canonical_coordinates ... ok
+test high::curve::tests::private_key_encode_error ... ok
+test high::blind_rsa::tests::signatures_are_bound_to_their_variant ... ok
+test high::digest::tests::acvp_sha256 has been running for over 60 seconds
+test high::digest::tests::acvp_sha384 has been running for over 60 seconds
+test high::digest::tests::acvp_sha3_256 has been running for over 60 seconds
+test high::digest::tests::acvp_sha3_384 has been running for over 60 seconds
+test high::digest::tests::acvp_sha3_512 has been running for over 60 seconds
+test high::digest::tests::acvp_sha512 has been running for over 60 seconds
+test high::digest::tests::acvp_sha512_256 has been running for over 60 seconds
+test high::digest::tests::acvp_sha3_512 ... ok
+test high::digest::tests::acvp_sha3_256 ... ok
+test high::digest::tests::cavp has been running for over 60 seconds
+test high::digest::tests::cavp_monte_carlo has been running for over 60 seconds
+test high::digest::tests::cavp_monte_carlo ... ok
+test high::digest::tests::acvp_sha3_384 ... ok
+test high::digest::tests::finish_resets ... ok
+test high::digest::tests::rfc1321 ... ok
+test high::digest::tests::secret_message ... ok
+test high::ecdsa::tests::acvp_key_gen ... ok
+test high::ecdsa::tests::acvp_det_sig_gen ... ok
+test high::ecdsa::tests::acvp_key_ver ... ok
+test high::ecdsa::tests::acvp_sig_gen has been running for over 60 seconds
+test high::ecdsa::tests::acvp_sig_ver has been running for over 60 seconds
+test high::ecdsa::tests::acvp_sig_ver ... ok
+test high::ecdsa::tests::aws_lc_sign has been running for over 60 seconds
+test high::ecdsa::tests::acvp_sig_gen ... ok
+test high::ecdsa::tests::aws_lc_verify has been running for over 60 seconds
+test high::ecdsa::tests::aws_lc_sign ... ok
+test high::ecdsa::tests::cavp_sigver has been running for over 60 seconds
+test high::digest::tests::acvp_sha384 ... ok
+test high::ecdsa::tests::digest_signing_matches_message_signing has been running for over 60 seconds
+test high::ecdsa::tests::digest_signing_matches_message_signing ... ok
+test high::ecdsa::tests::rejects_invalid_asn1_sigs ... ok
+test high::ecdsa::tests::rfc6979_p521_test_vectors ... ok
+test high::ecdsa::tests::aws_lc_verify ... ok
+test high::ecdsa::tests::sign_retries_when_s_is_zero ... ok
+test high::ecdsa::tests::rfc6979_test_vectors ... ok
+test high::ecdsa::tests::smoke_test_ecdsa_sign has been running for over 60 seconds
+test high::ecdsa::tests::smoke_test_ecdsa_sign ... ok
+test high::ecdsa::tests::smoke_test_loading_keys has been running for over 60 seconds
+test high::ecdsa::tests::smoke_test_loading_keys ... ok
+test high::ed25519::tests::acvp_key_gen has been running for over 60 seconds
+test high::digest::tests::acvp_sha256 ... ok
+test high::ed25519::tests::acvp_key_ver has been running for over 60 seconds
+test high::ed25519::tests::acvp_sig_gen has been running for over 60 seconds
+test high::ed25519::tests::acvp_key_gen ... ok
+test high::ed25519::tests::acvp_key_ver ... ok
+test high::ed25519::tests::acvp_sig_gen ... ok
+test high::ed25519::tests::acvp_sig_ver has been running for over 60 seconds
+test high::ed25519::tests::decode_pkcs8_v1 has been running for over 60 seconds
+test high::ed25519::tests::pairwise has been running for over 60 seconds
+test high::ed25519::tests::decode_pkcs8_v1 ... ok
+test high::ed25519::tests::acvp_sig_ver ... ok
+test high::ed25519::tests::pkcs8_public_key_wrong has been running for over 60 seconds
+test high::ed25519::tests::pairwise ... ok
+test high::ed25519::tests::round_trip_pkcs8_v2 has been running for over 60 seconds
+test high::ed25519::tests::pkcs8_public_key_wrong ... ok
+test high::ed25519::tests::small_order has been running for over 60 seconds
+test high::agreement::tests::wycheproof_p521 ... ok
+test high::ed25519::tests::round_trip_pkcs8_v2 ... ok
+test high::ed25519::tests::spki_encode_length has been running for over 60 seconds
+test high::ed25519::tests::verifying_key_from_bytes has been running for over 60 seconds
+test high::ecdsa::tests::cavp_sigver ... ok
+test high::frost::api_tests::an_altered_share_names_its_participant has been running for over 60 seconds
+test high::frost::api_tests::each_suite_signs_and_verifies has been running for over 60 seconds
+test high::ed25519::tests::small_order ... ok
+test high::ed25519::tests::spki_encode_length ... ok
+test high::blind_rsa::tests::round_trip ... ok
+test high::ed25519::tests::verifying_key_from_bytes ... ok
+test high::frost::api_tests::an_altered_share_names_its_participant ... ok
+test high::frost::api_tests::encodings_reject_malformed_inputs has been running for over 60 seconds
+test high::frost::api_tests::hostile_input_is_refused has been running for over 60 seconds
+test high::frost::api_tests::secret_dealing_and_signing has been running for over 60 seconds
+test high::frost::api_tests::sign_reports_a_nonce_commitment_mismatch has been running for over 60 seconds
+test high::frost::api_tests::each_suite_signs_and_verifies ... ok
+test high::digest::tests::acvp_sha512_256 ... ok
+test high::frost::api_tests::encodings_reject_malformed_inputs ... ok
+test high::frost::api_tests::hostile_input_is_refused ... ok
+test high::frost::vectors::refuses_a_bad_commitment has been running for over 60 seconds
+test high::frost::vectors::rfc9591_ed25519 has been running for over 60 seconds
+test high::frost::api_tests::secret_dealing_and_signing ... ok
+test high::digest::tests::acvp_sha512 ... ok
+test high::frost::api_tests::sign_reports_a_nonce_commitment_mismatch ... ok
+test high::frost::vectors::refuses_a_bad_commitment ... ok
+test high::frost::vectors::rfc9591_ed25519 ... ok
+test high::frost::vectors::rfc9591_p256 ... ok
+test high::frost::vectors::rfc9591_encodings_match_the_vectors ... ok
+test high::frost::vectors::rfc9591_ristretto255 ... ok
+test high::hkdf::tests::keys_match_filled_bytes ... ok
+test high::hkdf::tests::lengths ... ok
+test high::hkdf::tests::rfc5869 ... ok
+test high::hkdf::tests::rfc9001_initial_secrets ... ok
+test high::hkdf::tests::secret_ikm ... ok
+test high::hkdf::tests::acvp_kda has been running for over 60 seconds
+test high::hmac::tests::acvp has been running for over 60 seconds
+test high::hmac::tests::cavp has been running for over 60 seconds
+test high::hmac::tests::secret_key_and_message has been running for over 60 seconds
+test high::hmac::tests::secret_key_and_message ... ok
+test high::hmac::tests::smoke has been running for over 60 seconds
+test high::hmac::tests::verify_whole_tags_only has been running for over 60 seconds
+test high::hmac::tests::smoke ... ok
+test high::hmac::tests::verify_whole_tags_only ... ok
+test high::hmac_drbg::tests::cavp has been running for over 60 seconds
+test high::hmac_drbg::tests::rfc6979_example ... ok
+test high::hmac_drbg::tests::secret_entropy_and_state ... ok
+test high::hmac_drbg::tests::zeroise_wipes_the_state_under_wipe ... ok
+test high::hpke::tests::debug_shows_no_secret ... ok
+test high::hpke::tests::derives_from_any_length has been running for over 60 seconds
+test high::hpke::tests::every_suite_round_trips has been running for over 60 seconds
+test high::hpke::tests::derives_from_any_length ... ok
+test high::hmac::tests::acvp ... ok
+test high::hpke::tests::failed_open_keeps_sequence ... ok
+test high::hpke::tests::message_limit ... ok
+test high::hpke::tests::panicking_append_spends_nonce ... ok
+test high::hpke::tests::refuses_malformed_keys ... ok
+test high::hpke::tests::opens_compressed_enc ... ok
+test high::hpke::tests::rfc9180 has been running for over 60 seconds
+test high::hpke::tests::secret_decapsulation ... ok
+test high::hpke::tests::secret_key_derivation ... ok
+test high::hpke::tests::every_suite_round_trips ... ok
+test high::hpke::tests::suite_and_info_bind ... ok
+test high::hpke::tests::wycheproof_encap ... ok
+test high::hmac::tests::cavp ... ok
+test high::hpke::tests::wycheproof_decrypt has been running for over 60 seconds
+test high::hpke::tests::wycheproof_sequence has been running for over 60 seconds
+test high::hpke::tests::wycheproof_decrypt ... ok
+test high::kem::tests::boringssl has been running for over 60 seconds
+test high::kem::tests::cctv_accumulated has been running for over 60 seconds
+test high::kem::tests::cctv_intermediate has been running for over 60 seconds
+test high::hpke::tests::wycheproof_sequence ... ok
+test high::kem::tests::cctv_intermediate ... ok
+test high::kem::tests::cctv_modulus has been running for over 60 seconds
+test high::kem::tests::cctv_modulus ... ok
+test high::kem::tests::cctv_strcmp has been running for over 60 seconds
+test high::kem::tests::boringssl ... ok
+test high::kem::tests::cctv_strcmp ... ok
+test high::kem::tests::cctv_unlucky_sample has been running for over 60 seconds
+test high::kem::tests::crosscheck::encapsulated_by_theirs has been running for over 60 seconds
+test high::kem::tests::cctv_unlucky_sample ... ok
+test high::kem::tests::wycheproof_decaps has been running for over 60 seconds
+test high::kem::tests::crosscheck::encapsulated_by_theirs ... ok
+test high::kem::tests::wycheproof_encaps has been running for over 60 seconds
+test high::kem::tests::wycheproof_keygen has been running for over 60 seconds
+test high::oaep::tests::every_failure_is_the_same has been running for over 60 seconds
+test high::oaep::tests::every_failure_is_the_same ... ok
+test high::oaep::tests::refuses_small_public_keys ... ok
+test high::oaep::tests::round_trip has been running for over 60 seconds
+test high::hmac_drbg::tests::cavp ... ok
+test high::oaep::tests::stays_secret has been running for over 60 seconds
+test high::oaep::tests::stays_secret ... ok
+test high::hpke::tests::rfc9180 ... ok
+test high::pbkdf2::tests::lengths has been running for over 60 seconds
+test high::pbkdf2::tests::lengths ... ok
+test high::pbkdf2::tests::secret_password ... ok
+test high::kem::tests::wycheproof_keygen ... ok
+test high::pbkdf2::tests::verify_checks_every_byte has been running for over 60 seconds
+test high::pkcs1::tests::digestinfos_are_correct has been running for over 60 seconds
+test high::pkcs1::tests::oaep_needs_two_hashes_and_two_bytes has been running for over 60 seconds
+test high::pbkdf2::tests::verify_checks_every_byte ... ok
+test high::pkcs1::tests::digestinfos_are_correct ... ok
+test high::pkcs1::tests::oaep_needs_two_hashes_and_two_bytes ... ok
+test high::pkcs1::tests::oaep_refuses_wrong_label_and_nonzero_first_byte has been running for over 60 seconds
+test high::pkcs1::tests::oaep_refuses_wrong_label_and_nonzero_first_byte ... ok
+test high::pkcs1::tests::pss_encode_test has been running for over 60 seconds
+test high::kem::tests::wycheproof_decaps ... ok
+test high::pkcs8::tests::construct_ed25519 has been running for over 60 seconds
+test high::pkcs1::tests::pss_encode_test ... ok
+test high::pkcs8::tests::rejects_unknown_version has been running for over 60 seconds
+test high::pkcs8::tests::construct_ed25519 ... ok
+test high::pkcs8::tests::rejects_wrong_version_for_public_key has been running for over 60 seconds
+test high::pkcs8::tests::round_trip_ed25519_v2 has been running for over 60 seconds
+test high::pkcs8::tests::rejects_unknown_version ... ok
+test high::pkcs8::tests::skips_attributes has been running for over 60 seconds
+test high::pkcs8::tests::rejects_wrong_version_for_public_key ... ok
+test high::kem::tests::wycheproof_encaps ... ok
+test high::pkcs8::tests::round_trip_ed25519_v2 ... ok
+test high::rsa::tests::acvp_sig_gen has been running for over 60 seconds
+test high::agreement::tests::wycheproof_p384 ... ok
+test high::rsa::tests::acvp_sig_ver has been running for over 60 seconds
+test high::pkcs8::tests::skips_attributes ... ok
+test high::rsa::tests::i2osp_refuses_what_does_not_fit has been running for over 60 seconds
+test high::rsa::tests::key_generation_known_answer has been running for over 60 seconds
+test high::rsa::tests::key_generation_matches_aws_lc has been running for over 60 seconds
+test high::rsa::tests::acvp_sig_gen ... ok
+test high::rsa::tests::loads_d_above_lcm has been running for over 60 seconds
+test high::rsa::tests::i2osp_refuses_what_does_not_fit ... ok
+test high::rsa::tests::acvp_sig_ver ... ok
+test high::rsa::tests::loads_q_above_p has been running for over 60 seconds
+test high::rsa::tests::loads_d_above_lcm ... ok
+test high::rsa::tests::loads_unbalanced_primes has been running for over 60 seconds
+test high::rsa::tests::key_generation_matches_aws_lc ... ok
+test high::rsa::tests::pairwise_key_formatting has been running for over 60 seconds
+test high::rsa::tests::pairwise_odd_size_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_key_formatting ... ok
+test high::rsa::tests::pairwise_rsa2048_sign_verify has been running for over 60 seconds
+test high::rsa::tests::loads_q_above_p ... ok
+test high::rsa::tests::pairwise_rsa2048_sign_verify_pkcs8 has been running for over 60 seconds
+test high::oaep::tests::round_trip ... ok
+test high::rsa::tests::loads_unbalanced_primes ... ok
+test high::rsa::tests::pairwise_rsa2560_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa3072_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2048_sign_verify ... ok
+test high::rsa::tests::pairwise_rsa4096_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2048_sign_verify_pkcs8 ... ok
+test high::rsa::tests::pairwise_rsa6144_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pairwise_odd_size_sign_verify ... ok
+test high::rsa::tests::pairwise_rsa8192_sign_verify has been running for over 60 seconds
+test high::rsa::tests::pss_salt_must_fit_modulus has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa2560_sign_verify ... ok
+test high::rsa::tests::pss_salt_must_fit_modulus ... ok
+test high::hkdf::tests::acvp_kda ... ok
+test high::rsa::tests::refuses_a_faulty_signature has been running for over 60 seconds
+test high::rsa::tests::refuses_even_unit_or_wide_exponent has been running for over 60 seconds
+test high::rsa::tests::refuses_a_faulty_signature ... ok
+test high::rsa::tests::refuses_mismatched_private_key has been running for over 60 seconds
+test high::rsa::tests::refuses_even_unit_or_wide_exponent ... ok
+test high::rsa::tests::pairwise_rsa3072_sign_verify ... ok
+test high::rsa::tests::signs_with_crt_half_above_p has been running for over 60 seconds
+test high::rsa::tests::key_generation_known_answer ... ok
+test high::rsa::tests::verify_rejects_signature_not_modulus_length has been running for over 60 seconds
+test high::rsa::tests::signs_with_crt_half_above_p ... ok
+test high::signature::tests::digests_refused_as_unsupported has been running for over 60 seconds
+test high::signature::tests::ecdsa_generated_public_key_agrees_whichever_reads_first has been running for over 60 seconds
+test high::rsa::tests::refuses_mismatched_private_key ... ok
+test high::signature::tests::digests_refused_as_unsupported ... ok
+test high::signature::tests::ecdsa_key_is_bound_to_its_curve has been running for over 60 seconds
+test high::signature::tests::ecdsa_generated_public_key_agrees_whichever_reads_first ... ok
+test high::signature::tests::ecdsa_p256_refuses_the_negated_point has been running for over 60 seconds
+test high::signature::tests::ecdsa_private_key_round_trips has been running for over 60 seconds
+test high::signature::tests::ecdsa_key_is_bound_to_its_curve ... ok
+test high::signature::tests::ecdsa_p256_refuses_the_negated_point ... ok
+test high::signature::tests::ecdsa_sec1_round_trips has been running for over 60 seconds
+test high::signature::tests::ecdsa_signs_and_verifies_any_digest has been running for over 60 seconds
+test high::signature::tests::ecdsa_private_key_round_trips ... ok
+test high::signature::tests::ecdsa_spki_decompresses has been running for over 60 seconds
+test high::rsa::tests::pairwise_rsa4096_sign_verify ... ok
+test high::signature::tests::ecdsa_verification_matches_aws_lc_rs has been running for over 60 seconds
+test high::signature::tests::ecdsa_sec1_round_trips ... ok
+test high::signature::tests::ecdsa_verifies_only_under_its_algorithm has been running for over 60 seconds
+test high::signature::tests::ecdsa_spki_decompresses ... ok
+test high::signature::tests::ecdsa_signs_and_verifies_any_digest ... ok
+test high::signature::tests::ecdsa_verification_matches_aws_lc_rs ... ok
+test high::signature::tests::ecdsa_verifies_only_under_its_algorithm ... ok
+test high::signature::tests::ed25519_seed_and_public_key ... ok
+test high::signature::tests::ed25519_seed_loads_alone ... ok
+test high::signature::tests::ed25519_seed_round_trips has been running for over 60 seconds
+test high::signature::tests::encodings_fit_the_largest_keys has been running for over 60 seconds
+test high::signature::tests::key_loaders_refuse_trailing_bytes has been running for over 60 seconds
+test high::signature::tests::ml_dsa_encodings has been running for over 60 seconds
+test high::signature::tests::ed25519_seed_round_trips ... ok
+test high::signature::tests::public_key_refuses_malformed_keys has been running for over 60 seconds
+test high::signature::tests::key_loaders_refuse_trailing_bytes ... ok
+test high::signature::tests::ml_dsa_encodings ... ok
+test high::signature::tests::public_key_refuses_malformed_keys ... ok
+test high::signature::tests::public_keys_round_trip_through_spki has been running for over 60 seconds
+test high::signature::tests::rsa_public_key_components has been running for over 60 seconds
+test high::signature::tests::rsa_signs_as_long_as_the_modulus has been running for over 60 seconds
+test high::signature::tests::rsa_public_key_components ... ok
+test high::vrf::tests::generated_keys_round_trip has been running for over 60 seconds
+test high::signature::tests::public_keys_round_trip_through_spki ... ok
+test high::vrf::tests::refuses_altered_proofs has been running for over 60 seconds
+test high::signature::tests::rsa_signs_as_long_as_the_modulus ... ok
+test high::vrf::tests::generated_keys_round_trip ... ok
+test high::vrf::tests::refuses_bad_public_keys has been running for over 60 seconds
+test high::vrf::tests::refuses_bad_secret_keys has been running for over 60 seconds
+test high::signature::tests::encodings_fit_the_largest_keys ... ok
+test high::vrf::tests::refuses_unreduced_s has been running for over 60 seconds
+test high::vrf::tests::refuses_bad_public_keys ... ok
+test high::vrf::tests::refuses_bad_secret_keys ... ok
+test high::vrf::tests::rfc9381_vectors has been running for over 60 seconds
+test high::vrf::tests::stays_secret has been running for over 60 seconds
+test high::vrf::tests::refuses_unreduced_s ... ok
+test low::cpu::tests::has_aes_hardware_matches_keys has been running for over 60 seconds
+test high::vrf::tests::rfc9381_vectors ... ok
+test low::cpu::tests::missing_feature_names_it has been running for over 60 seconds
+test high::vrf::tests::stays_secret ... ok
+test low::cpu::tests::has_aes_hardware_matches_keys ... ok
+test low::ct_binsec::tests::ct_binsec_planted_branch has been running for over 60 seconds
+test low::ct_binsec::tests::ct_binsec_planted_index has been running for over 60 seconds
+test low::cpu::tests::missing_feature_names_it ... ok
+test low::generic::chacha20::tests::hchacha_test_vectors has been running for over 60 seconds
+test low::ct_binsec::tests::ct_binsec_planted_branch ... ignored, admin/ct-binsec runs it under BINSEC
+test low::generic::ct_copy::tests::cond_false_copies_if_false has been running for over 60 seconds
+test low::ct_binsec::tests::ct_binsec_planted_index ... ignored, admin/ct-binsec runs it under BINSEC
+test low::generic::chacha20::tests::hchacha_test_vectors ... ok
+test low::generic::ct_copy::tests::cond_true_keeps_output has been running for over 60 seconds
+test low::generic::ct_copy::tests::cond_false_copies_if_false ... ok
+test low::generic::ct_copy::tests::empty_arrays_are_a_no_op has been running for over 60 seconds
+test low::generic::ct_copy::tests::cond_true_keeps_output ... ok
+test low::generic::ct_copy::tests::equal_inputs_unchanged_either_way has been running for over 60 seconds
+test high::rsa::tests::verify_rejects_signature_not_modulus_length ... ok
+test low::generic::ct_copy::tests::equal_inputs_unchanged_either_way ... ok
+test low::generic::ct_copy::tests::larger_buffer ... ok
+test low::generic::ct_copy::tests::empty_arrays_are_a_no_op ... ok
+test low::generic::ct_copy::tests::select_bit_set_returns_if_set ... ok
+test high::rsa::tests::pairwise_rsa6144_sign_verify ... ok
+test low::generic::ct_copy::tests::select_equal_inputs ... ok
+test low::generic::ct_copy::tests::select_does_not_mix_arms ... ok
+test low::generic::ct_copy::tests::select_covers_full_i16_range ... ok
+test low::generic::ct_copy::tests::select_bit_unset_returns_if_unset has been running for over 60 seconds
+test low::generic::ct_copy::tests::selects_every_byte_independently has been running for over 60 seconds
+test low::generic::ct_copy::tests::single_byte has been running for over 60 seconds
+test low::generic::ct_equal::tests::matches_eq has been running for over 60 seconds
+test low::generic::ghash::tests::test_double has been running for over 60 seconds
+test low::generic::ct_copy::tests::single_byte ... ok
+test low::generic::ghash::tests::test_mul has been running for over 60 seconds
+test low::generic::ct_copy::tests::select_bit_unset_returns_if_unset ... ok
+test low::generic::ct_copy::tests::selects_every_byte_independently ... ok
+test low::generic::ghash::tests::test_double ... ok
+test low::generic::mldsa_poly::tests::backend_matches_port has been running for over 60 seconds
+test low::generic::mldsa_poly::tests::port_meets_contracts has been running for over 60 seconds
+test low::generic::mlkem::tests::output_is_at_most_12_bits has been running for over 60 seconds
+test low::generic::ghash::tests::test_mul ... ok
+test low::generic::mlkem::tests::unpacks_known_values has been running for over 60 seconds
+test low::generic::mlkem::tests::output_is_at_most_12_bits ... ok
+test low::generic::poly1305::tests::aws_lc has been running for over 60 seconds
+test low::generic::mldsa_poly::tests::backend_matches_port ... ok
+test low::generic::poly1305::tests::split_updates has been running for over 60 seconds
+test low::generic::mldsa_poly::tests::port_meets_contracts ... ok
+test low::generic::mlkem::tests::unpacks_known_values ... ok
+test low::generic::poly1305::tests::test_vectors has been running for over 60 seconds
+test low::generic::reuse_cache::tests::builds_now_on_first_use has been running for over 60 seconds
+test low::generic::poly1305::tests::aws_lc ... ok
+test low::generic::reuse_cache::tests::builds_on_second_use has been running for over 60 seconds
+test low::generic::poly1305::tests::split_updates ... ok
+test low::generic::poly1305::tests::test_vectors ... ok
+test low::generic::reuse_cache::tests::never_keeps_beside_a_build has been running for over 60 seconds
+test low::generic::reuse_cache::tests::builds_now_on_first_use ... ok
+test low::generic::reuse_cache::tests::shared_across_threads has been running for over 60 seconds
+test low::generic::zeroise::tests::zero_bytes_clears_only_its_range has been running for over 60 seconds
+test low::generic::reuse_cache::tests::builds_on_second_use ... ok
+test low::generic::reuse_cache::tests::never_keeps_beside_a_build ... ok
+test low::portable::aes_nohw::tests::fips197 has been running for over 60 seconds
+test low::generic::zeroise::tests::zero_bytes_clears_only_its_range ... ok
+test low::portable::aes_nohw::tests::modes_match_blocks has been running for over 60 seconds
+test low::portable::ghash_nohw::tests::matches_ssse3_and_model has been running for over 60 seconds
+test low::generic::reuse_cache::tests::shared_across_threads ... ok
+test low::portable::ghash_nohw::tests::multiplies_match has been running for over 60 seconds
+test low::portable::aes_nohw::tests::fips197 ... ok
+test low::portable::ghash_nohw::tests::matches_ssse3_and_model ... ok
+test low::portable::aes_nohw::tests::modes_match_blocks ... ok
+test low::portable::keccak::tests::zero_state has been running for over 60 seconds
+test low::portable::ghash_nohw::tests::multiplies_match ... ok
+test low::portable::poly1305::tests::hacl_matches_generic has been running for over 60 seconds
+test low::posint::tests::aws_lc_mod_exp has been running for over 60 seconds
+test low::posint::tests::aws_lc_mod_mul has been running for over 60 seconds
+test low::portable::keccak::tests::zero_state ... ok
+test low::posint::tests::basics has been running for over 60 seconds
+test low::portable::poly1305::tests::hacl_matches_generic ... ok
+test low::posint::tests::from_bytes has been running for over 60 seconds
+test low::posint::tests::basics ... ok
+test low::posint::tests::aws_lc_mod_mul ... ok
+test high::digest::tests::cavp ... ok
+test low::posint::tests::is_coprime has been running for over 60 seconds
+test low::posint::tests::from_bytes ... ok
+test high::kem::tests::cctv_accumulated ... ok
+test low::posint::tests::mont_exp_matches_square_and_multiply has been running for over 60 seconds
+test low::posint::tests::mul has been running for over 60 seconds
+test low::posint::tests::mul_word_mod has been running for over 60 seconds
+test low::posint::tests::is_coprime ... ok
+test low::posint::tests::pub_montifier has been running for over 60 seconds
+test high::vrf::tests::refuses_altered_proofs ... ok
+test low::posint::tests::mul ... ok
+test low::posint::tests::reduce_even_by_a_word has been running for over 60 seconds
+test low::posint::tests::mul_word_mod ... ok
+test low::posint::tests::pub_montifier ... ok
+test low::posint::tests::sub_narrower has been running for over 60 seconds
+test low::posint::tests::mont_exp_matches_square_and_multiply ... ok
+test low::posint::tests::reduce_even_by_a_word ... ok
+test low::posint::tests::sub_narrower ... ok
+test low::posint::tests::test_reduce_even has been running for over 60 seconds
+test low::posint::tests::to_bytes has been running for over 60 seconds
+test mid::aes::tests::acvp_ctr has been running for over 60 seconds
+test low::posint::tests::aws_lc_mod_exp ... ok
+test low::posint::tests::test_reduce_even ... ok
+test mid::aes::tests::acvp_ecb has been running for over 60 seconds
+test mid::aes::tests::aes_ctr_refuses_counter_reuse has been running for over 60 seconds
+test mid::aes::tests::cavp has been running for over 60 seconds
+test mid::aes::tests::counter_bits_match_model has been running for over 60 seconds
+test mid::aes::tests::counter_bits_must_be_1_to_128 has been running for over 60 seconds
+test low::posint::tests::to_bytes ... ok
+test mid::aes::tests::aes_ctr_refuses_counter_reuse ... ok
+test mid::aes::tests::gcm_length_limits has been running for over 60 seconds
+test mid::aes::tests::key_length_must_match_algorithm has been running for over 60 seconds
+test mid::aes::tests::counter_bits_match_model ... ok
+test mid::aes::tests::rfc3686 has been running for over 60 seconds
+test mid::aes::tests::acvp_ctr ... ok
+test mid::aes::tests::sp800_38a has been running for over 60 seconds
+test mid::aes::tests::counter_bits_must_be_1_to_128 ... ok
+test high::rsa::tests::pairwise_rsa8192_sign_verify ... ok
+test mid::aes::tests::srtp_aes_cm has been running for over 60 seconds
+test mid::aes::tests::gcm_length_limits ... ok
+test mid::aes::tests::key_length_must_match_algorithm ... ok
+test mid::aes::tests::rfc3686 ... ok
+test mid::aes::tests::sp800_38a ... ok
+test mid::aes::tests::srtp_aes_cm ... ok
+test mid::aes_cbc::tests::debug_shows_only_the_algorithm ... ok
+test mid::aes_cbc::tests::key_length_must_match_algorithm ... ok
+test mid::aes_cbc::tests::sp800_38a ... ok
+test mid::aes_cbc::tests::acvp has been running for over 60 seconds
+test mid::aes_cbc::tests::lengths has been running for over 60 seconds
+test mid::aes_cbc::tests::padding has been running for over 60 seconds
+test mid::aes_gcm::tests::compositions_match_model has been running for over 60 seconds
+test mid::aes_gcm::tests::long_round_trip has been running for over 60 seconds
+test mid::aes_gcm::tests::long_round_trip ... ok
+test mid::aes_gcm::tests::smoketest has been running for over 60 seconds
+test mid::aes_cbc::tests::padding ... ok
+test mid::aes_kw::tests::acvp_kw has been running for over 60 seconds
+test mid::aes::tests::acvp_ecb ... ok
+test mid::aes_kw::tests::acvp_kwp has been running for over 60 seconds
+test mid::aes_cbc::tests::lengths ... ok
+test mid::aes_gcm::tests::compositions_match_model ... ok
+test mid::aes_gcm::tests::smoketest ... ok
+test mid::aes_kw::tests::lengths ... ok
+test mid::aes_kw::tests::padded ... ok
+test mid::aes_kw::tests::rfc5649 ... ok
+test mid::aes_kw::tests::unwrap_failure_clears_key ... ok
+test mid::chacha20::tests::counter_limits ... ok
+test mid::aes_kw::tests::rfc3394 ... ok
+test mid::chacha20::tests::rfc8439 ... ok
+test mid::hash_to_curve::tests::expand_message_xmd_oversize_dst ... ok
+test mid::chacha20poly1305::tests::test_vector ... ok
+test mid::md5::tests::length_wraps_at_2_64_bits ... ok
+test mid::md5::tests::length_past_32_bit_usize ... ok
+test mid::hash_to_curve::tests::expand_message_xmd_lengths ... ok
+test mid::md5::tests::rfc1321 ... ok
+test mid::hash_to_curve::tests::expand_message_xmd_vectors ... ok
+test mid::mldsa::tests::sign_verify_round_trip ... ok
+test mid::mldsa::tests::acvp_key_gen has been running for over 60 seconds
+test mid::mldsa::tests::acvp_sig_gen has been running for over 60 seconds
+test mid::mldsa::tests::acvp_sig_ver has been running for over 60 seconds
+test mid::mldsa::tests::wycheproof has been running for over 60 seconds
+test mid::mlkem768::sample_ntt::tests::twelve_bit_samples_span_blocks ... ok
+test low::generic::ct_equal::tests::matches_eq ... ok
+test mid::aes::tests::cavp ... ok
+test mid::mlkem768::tests::encaps_modulus_test ... ok
+test mid::mlkem768::tests::acvp_encap_decap has been running for over 60 seconds
+test mid::mlkem768::tests::acvp_key_gen has been running for over 60 seconds
+test mid::mlkem768::tests::pairwise ... ok
+test mid::mlkem768::tests::shared_secret_debug ... ok
+test mid::mlkem768::tests::acvp_key_gen ... ok
+test mid::p256::hash_to_curve::tests::constants ... ok
+test mid::p256::hash_to_curve::tests::crosscheck ... ok
+test mid::p256::hash_to_curve::tests::from_wide ... ok
+test mid::p256::hash_to_curve::tests::hashes_in_constant_time ... ok
+test mid::p256::hash_to_curve::tests::pow_c1 ... ok
+test mid::p256::hash_to_curve::tests::rfc9380 ... ok
+test mid::p256::hash_to_curve::tests::sum ... ok
+test mid::p256::hash_to_curve::tests::scalar_in_constant_time ... ok
+test mid::p256::tests::curve_field_elements_as_mont ... ok
+test mid::p256::tests::generate_key_1 ... ok
+test mid::p256::tests::base_point_precomp ... ok
+test mid::p256::tests::generate_key_known_answer ... ok
+test mid::p256::tests::generate_key_2 ... ok
+test mid::p256::tests::generator_on_curve ... ok
+test mid::p256::tests::point_double ... ok
+test mid::p256::tests::private_key_debug ... ok
+test mid::p256::tests::multiply_matches_double_and_add has been running for over 60 seconds
+test mid::p256::tests::multiply_matches_double_and_add ... ok
+test mid::p256::tests::private_key_in_range has been running for over 60 seconds
+test mid::p256::tests::private_key_in_range ... ok
+test mid::mlkem768::tests::acvp_encap_decap ... ok
+test mid::p256::tests::test_raw_ecdsa_sign has been running for over 60 seconds
+test mid::p256::tests::test_raw_ecdsa_sign ... ok
+test mid::p256::tests::twin_multiply_exceptional has been running for over 60 seconds
+test mid::mldsa::tests::acvp_key_gen ... ok
+test mid::p256::tests::twin_multiply_exceptional ... ok
+test mid::p384::hash_to_curve::tests::constants ... ok
+test mid::p384::hash_to_curve::tests::from_wide ... ok
+test mid::p384::hash_to_curve::tests::crosscheck ... ok
+test mid::aes_cbc::tests::acvp ... ok
+test mid::p384::hash_to_curve::tests::hashes_in_constant_time ... ok
+test mid::p384::hash_to_curve::tests::pow_c1 ... ok
+test mid::p384::hash_to_curve::tests::rfc9380 ... ok
+test mid::p384::hash_to_curve::tests::scalar_in_constant_time ... ok
+test mid::p384::hash_to_curve::tests::sum ... ok
+test mid::p384::tests::base_point_precomp_comb ... ok
+test mid::p384::tests::curve_field_elements_as_mont ... ok
+test mid::p384::tests::generate_key_1 ... ok
+test mid::p384::tests::generate_key_2 ... ok
+test mid::p384::tests::generate_key_3 ... ok
+test mid::p384::tests::generate_key_99999999 ... ok
+test mid::p384::tests::generate_key_known_answer ... ok
+test mid::p384::tests::generator_on_curve ... ok
+test mid::p384::tests::point_double ... ok
+test mid::p384::tests::private_key_debug ... ok
+test mid::p384::tests::private_key_in_range ... ok
+test mid::p384::tests::multiply_matches_double_and_add has been running for over 60 seconds
+test mid::p384::tests::test_raw_ecdsa_sign ... ok
+test mid::p384::tests::test_scalar ... ok
+test mid::p384::tests::multiply_matches_double_and_add ... ok
+test mid::p521::hash_to_curve::tests::constants ... ok
+test mid::p384::tests::twin_multiply_exceptional has been running for over 60 seconds
+test mid::p384::tests::twin_multiply_exceptional ... ok
+test mid::p521::hash_to_curve::tests::crosscheck ... ok
+test mid::p521::hash_to_curve::tests::from_wide ... ok
+test mid::p521::hash_to_curve::tests::hashes_in_constant_time ... ok
+test mid::p521::hash_to_curve::tests::pow_c1 ... ok
+test mid::p521::hash_to_curve::tests::scalar_in_constant_time ... ok
+test mid::p521::hash_to_curve::tests::rfc9380 ... ok
+test mid::p521::hash_to_curve::tests::sum ... ok
+test mid::p521::tests::base_point_precomp_comb ... ok
+test mid::p521::tests::generate_key_known_answer ... ok
+test mid::p521::tests::generate_takes_leftmost_521_bits ... ok
+test mid::p521::tests::generator_on_curve ... ok
+test mid::p521::tests::montifier ... ok
+test mid::p521::tests::multiplications_match_double_and_add has been running for over 60 seconds
+test mid::p521::tests::private_key_debug has been running for over 60 seconds
+test mid::p521::tests::private_key_debug ... ok
+test mid::p521::tests::private_key_in_range has been running for over 60 seconds
+test mid::p521::tests::public_add_affine_edges has been running for over 60 seconds
+test mid::p521::tests::test_scalar has been running for over 60 seconds
+test mid::p521::tests::public_add_affine_edges ... ok
+test mid::p521::tests::private_key_in_range ... ok
+test mid::p521::tests::test_scalar ... ok
+test mid::p521::tests::twin_multiply_exceptional has been running for over 60 seconds
+test mid::ristretto255_tests::constant_time ... ok
+test mid::ristretto255_tests::matches_dalek ... ok
+test mid::p521::tests::twin_multiply_exceptional ... ok
+test mid::ristretto255_tests::rfc9496_from_uniform_bytes ... ok
+test mid::ristretto255_tests::rfc9496_invalid_encodings ... ok
+test mid::ristretto255_tests::rfc9496_multiples_of_the_generator ... ok
+test mid::ristretto255_tests::rfc9497_oprf ... ok
+test mid::ristretto255_tests::scalar_bounds has been running for over 60 seconds
+test mid::ristretto255_tests::wycheproof_scalar_invert has been running for over 60 seconds
+test mid::ristretto255_tests::scalar_bounds ... ok
+test mid::ristretto255_tests::wycheproof_scalar_invert ... ok
+test mid::rng::tests::fill_writes_every_byte has been running for over 60 seconds
+test mid::rng::tests::fill_writes_every_byte ... ok
+test mid::rsa_priv::exponents::tests::divides_by_gcd ... ok
+test mid::rsa_priv::exponents::tests::inverts_e ... ok
+test mid::rsa_priv::exponents::tests::reduces_e has been running for over 60 seconds
+test mid::rsa_priv::exponents::tests::reduces_e ... ok
+test mid::rsa_priv::exponents::tests::shifts_right_secret has been running for over 60 seconds
+test mid::rsa_priv::exponents::tests::shifts_right_secret ... ok
+test mid::rsa_priv::generate::tests::aws_lc_miller_rabin has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_hosed_rng has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_hosed_rng ... ok
+test mid::rsa_priv::generate::tests::test_invalid_primes has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_p_q_close has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_p_q_close ... ok
+test mid::rsa_priv::generate::tests::test_p_q_equal has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::aws_lc_miller_rabin ... ok
+test mid::p521::tests::multiplications_match_double_and_add ... ok
+test mid::rsa_priv::generate::tests::test_p_q_equal ... ok
+test mid::rsa_priv::generate::tests::test_phi_not_coprime_e has been running for over 60 seconds
+test mid::rsa_priv::generate::tests::test_valid_primes has been running for over 60 seconds
+test mid::rsa_priv::tests::acvp_decryption_primitive has been running for over 60 seconds
+test mid::rsa_priv::tests::acvp_signature_primitive has been running for over 60 seconds
+test mid::mldsa::tests::acvp_sig_ver ... ok
+test mid::rsa_priv::tests::short_prime_refused ... ok
+test mid::rsa_pub::tests::smoke ... ok
+test mid::sha1::tests::length_past_32_bit_usize ... ok
+test mid::sha2::tests::hello ... ok
+test mid::sha2::tests::length_past_32_bit_usize ... ok
+test mid::sha2::tests::sha256_all_lengths has been running for over 60 seconds
+test mid::sha2::tests::sha256_all_lengths ... ok
+test mid::sha2::tests::sha512_all_lengths ... ok
+test mid::sha2::tests::sha512_long ... ok
+test mid::sha3::tests::cavp_shake has been running for over 60 seconds
+test mid::rsa_priv::tests::acvp_decryption_primitive ... ok
+test mid::sha3::tests::one_shot_batch_matches_single has been running for over 60 seconds
+test mid::sha3::tests::one_shot_batch_matches_single ... ok
+test mid::rsa_priv::generate::tests::test_phi_not_coprime_e ... ok
+test mid::sha3::tests::sha3_256_all_lengths has been running for over 60 seconds
+test mid::sha3::tests::sha3_256_all_lengths ... ok
+test mid::sha3::tests::sha3_512_all_lengths has been running for over 60 seconds
+test mid::sha3::tests::sha3_512_all_lengths ... ok
+test mid::sha3::tests::shake4x_matches_single has been running for over 60 seconds
+test mid::sha3::tests::shake4x_matches_single ... ok
+test mid::sha3::tests::shake_incremental_read ... ok
+test mid::sha3::tests::squeezing_sponge_4x_shake128_matches_single has been running for over 60 seconds
+test mid::sha3::tests::squeezing_sponge_4x_shake128_matches_single ... ok
+test mid::util::tests::naf has been running for over 60 seconds
+test mid::util::tests::naf ... ok
+test mid::x25519::tests::base_mul ... ok
+test mid::x25519::tests::random_keys has been running for over 60 seconds
+test mid::x25519::tests::rfc7748_1 has been running for over 60 seconds
+test mid::x25519::tests::rfc7748_1 ... ok
+test mid::x25519::tests::random_keys ... ok
+test mid::x25519::tests::rfc7748_2 has been running for over 60 seconds
+test mid::x25519::tests::rfc7748_2 ... ok
+test mid::x25519::tests::rfc7748_3 has been running for over 60 seconds
+test mid::xchacha20poly1305::tests::test_vector ... ok
+test test::binsec::ct_binsec_aes ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_aes_cbc ... ignored, admin/ct-binsec runs it under BINSEC
+test mid::x25519::tests::rfc7748_3 ... ok
+test test::binsec::ct_binsec_aes_gcm ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_aes_kw has been running for over 60 seconds
+test test::binsec::ct_binsec_aes_kw ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_chacha20 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_chacha20_poly1305 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_constant_time_verify ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_digest ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdh_p256 ... ignored, admin/ct-binsec runs it under BINSEC
+test mid::rsa_priv::generate::tests::test_valid_primes ... ok
+test test::binsec::ct_binsec_ecdh_p384 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdh_p521 has been running for over 60 seconds
+test test::binsec::ct_binsec_ecdh_p521 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_ecdsa_p256 ... ignored, admin/ct-binsec runs it under BINSEC
+test mid::aes_kw::tests::acvp_kw ... ok
+test mid::aes_kw::tests::acvp_kwp ... ok
+test test::binsec::ct_binsec_ecdsa_p384 has been running for over 60 seconds
+test test::binsec::ct_binsec_ecdsa_p521 has been running for over 60 seconds
+test test::binsec::ct_binsec_ed25519 has been running for over 60 seconds
+test test::binsec::ct_binsec_ecdsa_p384 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_hkdf has been running for over 60 seconds
+test test::binsec::ct_binsec_ecdsa_p521 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_hmac has been running for over 60 seconds
+test test::binsec::ct_binsec_ed25519 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_hkdf ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_hmac ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_mlkem768 has been running for over 60 seconds
+test test::binsec::ct_binsec_mlkem768 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_mont_mul ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_pbkdf2 has been running for over 60 seconds
+test test::binsec::ct_binsec_quic_header_protection has been running for over 60 seconds
+test test::binsec::ct_binsec_pbkdf2 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_reduce_even has been running for over 60 seconds
+test test::binsec::ct_binsec_rsa_oaep_padding has been running for over 60 seconds
+test test::binsec::ct_binsec_quic_header_protection ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_x25519 has been running for over 60 seconds
+test test::binsec::ct_binsec_xchacha20_poly1305 has been running for over 60 seconds
+test test::binsec::ct_binsec_reduce_even ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_rsa_oaep_padding ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_x25519 ... ignored, admin/ct-binsec runs it under BINSEC
+test test::binsec::ct_binsec_xchacha20_poly1305 ... ignored, admin/ct-binsec runs it under BINSEC
+test mid::rsa_priv::tests::acvp_signature_primitive ... ok
+test mid::mldsa::tests::acvp_sig_gen ... ok
+test mid::rsa_priv::generate::tests::test_invalid_primes ... ok
+test mid::sha3::tests::cavp_shake ... ok
+test aead::gcm::tests::cavp ... ok
+test mid::mldsa::tests::wycheproof ... ok
+test high::blind_rsa::tests::rfc9474_vectors ... ok
+
+test result: ok. 430 passed; 0 failed; 27 ignored; 0 measured; 0 filtered out; finished in 18111.21s
+
+==1989809== 
+==1989809== HEAP SUMMARY:
+==1989809==     in use at exit: 808 bytes in 15 blocks
+==1989809==   total heap usage: 4,771,639 allocs, 4,771,624 frees, 1,015,734,832 bytes allocated
+==1989809== 
+==1989809== LEAK SUMMARY:
+==1989809==    definitely lost: 192 bytes in 12 blocks
+==1989809==    indirectly lost: 0 bytes in 0 blocks
+==1989809==      possibly lost: 48 bytes in 1 blocks
+==1989809==    still reachable: 568 bytes in 2 blocks
+==1989809==         suppressed: 0 bytes in 0 blocks
+==1989809== Rerun with --leak-check=full to see details of leaked memory
+==1989809== 
+==1989809== For lists of detected and suppressed errors, rerun with: -s
+==1989809== ERROR SUMMARY: 570774 errors from 1 contexts (suppressed: 0 from 0)
+error: test failed, to rerun pass `-p rind --lib`
+
+Caused by:
+  process didn't exit successfully: `~/tmp/bestprac-20261112/pr51/admin/ctgrind --run ~/rind-frost-51-ctgrind-portable-target/debug/deps/rind-7ec328873f162901` (exit status: 99)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+===== END Fri, 13 Nov 2026 04:30:45 -0800 exit=99 HEAD=7c29ef48e2a62c1d8e9de65bdfc75d0fda38910a =====

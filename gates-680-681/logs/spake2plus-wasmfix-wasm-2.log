@@ -1,0 +1,174 @@
+nix develop .#wasm --command sh/wasm.sh
+warning: unused import: `p256::NistP256`
+   --> rind/src/mid/p256/hash_to_curve.rs:150:9
+    |
+150 |     use p256::NistP256;
+    |         ^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `p256::elliptic_curve::array::typenum::U48`
+   --> rind/src/mid/p256/hash_to_curve.rs:151:9
+    |
+151 |     use p256::elliptic_curve::array::typenum::U48;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `GroupDigest` and `self as rustcrypto`
+   --> rind/src/mid/p256/hash_to_curve.rs:152:28
+    |
+152 |     use p256::hash2curve::{self as rustcrypto, GroupDigest};
+    |                            ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `p384::NistP384`
+   --> rind/src/mid/p384/hash_to_curve.rs:156:9
+    |
+156 |     use p384::NistP384;
+    |         ^^^^^^^^^^^^^^
+
+warning: unused import: `p384::elliptic_curve::array::typenum::U72`
+   --> rind/src/mid/p384/hash_to_curve.rs:157:9
+    |
+157 |     use p384::elliptic_curve::array::typenum::U72;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `GroupDigest` and `self as rustcrypto`
+   --> rind/src/mid/p384/hash_to_curve.rs:158:28
+    |
+158 |     use p384::hash2curve::{self as rustcrypto, GroupDigest};
+    |                            ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: function `hash_to_curve` is never used
+  --> rind/src/mid/p256/hash_to_curve.rs:21:15
+   |
+21 | pub(crate) fn hash_to_curve(msg: &[u8], dst: &[u8]) -> Result<PublicKey, Error> {
+   |               ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `hash_to_curve` is never used
+  --> rind/src/mid/p384/hash_to_curve.rs:21:15
+   |
+21 | pub(crate) fn hash_to_curve(msg: &[u8], dst: &[u8]) -> Result<PublicKey, Error> {
+   |               ^^^^^^^^^^^^^
+
+warning: struct `NoRoom` is never constructed
+    --> rind/src/high/hpke.rs:1329:12
+     |
+1329 |     struct NoRoom(Vec<u8>);
+     |            ^^^^^^
+
+warning: function `scalar_bytes` is never used
+    --> rind/src/high/spake2plus.rs:1077:8
+     |
+1077 |     fn scalar_bytes(bytes: &[u8; 32]) -> Scalar {
+     |        ^^^^^^^^^^^^
+
+   Compiling rind v0.3.2 (~/rind-results/gates-680-681/spake2plus-wasmfix/rind)
+warning: `rind` (lib test) generated 10 warnings (run `cargo fix --lib -p rind --tests` to apply 6 suggestions)
+warning: unused import: `std::hint::black_box`
+  --> rind/tests/heap_scratch.rs:20:5
+   |
+20 | use std::hint::black_box;
+   |     ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `rind` (test "heap_scratch") generated 1 warning (run `cargo fix --test "heap_scratch" -p rind` to apply 1 suggestion)
+    Finished `release` profile [optimized] target(s) in 7.06s
+     Running unittests src/lib.rs (~/rind-results/gates-680-681/target-spake2plus-up-r6-wasm-fix/wasm32-wasip2/release/deps/rind-c404d5e4b29ab337.wasm)
+
+running 433 tests
+test aead::gcm::tests::acvp ... ok
+test aead::gcm::tests::cavp ... ok
+test aead::gcm::tests::refuses_malformed_input ... ok
+test aead::gcm::tests::tags_are_prefixes ... ok
+test aead::quic::tests::key_length_must_match_algorithm ... ok
+test aead::quic::tests::rfc9001 ... ok
+test aead::tests::key_length_must_match_algorithm ... ok
+test aead::tests::open_refuses_input_shorter_than_tag ... ok
+test aead::tests::randomized_nonce_key ... ok
+test aead::tests::seal_and_open ... ok
+test aead::tests::tag_must_be_whole ... ok
+test error::tests::key_rejected_displays_its_reason ... ok
+test high::agreement::tests::acvp_x25519 ... ok
+test high::agreement::tests::acvp_x25519_key_gen ... ok
+test high::agreement::tests::acvp_x25519_key_ver ... ok
+test high::agreement::tests::agrees ... ok
+test high::agreement::tests::cavp_ecdh ... ok
+test high::agreement::tests::decompresses_points ... ok
+test high::agreement::tests::loads_ecdsa_keys ... ok
+test high::agreement::tests::loads_in_constant_time ... ok
+test high::agreement::tests::public_keys_round_trip ... ok
+test high::agreement::tests::refuses_scalars ... ok
+test high::agreement::tests::round_trips ... ok
+test high::agreement::tests::wycheproof_p256 ... ok
+test high::agreement::tests::wycheproof_p384 ... ok
+test high::agreement::tests::wycheproof_p521 ... ok
+test high::agreement::tests::wycheproof_x25519 ... ok
+test high::agreement::tests::wycheproof_x25519_pkcs8 ... ok
+test high::agreement::tests::x25519_pkcs8 ... ok
+test high::asn1::pkix::tests::parse_ec_spki ... ok
+test high::asn1::pkix::tests::parse_pkcs8_key ... ok
+test high::asn1::pkix::tests::parse_pkcs8_v2_key ... ok
+test high::asn1::pkix::tests::parse_pkcs8_v2_key_with_attributes ... ok
+test high::asn1::pkix::tests::parse_private_key ... ok
+test high::asn1::pkix::tests::parse_public_key ... ok
+test high::asn1::pkix::tests::parse_rsa_spki ... ok
+test high::asn1::pkix::tests::parse_sec1_key ... ok
+test high::asn1::tests::test_any ... ok
+test high::asn1::tests::test_canonical_length_requirements ... ok
+test high::asn1::tests::test_context_tag ... ok
+test high::asn1::tests::test_encode_errors ... ok
+test high::asn1::tests::test_encode_len ... ok
+test high::asn1::tests::test_error_display ... ok
+test high::asn1::tests::test_integer_as_usize ... ok
+test high::asn1::tests::test_integer_encoding ... ok
+test high::asn1::tests::test_invalid_bitstring_encodings ... ok
+test high::asn1::tests::test_invalid_integer_encodings ... ok
+test high::asn1::tests::test_null ... ok
+test high::asn1::tests::test_oid ... ok
+test high::asn1::tests::test_optional ... ok
+test high::blind_rsa::tests::blind_sign_refuses_bad_requests ... ok
+test high::blind_rsa::tests::blinding_rejects_bad_blinds ... ok
+test high::blind_rsa::tests::debug_shows_no_secrets ... ok
+test high::blind_rsa::tests::finalize_refuses_bad_replies ... ok
+test high::blind_rsa::tests::refuses_a_key_sharing_a_factor_with_the_message ... ok
+test high::blind_rsa::tests::refuses_other_keys ... ok
+test high::blind_rsa::tests::rfc9474_vectors ... ok
+test high::blind_rsa::tests::rfc9578_token ... ok
+test high::blind_rsa::tests::round_trip ... ok
+test high::blind_rsa::tests::signatures_are_bound_to_their_variant ... ok
+test high::blind_rsa::tests::stays_secret ... ok
+test high::constant_time::tests::contents_stay_secret ... ok
+test high::constant_time::tests::unequal_lengths ... ok
+test high::curve::tests::cavp_keypair ... ok
+test high::curve::tests::cavp_pkv ... ok
+test high::curve::tests::is_zero ... ok
+test high::curve::tests::non_canonical_coordinates ... ok
+test high::curve::tests::private_key_encode_error ... ok
+test high::digest::tests::acvp_sha256 ... ok
+test high::digest::tests::acvp_sha384 ... ok
+test high::digest::tests::acvp_sha3_256 ... ok
+test high::digest::tests::acvp_sha3_384 ... ok
+test high::digest::tests::acvp_sha3_512 ... ok
+test high::digest::tests::acvp_sha512 ... ok
+test high::digest::tests::acvp_sha512_256 ... ok
+test high::digest::tests::cavp ... ok
+test high::digest::tests::cavp_monte_carlo ... ok
+test high::digest::tests::finish_resets ... ok
+test high::digest::tests::rfc1321 ... ok
+test high::digest::tests::secret_message ... ok
+test high::ecdsa::tests::acvp_det_sig_gen ... ok
+test high::ecdsa::tests::acvp_key_gen ... ok
+test high::ecdsa::tests::acvp_key_ver ... ok
+test high::ecdsa::tests::acvp_sig_gen ... ok
+test high::ecdsa::tests::acvp_sig_ver ... ok
+test high::ecdsa::tests::aws_lc_sign ... ok
+test high::ecdsa::tests::aws_lc_verify ... ok
+test high::ecdsa::tests::cavp_sigver ... ok
+test high::ecdsa::tests::digest_signing_matches_message_signing ... ok
+test high::ecdsa::tests::rejects_invalid_asn1_sigs ... ok
+test high::ecdsa::tests::rfc6979_p521_test_vectors ... ok
+test high::ecdsa::tests::rfc6979_test_vectors ... ok
+test high::ecdsa::tests::sign_retries_when_s_is_zero ... ok
+test high::ecdsa::tests::smoke_test_ecdsa_sign ... error: recipe `wasm` was terminated on line 50 by signal 15

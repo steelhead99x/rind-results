@@ -1,0 +1,27 @@
+[package]
+name = "rind-object-store"
+version = "0.14.4"
+edition = "2024"
+repository = "https://github.com/moq-dev/rind"
+license = "Apache-2.0 OR ISC OR MIT-0"
+description = "object_store CryptoProvider backed by rind"
+categories = ["cryptography"]
+rust-version.workspace = true
+readme = "README.md"
+
+[dependencies]
+# object_store exposes its CryptoProvider only with a cloud backend enabled;
+# gcp-base is the one that adds no dependencies beyond the shared cloud-base.
+object_store = { version = "0.14", default-features = false, features = ["gcp-base"] }
+rind = { version = "0.3.2", path = "../rind" }
+rustls-pki-types = { version = "1.9", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+aws-lc-rs = { version = "1.16", default-features = false, features = ["alloc", "prebuilt-nasm", "non-fips"] }
+async-trait = "0.1"
+# Requests reach valgrind only once `rind/__ctgrind` turns on crabgrind's default
+# features, as `admin/ctgrind` does; otherwise they build as no-ops.
+crabgrind = { version = "0.4", default-features = false }
+http = "1"
+object_store = { version = "0.14", default-features = false, features = ["aws-base", "azure-base", "gcp-base"] }
+tokio = { version = "1", features = ["macros", "rt"] }

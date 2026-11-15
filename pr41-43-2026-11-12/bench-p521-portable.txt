@@ -1,0 +1,49 @@
+host: AMD Ryzen 5 7535HS (family 25, model 68), 12 threads, governor=performance
+date: 2026-11-12 America/Los_Angeles
+head: 58523a7e62225ed6d2940598bc62aa35cd9b0177
+flags: RUSTFLAGS='--cfg rind_portable --cfg curve25519_dalek_backend="serial"' AWS_LC_SYS_NO_ASM=1 AWS_LC_SYS_CMAKE_BUILDER=0 profile.bench.package.aws-lc-sys.opt-level=2 --features __bench_openssl
+backend: portable (rind_portable)
+
+   Compiling rind-bench v0.1.0 (~/work/rind-pr43/rind-bench)
+    Finished `bench` profile [optimized + debuginfo] target(s) in 47.79s
+     Running benches/p521.rs (~/work/rind-target-bench/release/deps/p521-7d0e9fa2eea0d8cc)
+Gnuplot not found, using plotters backend
+test p521-ecdh/aws-lc-rs ... bench:     420,964 ns/iter (+/- 12,507)
+test p521-ecdh/rind ... bench:     403,474 ns/iter (+/- 17,109)
+test p521-ecdh/rustcrypto ... bench:     709,504 ns/iter (+/- 28,523)
+test p521-ecdh/openssl ... bench:     505,141 ns/iter (+/- 18,295)
+
+test p521-keygen/aws-lc-rs ... bench:     103,023 ns/iter (+/- 3,137)
+test p521-keygen/rind ... bench:     175,998 ns/iter (+/- 34,174)
+
+test p521-ecdsa-verify/aws-lc-rs ... bench:     691,276 ns/iter (+/- 290,224)
+test p521-ecdsa-verify/rind ... bench:     807,233 ns/iter (+/- 234,820)
+test p521-ecdsa-verify/rustcrypto ... bench:     870,274 ns/iter (+/- 111,597)
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 5.5s, enable flat sampling, or reduce sample count to 60.
+test p521-ecdsa-verify/openssl ... bench:   1,303,102 ns/iter (+/- 611,453)
+
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 6.3s, enable flat sampling, or reduce sample count to 60.
+test p521-ecdsa-verify-parsed/aws-lc-rs ... bench:   1,026,601 ns/iter (+/- 439,437)
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 7.8s, enable flat sampling, or reduce sample count to 50.
+test p521-ecdsa-verify-parsed/rind ... bench:     821,758 ns/iter (+/- 691,022)
+
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 8.2s, enable flat sampling, or reduce sample count to 50.
+test p521-ecdsa-verify-digest/aws-lc-rs ... bench:   1,100,862 ns/iter (+/- 678,105)
+test p521-ecdsa-verify-digest/rind ... bench:     764,367 ns/iter (+/- 253,905)
+
+test p521-ecdsa-sign/aws-lc-rs ... bench:     247,320 ns/iter (+/- 46,768)
+test p521-ecdsa-sign/rind ... bench:     246,941 ns/iter (+/- 30,978)
+test p521-ecdsa-sign/rustcrypto ... bench:     180,618 ns/iter (+/- 19,900)
+test p521-ecdsa-sign/openssl ... bench:     253,411 ns/iter (+/- 39,633)
+
+test p521-ecdsa-sign-digest/aws-lc-rs ... bench:     201,588 ns/iter (+/- 5,254)
+test p521-ecdsa-sign-digest/rind ... bench:     184,468 ns/iter (+/- 4,412)
+
+test p521-ecdh-stored/aws-lc-rs ... bench:     316,311 ns/iter (+/- 7,039)
+test p521-ecdh-stored/rind ... bench:     305,740 ns/iter (+/- 10,743)
+
+p521 bench exit:0

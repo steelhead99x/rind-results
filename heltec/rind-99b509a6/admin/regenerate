@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Re-runs every importer and generator at the upstream revision it pins, and
+# fails if the generated code differs from the committed code or a committed
+# file is one nothing generates.
+#
+# Usage: admin/regenerate
+#
+# Fetches each upstream shallowly into .tmp/upstream. Run it in the flake's
+# `regenerate` dev shell, which pins the cross tools admin/parse-asm calls and
+# the perl OpenSSL's perlasm runs on: `nix develop .#regenerate --command
+# admin/regenerate`.
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+upstream=.tmp/upstream
+
+for name in aws-lc boringssl openssl hacl-star; do
+    admin/upstream "$name"
+done
+# s2n-bignum's pin is its submodule commit.
+git submodule update --init --depth 1 thirdparty/s2n-bignum
+
+# Deleted first, so a file nothing regenerates shows as deleted.
+find rind/src/low/*/aws_lc rind/src/low/*/boringssl rind/src/low/*/openssl rind/src/low/*/hacl -type f -delete
+grep -rlxZ '// generated source. do not edit.' rind/src | xargs -0 rm --
+
+admin/import-aws-lc "$upstream/aws-lc"
+admin/import-boringssl "$upstream/boringssl"
+admin/import-openssl "$upstream/openssl"
+admin/import-hacl "$upstream/hacl-star"
+(cd admin/parse-asm && ./all.sh >/dev/null)
+admin/p256-precomp
+admin/p384-precomp
+admin/p521-precomp
+
+if [[ -n "$(git status --porcelain -- rind/src)" ]]; then
+    git status --short -- rind/src >&2
+    git --no-pager diff -- rind/src >&2
+    echo "admin/regenerate: the generated code differs from the committed code" >&2
+    exit 1
+fi
+echo "admin/regenerate: the generated code matches the committed code"

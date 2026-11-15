@@ -1,0 +1,1505 @@
+import contextlib
+import copy
+import os
+import re
+import string
+import subprocess
+from functools import reduce
+from io import StringIO
+
+from parse import Type, is_comment, register_from_token, tokenise
+
+
+@contextlib.contextmanager
+def generated(path):
+    """Opens a file that replaces `path` only once the block completes, so
+    a tool that is missing or fails leaves the committed file whole."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w") as output:
+            yield output
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
+class Architecture:
+    # registers (canonically named via `lookup_register`)
+    # that should be ignored when calculating clobbers
+    ignore_clobber = set()
+
+    # instruction mnemonic for unconditional jump; used for hoisting
+    unconditional_jump = "str"
+
+    # names of (64-bit) registers, in parameter order per 'standard' ABI
+    fn_arg_regs = []
+
+    # name of 64-bit return register per standard ABI
+    # (only used if this register is not also a parameter register)
+    fn_ret_reg = None
+
+    # on ARM64, constant refs using @PAGE and @PAGEOFF are also
+    # dropped to macros
+    constant_reference_page_offs = False
+
+    # instruction a routine naming a wide vector register ends with, and the
+    # registers it writes
+    wide_vector_exit = None
+    wide_vector_exit_clobbers = []
+
+    @staticmethod
+    def is_wide_vector(reg):
+        return False
+
+    # macro testing for a CPU feature, and the features each instruction
+    # needs beyond those the architecture's tests assume
+    feature_detector = None
+    feature_instructions = {}
+
+    @classmethod
+    def required_features(cls, mnemonics):
+        return sorted(
+            set(f for m in mnemonics for f in cls.feature_instructions.get(m, []))
+        )
+
+    # canonicalise register names, by returning a better name
+    # for `reg`.
+    #
+    # return `None` if `reg` is not a recognised register name.
+    @staticmethod
+    def lookup_register(reg):
+        pass
+
+
+class Architecture_amd64(Architecture):
+    """
+    x86	ax	eax, rax
+    x86	bx	ebx, rbx
+    x86	cx	ecx, rcx
+    x86	dx	edx, rdx
+    x86	si	esi, rsi
+    x86	di	edi, rdi
+    x86	bp	bpl, ebp, rbp
+    x86	sp	spl, esp, rsp
+    x86	ip	eip, rip
+    x86	st(0)	st
+    x86	r[8-15]	r[8-15]b, r[8-15]w, r[8-15]d
+    x86	xmm[0-31]	ymm[0-31], zmm[0-31]
+    """
+
+    ignore_clobber = set("rbx rsp rbp rip".split())
+
+    unconditional_jump = "jmp"
+
+    fn_arg_regs = "rdi rsi rdx rcx r8 r9".split()
+    fn_ret_reg = "rax"
+
+    cpp_definitions = dict(__linux__="1", __ELF__="1")
+
+    # Legacy SSE code after the upper halves of ymm0-15 are left dirty pays a
+    # state transition or a false dependency, and rustc cannot see an asm
+    # block's vector width to insert this itself.
+    wide_vector_exit = "vzeroupper"
+    wide_vector_exit_clobbers = ["zmm%d" % n for n in range(16)]
+
+    @staticmethod
+    def is_wide_vector(reg):
+        return re.fullmatch(r"[yz]mm[0-9]+", reg) is not None
+
+    feature_detector = "std::arch::is_x86_feature_detected"
+    feature_instructions = dict(
+        [(m, ["bmi2"]) for m in "mulx shlx shrx sarx rorx bzhi pdep pext".split()]
+        + [(m, ["adx"]) for m in "adcx adox".split()]
+        + [(m, ["avx2"]) for m in ["ymm%d" % n for n in range(16)]]
+        + [(m, ["ssse3"]) for m in "pshufb palignr".split()]
+        + [(m, ["sse4.1"]) for m in "pblendw pinsrq pextrq ptest".split()]
+        + [("popcnt", ["popcnt"]), ("lzcnt", ["lzcnt"]), ("tzcnt", ["bmi1"])]
+    )
+
+    @classmethod
+    def required_features(cls, mnemonics):
+        features = set(Architecture.required_features.__func__(cls, mnemonics))
+        # A VEX-encoded instruction on xmm registers needs only AVX.
+        if any(re.fullmatch(r"v[a-z0-9]+", m) for m in mnemonics) and "avx2" not in features:
+            features.add("avx")
+        return sorted(features)
+
+    @staticmethod
+    def lookup_register(reg):
+        for c in "ax bx cx dx si di ip".split():
+            if reg in [c, "e" + c, "r" + c]:
+                return "r" + c
+
+        for c in "bp sp".split():
+            if reg in [c, c + "l", "e" + c, "r" + c]:
+                return "r" + c
+
+        if reg == "st":
+            return reg
+
+        for n in range(8, 16):
+            n = str(n)
+            if reg in ["r" + n, "r" + n + "d", "r" + n + "w", "r" + n + "b"]:
+                return "r" + n
+
+        for n in range(0, 32):
+            n = str(n)
+            if reg in ["xmm" + n, "ymm" + n, "zmm" + n]:
+                return "zmm" + n
+
+
+class Architecture_aarch64(Architecture):
+    """
+    AArch64	reg	x[0-30]	r
+    AArch64	vreg	v[0-31]	w
+    AArch64	vreg_low16	v[0-15]	x
+    AArch64	preg	p[0-15], ffr	Only clobbers
+    ARM (ARM/Thumb2)	reg	r[0-12], r14	r
+    ARM (Thumb1)	reg	r[0-7]	r
+    ARM	sreg	s[0-31]	t
+    ARM	sreg_low16	s[0-15]	x
+    ARM	dreg	d[0-31]	w
+    ARM	dreg_low16	d[0-15]	t
+    ARM	dreg_low8	d[0-8]	x
+    ARM	qreg	q[0-15]	w
+    ARM	qreg_low8	q[0-7]	t
+    ARM	qreg_low4	q[0-3]	x
+    """
+
+    ignore_clobber = set(["x19", "x29"])
+
+    unconditional_jump = "b"
+
+    constant_reference_page_offs = True
+
+    fn_arg_regs = "x0 x1 x2 x3 x4 x5 x6 x7".split()
+
+    feature_detector = "std::arch::is_aarch64_feature_detected"
+    feature_instructions = dict(
+        [(m, ["sha3"]) for m in "eor3 bcax rax1 xar sha512h sha512h2 sha512su0 sha512su1".split()]
+        + [(m, ["aes"]) for m in "aese aesd aesmc aesimc".split()]
+        + [(m, ["pmull"]) for m in "pmull pmull2".split()]
+        + [(m, ["sha2"]) for m in "sha256h sha256h2 sha256su0 sha256su1".split()]
+    )
+
+    cpp_definitions = dict(__linux__="1", __ELF__="1")
+
+    @staticmethod
+    def lookup_register(reg):
+        for n in range(31):
+            n = str(n)
+            if reg in ["r" + n, "x" + n, "w" + n]:
+                return "x" + n
+
+        for n in range(32):
+            n = str(n)
+            if reg in ["v" + n, "q" + n, "d" + n, "s" + n, "h" + n]:
+                return "v" + n
+
+        for n in range(16):
+            n = str(n)
+            if reg == "p" + n:
+                return reg
+
+        if "." in reg:
+            parts = reg.split(".")
+            lu = Architecture_aarch64.lookup_register(parts[0])
+            if lu:
+                return lu
+
+
+class Dispatcher:
+    def __call__(self, ty, *args):
+        func = getattr(self, "on_" + ty.lower())
+        func(*args)
+
+    def on_comment(self, comment):
+        pass
+
+    def on_vertical_whitespace(self):
+        pass
+
+    def on_align(self, contexts, alignment):
+        pass
+
+    def on_define(self, name, *value):
+        print("!!! UNHANDLED: on_define(", name, ",", value, ")")
+
+    def on_asm(self, contexts, opcode, operands):
+        print("!!! UNHANDLED: on_asm(", contexts, ",", opcode, ",", operands, ")")
+
+    def on_macro(self, name, operands):
+        print("!!! UNHANDLED: on_macro(", name, ",", operands, ")")
+
+    def on_label(self, contexts, label):
+        print("!!! UNHANDLED: on_label(", contexts, ",", label, ")")
+
+    def on_const(self, contexts, type, value):
+        print("!!! UNHANDLED: on_const(", contexts, ",", type, ",", value, ")")
+
+    def on_directive(self, contexts, directive, *args):
+        print("!!! UNHANDLED on_directive(", contexts, ",", directive, ",", args, ")")
+
+    def on_eof(self):
+        pass
+
+    def on_source(self, name):
+        pass
+
+    def on_cpp(self, cpp):
+        print(f"!!! UNHANDLED on_cpp {self}")
+
+
+class QuietDispatcher(Dispatcher):
+    def on_define(self, name, *value):
+        pass
+
+    def on_asm(self, contexts, opcode, operands):
+        pass
+
+    def on_macro(self, name, operands):
+        pass
+
+    def on_label(self, contexts, label):
+        pass
+
+    def on_const(self, contexts, type, value):
+        pass
+
+    def on_directive(self, contexts, directive, *args):
+        pass
+
+    def on_eof(self):
+        pass
+
+    def on_cpp(self, cpp):
+        pass
+
+
+class Collector:
+    def __init__(self):
+        self.events = []
+
+    def __call__(self, ty, *args):
+        self.events.append(copy.deepcopy((ty, args)))
+
+    def replay(self, other):
+        for ty, args in self.events:
+            other(ty, *args)
+
+
+# A pass to collect all defined labels
+class LabelCollector(QuietDispatcher):
+    def __init__(self):
+        self.labels = set()
+
+    def on_label(self, contexts, label):
+        if label in self.labels:
+            print("duplicate label", label)
+        self.labels.add(label)
+
+    def get_labels(self):
+        return set(self.labels)
+
+
+RUST_FUNCTION_DECL = re.compile(r"^(unsafe )?fn (?P<name>[a-zA-Z0-9_]+)\(")
+
+
+# A pass to collect (1) all macro definitions that reference labels, and (2) the
+# blocks in which they are expanded. We use this later to fixup the generated
+# Rust macros to use the correct local label references.
+class MacroWithLabelRefCollector(QuietDispatcher):
+    def __init__(self):
+        self.macro_defs = {}
+        self.macro_exps = {}
+        self.labels = {}
+        self.expected_labels = set()
+        self.expected_functions = {}
+        self.current_block = None
+
+    def discard_rust_function(self, function):
+        self.expected_functions[function] = None
+
+    def emit_rust_function(self, name, rust_decl):
+        rust_name = RUST_FUNCTION_DECL.match(rust_decl).group("name")
+        self.expected_functions[name] = rust_name
+
+    def need_macro_fixup_pass(self):
+        # we need a fixup pass if there's any macro def that contains a label
+        return len(self.macro_defs) > 0
+
+    def on_define(self, name, *value):
+        # The macro name without parameters
+        name = tokenise(name)[0]
+
+        if name in self.macro_defs:
+            print("duplicate macro", name)
+
+        for v in value:
+            for t in tokenise(v):
+                if t in self.expected_labels:
+                    self.macro_defs.setdefault(name, set()).add(t)
+
+    def on_function(self, contexts, name):
+        rust_name = self.expected_functions.get(name, name)
+        self.current_block = rust_name
+
+    def on_label(self, contexts, label):
+        if label in self.expected_functions:
+            self.on_function(contexts, label)
+            return
+
+        if label not in self.expected_labels:
+            print(f"label ({label}) not in expected_labels")
+        self.current_block = label
+
+    def on_macro(self, name, operands):
+        # NOTE: doesn't handle macros used inside other macros
+        if name not in self.macro_defs:
+            return
+        if self.current_block is None:
+            print(f"macro ({name}) expanded outside block")
+            return
+        self.macro_exps.setdefault(name, set()).add(self.current_block)
+
+
+class ConstantArray:
+    def __init__(self, name):
+        self.name = name
+        self.type = None
+        self.items = []
+        self.lines = []
+
+    def add_comment(self, comment):
+        self.lines.append("// " + comment)
+
+    def add_vertical_whitespace(self):
+        self.lines.append("")
+
+    def add_item(self, value):
+        for v in tokenise(value):
+            if v == ",":
+                continue
+            self.lines.append(v + ",")
+            self.items.append(v)
+
+    def set_type(self, type):
+        if self.type is not None and self.type != type:
+            raise ValueError("type varied within constant array")
+
+        self.type = type
+
+
+def tokens_to_macro_fn(tokens):
+    tokens = list(tokens)
+
+    name = tokens.pop(0)
+    assert tokens.pop(0) == "("
+    params = []
+    while len(tokens) > 1:
+        params.append(tokens.pop(0))
+        if len(tokens) > 1:
+            assert tokens.pop(0) == ","
+    assert tokens.pop(0) == ")"
+    return name, params
+
+
+class unquote:
+    def __init__(self, v):
+        self.v = v
+
+
+def tokens_to_quoted_spans(tokens):
+    tokens = list(tokens)
+    collected = []
+    while tokens:
+        cur = tokens.pop(0)
+        next = tokens[0] if len(tokens) else ""
+        if isinstance(next, unquote):
+            next = next.v
+
+        if isinstance(cur, unquote):
+            if collected:
+                yield '"' + "".join(collected) + '"'
+            collected = []
+            yield cur.v
+            continue
+
+        if next in ",;])":
+            collected.append(cur)
+        elif cur == ";":
+            collected.append(cur)
+            yield '"' + "".join(collected) + '"'
+            collected = []
+        elif cur in "[(.":
+            collected.append(cur)
+        else:
+            collected.append(cur)
+            collected.append(" ")
+
+    if collected:
+        yield '"' + "".join(collected) + '"'
+
+
+def tokens_to_single_glued_string(tokens):
+    return " ".join(tokens_to_quoted_spans(tokens))
+
+
+def tokens_to_single_glued_string_lines(tokens, indent):
+    tokens = list(tokens)
+    if ";" in tokens:
+        # if we have semicolons, assume they can be used
+        # to improve formatting: they should terminate lines
+        return _tokens_to_single_glued_string_semicolon_lines(tokens, indent)
+
+    lines = []
+    for span in tokens_to_quoted_spans(tokens):
+        lines.append((" " * indent) + span)
+    return "\n".join(lines)
+
+
+def _tokens_to_single_glued_string_semicolon_lines(tokens, indent):
+    lines = []
+    collect = []
+    for span in tokens_to_quoted_spans(tokens):
+        if span.endswith(';"'):
+            collect.append(span.replace(";", ";\\n"))
+            lines.append((" " * indent) + " ".join(collect))
+            collect = []
+        elif span.endswith("*/"):
+            collect.append(span)
+            lines.append((" " * indent) + " ".join(collect))
+            collect = []
+        else:
+            collect.append(span)
+    if collect:
+        lines.append((" " * indent) + " ".join(collect))
+    return "\n".join(lines)
+
+
+def tokens_to_quoted_asm(tokens):
+    return " ".join(tokens_to_quoted_spans(tokens))
+
+
+def tokens_to_arg(tokens):
+    def gen(tokens):
+        tokens = list(tokens)
+        for t in tokens:
+            if isinstance(t, unquote):
+                yield t.v
+            elif t == ",":
+                continue
+            else:
+                yield '"' + t + '"'
+
+    g = list(gen(tokens))
+    if len(g) == 0:
+        return ""
+    if len(g) == 1:
+        return g[0]
+    else:
+        return "Q!(" + (" ".join(g)) + ")"
+
+
+class FunctionState:
+    def __init__(self, old_output):
+        self.old_output = old_output
+        self.macros_inside_function = StringIO()
+        self.spool = StringIO()
+        self.skip = False
+        self.return_value = None
+        self.parameter_map = []
+        self.return_map = []
+        self.clobbers = set()
+        self.labels = {}
+        self.labels_defined = set()
+        self.referenced_constant_syms = set()
+        self.hoist = None
+        self.hoisting = False
+        self.past_hoist_end_marker = False
+        self.several_exits = False
+        self.wide_vectors = False
+
+    def output(self):
+        return self.spool
+
+    def emit_ret(self):
+        # we want rets in local functions during a hoist, but not at the end of
+        # the primary function (leaving rustc to provider the function epilogue)
+        if self.hoist is not None:
+            return self.hoisting and self.hoist_mode_is_proc()
+        else:
+            return False
+
+    def hoist_mode_is_proc(self):
+        return self.hoist[0] == "proc"
+
+    def hoist_last_label(self):
+        return self.hoist[1]
+
+    def hoist_finish_opcode(self):
+        return self.hoist[2]
+
+    def finishes_hoist(self, opcode, operands):
+        return (
+            self.hoisting
+            and self.past_hoist_end_marker
+            and opcode == self.hoist_finish_opcode()
+        )
+
+
+class RustDriver:
+    def __init__(self, output, architecture):
+        super(RustDriver, self).__init__()
+        self.collector = Collector()
+        self.label_pass = LabelCollector()
+        self.macro_pass = MacroWithLabelRefCollector()
+        self.formatter = RustFormatter(output, architecture)
+        self.file_name = output.name
+
+    def discard_rust_function(self, function):
+        self.macro_pass.discard_rust_function(function)
+        self.formatter.discard_rust_function(function)
+
+    def emit_rust_function(
+        self,
+        name,
+        parameter_map,
+        rust_decl,
+        return_map=[],
+        return_value=None,
+        assertions=[],
+        allow_inline=False,
+        func_attrs="",
+        hoist=None,
+        several_exits=False,
+        abi_args=None,
+    ):
+        self.macro_pass.emit_rust_function(name, rust_decl)
+        self.formatter.emit_rust_function(
+            name,
+            parameter_map,
+            rust_decl,
+            return_map=return_map,
+            return_value=return_value,
+            assertions=assertions,
+            allow_inline=allow_inline,
+            func_attrs=func_attrs,
+            hoist=hoist,
+            several_exits=several_exits,
+            abi_args=abi_args,
+        )
+
+    def add_const_symbol(self, sym, shared=False, same_as=None):
+        self.formatter.add_const_symbol(sym, shared=shared, same_as=same_as)
+
+    def set_att_syntax(self, att_syntax):
+        self.formatter.set_att_syntax(att_syntax)
+
+    def __call__(self, ty, *args):
+        self.collector(ty, *args)
+
+        if ty == Type.EOF:
+            self.finish()
+
+    def finish(self):
+        # we do a pass to determine which labels are defined,
+        # because otherwise it is hard to know which tokens
+        # refer to a later label
+        self.collector.replay(self.label_pass)
+        expected_labels = self.label_pass.get_labels()
+        self.macro_pass.expected_labels = expected_labels
+        self.formatter.expected_labels = expected_labels
+
+        # do a pass looking for macro definitions that reference labels, which
+        # we need to fixup later
+        self.collector.replay(self.macro_pass)
+
+        if not self.macro_pass.need_macro_fixup_pass():
+            self.collector.replay(self.formatter)
+            output = self.formatter.output
+        else:
+            output = self.formatter.output
+            self.formatter.output = StringIO()
+            self.collector.replay(self.formatter)
+
+            # fixup macro definitions in the generated Rust code so the local
+            # label references are valid
+            macro_fixup_pass(
+                output,
+                self.formatter.output,
+                self.macro_pass.macro_defs,
+                self.macro_pass.macro_exps,
+            )
+
+        output.close()
+        subprocess.check_call(["rustfmt", self.file_name])
+        print("GENERATED", self.file_name)
+
+
+class RustFormatter(Dispatcher):
+    def __init__(self, output, architecture):
+        super(RustFormatter, self).__init__()
+        self.output = output
+        self.arch = architecture
+        self.rust_macros = {}
+        self.expected_functions = {}
+        self.constant_syms = set()
+        self.constant_sym_alignment = {}
+        self.constant_sym_rename = {}
+        self.constant_sym_shared = set()
+        self.constant_sym_same_as = {}
+        self.current_constant_array = None
+        self.current_function_comment = []
+        self.emitted_page_aligned_types = set()
+        self.function_state = None
+        self.expected_labels = []
+        self.att_syntax = False
+        self.abi_args = {}
+        self.harness = []
+        self.mnemonics = set()
+        self.source = None
+        self.start()
+
+    def discard_rust_function(self, function):
+        self.expected_functions[function] = None
+
+    def emit_rust_function(
+        self,
+        name,
+        parameter_map,
+        rust_decl,
+        return_map=[],
+        return_value=None,
+        assertions=[],
+        allow_inline=False,
+        func_attrs="",
+        hoist=None,
+        several_exits=False,
+        abi_args=None,
+    ):
+        # A function with several exits runs to the end of its input: each
+        # `ret` branches to one label there, where rustc's epilogue follows.
+        assert not (several_exits and hoist)
+        self.abi_args[name] = abi_args
+        self.expected_functions[name] = (
+            parameter_map,
+            return_map,
+            rust_decl,
+            return_value,
+            allow_inline,
+            hoist,
+            assertions,
+            func_attrs,
+            several_exits,
+        )
+
+    def set_att_syntax(self, att_syntax):
+        self.att_syntax = att_syntax
+
+    def start(self):
+        print(
+            """
+// generated source. do not edit.
+#![allow(
+    non_upper_case_globals,
+    unused_macros,
+    unused_imports,
+)]
+use crate::low::macros::*;
+
+""",
+            file=self.output,
+        )
+
+    def add_const_symbol(self, sym, shared=False, same_as=None):
+        """
+        Declares the constant array `sym`.
+
+        A `shared` one is visible to sibling modules. One the `same_as` path
+        names is not emitted: its routine uses that identical array instead,
+        so a binary holds one copy.
+        """
+        self.constant_syms.add(sym)
+        self.constant_sym_rename[sym] = sym
+        if shared:
+            self.constant_sym_shared.add(sym)
+        if same_as:
+            self.constant_sym_same_as[sym] = same_as
+
+        if self.arch.constant_reference_page_offs:
+            self.constant_sym_rename[sym + "@PAGE"] = sym
+            self.constant_sym_rename[sym + "@PAGEOFF"] = sym
+
+    def find_label(self, label, defn=False):
+        """
+        Returns an ordinal "local label" for the name `label`
+
+        Returns (ordinal, defined_before).
+
+        `defined_before` is true if the label is already defined.
+        """
+        func = self.function_state
+        if func is None:
+            # use `-1` to indicate that this label target needs to be filled
+            # in later in the `macro_fixup_pass`
+            return -1, True
+
+        if defn:
+            func.labels_defined.add(label)
+
+        id = func.labels.get(label, None)
+        if id is not None:
+            return id, label in func.labels_defined
+
+        # workaround warning that numeric labels must not solely
+        # consist of '1' and '0' characters. unhinged!
+        next_id = max(func.labels.values()) + 1 if func.labels else 1
+        while len(str(next_id).replace("1", "").replace("0", "")) == 0:
+            next_id += 1
+
+        func.labels[label] = next_id
+        return next_id, label in func.labels_defined
+
+    def looks_like_label(self, label):
+        return label in self.expected_labels
+
+    def register_rust_macro(self, name, value, params=None):
+        self.rust_macros[name] = (value, params)
+
+    def contains_constant_ref(self, *values):
+        for v in values:
+            for t in tokenise(v):
+                if t in self.constant_syms:
+                    return True
+
+    def expand_rust_macros(self, *values, params={}):
+        for v in values:
+            for t in tokenise(v):
+                r = register_from_token(t)
+
+                if t in params:
+                    yield unquote("$" + t)
+                elif t in self.rust_macros:
+                    macro_value, macro_args = self.rust_macros[t]
+                    for vv in macro_value:
+                        self.visit_operands(vv)
+                    # this code path is for macro expansions that don't
+                    # "look like function calls", macros mentioned like that
+                    # must not have any arguments
+                    assert macro_args == None
+                    yield unquote("%s!()" % t)
+                elif r is not None and r.reg in self.rust_macros:
+                    macro_value, macro_args = self.rust_macros[r.reg]
+                    for vv in macro_value:
+                        self.visit_operands(vv)
+                    assert macro_args == None
+                    yield unquote("%s!()" % r.reg)
+                    yield r.suffix
+                elif is_comment(t):
+                    yield unquote(t)
+                elif t in self.constant_sym_rename:
+                    at = self.constant_sym_rename[t]
+                    if self.function_state:
+                        self.function_state.referenced_constant_syms.add(at)
+                    if self.arch.constant_reference_page_offs:
+                        if t.endswith("@PAGE"):
+                            yield unquote('PageRef!("' + at + '")')
+                        else:
+                            yield unquote('PageOffRef!("' + at + '")')
+                    else:
+                        yield "{" + at + "}"
+                elif (
+                    self.function_state and t in self.function_state.labels
+                ) or self.looks_like_label(t):
+                    id, before = self.find_label(t)
+                    yield unquote(
+                        'Label!("%s", %d, %s)'
+                        % (t, id, "Before" if before else "After")
+                    )
+                else:
+                    yield t
+
+    def expand_rust_macros_in_macro_decl(self, *values, indent=0, params={}):
+        if indent == 0:
+            return tokens_to_single_glued_string(
+                self.expand_rust_macros(*values, params=params)
+            )
+        else:
+            return tokens_to_single_glued_string_lines(
+                self.expand_rust_macros(*values, params=params), indent=indent
+            )
+
+    def expand_rust_macros_in_asm(self, *values):
+        return tokens_to_quoted_asm(self.expand_rust_macros(*values))
+
+    def expand_rust_macros_in_macro_call(self, *values):
+        assert len(values) == 1
+        value = values[0]
+        args = value.split(",")
+        args = [a.strip() for a in args]
+        return ", ".join(tokens_to_arg(self.expand_rust_macros(a)) for a in args)
+
+    def massage_current_function_comment(self):
+        head_comment = []
+        inside = False
+
+        for c in self.current_function_comment:
+            if "---------" in c:
+                if not inside:
+                    inside = True
+                    continue
+                else:
+                    break
+
+            if inside:
+                head_comment.append(c.rstrip())
+
+        paragraphs = []
+        para = []
+        for h in head_comment:
+            if para and h == "":
+                paragraphs.append(para)
+                para = []
+                continue
+            para.append(h)
+
+        paragraphs = filter(
+            lambda para: "ABI" not in para[0] and "extern " not in para[0], paragraphs
+        )
+        head_comment = []
+        for para in paragraphs:
+            for line in para:
+                # need to remove codeblocks, as they won't be valid rust code
+                if "    " in line:
+                    head_comment.append(line.strip())
+                else:
+                    head_comment.append(line)
+            head_comment.append("")
+        head_comment.insert(1, "")
+        return head_comment[:-1]
+
+    def on_source(self, name):
+        self.source = name.split("/s2n-bignum/", 1)[1]
+
+    def on_cpp(self, cpp):
+        for key, value in self.arch.cpp_definitions.items():
+            cpp.set(key, value)
+
+    def on_function(self, contexts, name):
+        assert contexts == []
+        if name in self.expected_functions:
+            defn = self.expected_functions[name]
+
+            self.function_state = FunctionState(self.output)
+            self.output = self.function_state.output()
+
+            if defn is None:
+                self.function_state.skip = True
+            else:
+                (
+                    parameter_map,
+                    return_map,
+                    rust_decl,
+                    return_value,
+                    allow_inline,
+                    hoist,
+                    assertions,
+                    func_attrs,
+                    several_exits,
+                ) = defn
+                self.function_state.parameter_map = parameter_map
+                self.function_state.return_map = return_map
+                self.function_state.rust_decl = rust_decl
+                self.function_state.func_attrs = func_attrs
+                self.function_state.return_value = return_value
+                self.function_state.hoist = hoist
+                self.function_state.several_exits = several_exits
+
+            if not self.function_state.skip:
+                self.harness.append(
+                    (rust_decl, func_attrs, self.abi_args.get(name))
+                )
+                locals = ""
+                if self.function_state.return_value:
+                    rtype, rname, _ = self.function_state.return_value
+                    locals = "let %s: %s;" % (rname, rtype)
+                for a in assertions:
+                    locals += "assert!(%s);" % a
+
+                print("", file=self.output)
+
+                # `admin/prove bytes` reads it to find the routine's proof.
+                print("// Transliterated from s2n-bignum's %s." % self.source, file=self.output)
+                for c in self.massage_current_function_comment():
+                    print("/// " + c, file=self.output)
+                self.current_function_comment = []
+
+                # LLVM costs inline assembly as free, so it would copy a
+                # routine of thousands of instructions into every caller.
+                # `allow_inline` is for a routine called in a hot loop whose
+                # call costs more than its copies.
+                if not allow_inline:
+                    print("#[inline(never)]", file=self.output)
+
+                print(
+                    """%spub(crate) %s {
+                    %s
+                    // SAFETY: inline assembly. see [crate::low::inline_assembly_safety] for safety info.
+                    unsafe { core::arch::asm!("""
+                    % (
+                        self.function_state.func_attrs,
+                        self.function_state.rust_decl,
+                        locals,
+                    ),
+                    file=self.output,
+                )
+
+    def on_comment(self, comment):
+        if self.current_constant_array:
+            return self.current_constant_array.add_comment(comment.rstrip())
+
+        self.current_function_comment.append(comment)
+
+        print("// " + comment.rstrip(), file=self.output)
+
+    def on_vertical_whitespace(self):
+        if self.current_constant_array:
+            return self.current_constant_array.add_vertical_whitespace()
+
+        print("", file=self.output)
+
+    def on_define(self, name, *value):
+        if self.function_state:
+            f = self.function_state.macros_inside_function
+            print("// <macro definition %s hoisted upwards>" % name, file=self.output)
+        else:
+            f = self.output
+
+        tokens = tokenise(name)
+        if len(tokens) == 1:
+            assert len(value) == 1
+            self.register_rust_macro(tokens[0], value)
+            value = self.expand_rust_macros_in_macro_decl(*value, indent=0)
+
+            if value.count('"') == 2 and value[0] == '"' and value[-1] == '"':
+                # avoid extra Q! noise if not needed
+                value = value
+            else:
+                value = "Q!(%s)" % value
+            print(
+                """macro_rules! %s { () => { %s } }""" % (tokens[0], value),
+                file=f,
+            )
+        else:
+            name, params = tokens_to_macro_fn(tokens)
+            self.register_rust_macro(name, value, params)
+            value = self.expand_rust_macros_in_macro_decl(
+                *value, params=params, indent=8
+            )
+
+            params = ["$%s:expr" % p for p in params]
+            print(
+                """macro_rules! %s {
+    (%s) => { Q!(
+%s
+    )}
+}"""
+                % (name, ", ".join(params), value),
+                file=f,
+            )
+
+    def on_directive(self, contexts, directive, *args):
+        if directive == ".byte" and list(args) == ["0xf3,0xc3"]:
+            # this is "rep ret", obfuscated for some reason
+            return self.finish_function()
+        elif directive == ".byte" and self.function_state:
+            # TODO: disassemble these for readability
+            self.on_asm(contexts, directive, *args)
+        elif directive == ".byte" and self.current_constant_array:
+            # avoid binary marker leaking into operational constants
+            if args and args[0].startswith("65,69,83,45,78,73,32,71,67,77,32,109"):
+                return
+            self.on_const(contexts, directive, *args)
+
+    def on_asm(self, contexts, opcode, operands):
+        if "WINDOWS_ABI" in contexts:
+            # No need for these as we leave function entry/return to rustc
+            return
+
+        if opcode in ("ret", "retl") and self.function_state and self.function_state.several_exits:
+            self.expected_labels.add("exit")
+            return self.on_asm(contexts, self.arch.unconditional_jump, "exit")
+
+        if opcode in ("ret", "retl") and (
+            (self.function_state and not self.function_state.emit_ret())
+            or not self.function_state
+        ):
+            return self.finish_function()
+
+        self.visit_operands(operands)
+        self.note_mnemonics(opcode, operands)
+
+        operands = operands.replace("{", "{{").replace("}", "}}")
+        operands = self.expand_rust_macros_in_asm(operands)
+
+        parts = ['"    %-15s "' % opcode]
+        parts.append(operands)
+        print("Q!(" + (" ".join(parts)) + "),", file=self.output)
+
+        if self.function_state and self.function_state.finishes_hoist(opcode, operands):
+            return self.finish_function()
+
+    def note_mnemonics(self, *values, seen=None):
+        """Records each token the current function's instructions hold,
+        through the macros they expand, so its harness call can require the
+        CPU features they need."""
+        if not self.function_state or self.function_state.skip:
+            return
+        seen = seen if seen is not None else set()
+        for v in values:
+            for t in tokenise(v):
+                t = t.lstrip("%").lower()
+                if t not in self.rust_macros:
+                    self.mnemonics.add(t)
+                elif t not in seen:
+                    seen.add(t)
+                    self.note_mnemonics(*self.rust_macros[t][0], seen=seen)
+
+    def visit_operands(self, operands):
+        for t in tokenise(operands):
+            t = t.lstrip("%")
+            if t in self.rust_macros:
+                continue
+            actual_reg = self.arch.lookup_register(t)
+            if actual_reg and self.function_state:
+                self.function_state.clobbers.add(actual_reg)
+                if self.arch.is_wide_vector(t):
+                    self.function_state.wide_vectors = True
+
+    def on_label(self, contexts, label):
+        if "WINDOWS_ABI" in contexts:
+            return
+
+        if (
+            self.function_state
+            and self.function_state.hoisting
+            and self.function_state.hoist_last_label() == label
+        ):
+            self.function_state.past_hoist_end_marker = True
+
+        if label in self.expected_functions:
+            self.on_function(contexts, label)
+            return
+
+        if label in self.constant_syms:
+            self.finish_constant_array()
+            self.start_constant_array(self.constant_sym_rename[label])
+            return
+
+        id, _ = self.find_label(label, defn=True)
+        print('Q!(Label!("%s", %d) ":"),' % (label, id), file=self.output)
+
+    def on_macro(self, name, params):
+        assert name in self.rust_macros
+        macro_value, _macro_args = self.rust_macros[name]
+        for vv in macro_value:
+            self.visit_operands(vv)
+        # A register passed only as an argument is clobbered too.
+        self.visit_operands(params)
+        self.note_mnemonics(name, params)
+        value = self.expand_rust_macros_in_macro_call(params)
+        print("%s!(%s)," % (name, value), file=self.output)
+
+    def on_const(self, contexts, type, value):
+        self.emit_constant_item(type, value)
+
+    def start_constant_array(self, name):
+        self.current_constant_array = ConstantArray(name)
+
+    def emit_constant_item(self, type, value):
+        self.current_constant_array.set_type(type)
+        self.current_constant_array.add_item(value)
+
+    def finish_constant_array(self):
+        if self.current_constant_array:
+            ca = self.current_constant_array
+            self.current_constant_array = None
+            if ca.name in self.constant_sym_same_as:
+                return
+
+            rust_type = {
+                ".byte": "u8",
+                ".quad": "u64",
+                ".long": "u32",
+            }[ca.type]
+
+            array_type = "[%s; %d]" % (rust_type, len(ca.items))
+
+            rust_type = array_type
+
+            visibility = "pub(super) " if ca.name in self.constant_sym_shared else ""
+            print(
+                "%sstatic %s: %s = [" % (visibility, ca.name, rust_type),
+                file=self.output,
+            )
+            for line in ca.lines:
+                print("    %s" % line, file=self.output)
+            print("];", file=self.output)
+            print("", file=self.output)
+
+    def finish_function(self):
+        if self.function_state is None:
+            return
+
+        if self.function_state.hoist and not self.function_state.hoisting:
+            mode, after, fin = self.function_state.hoist
+            # linear hoisting: multiple rets from the main function, no calls, only jmps
+            #                  all rets are replaced with jmps to hoist_finish
+            # proc hoisting: single ret from the main function, but local functions after
+            #                that.  first ret is replaced with a jmp, others are left.
+            #
+            # this is deeply manual and inflexible.
+            #
+            # TODO: do a basic block pass, to determine which blocks are reached from the
+            # main function, and how (call/jmp), and then simply emit the correct code.
+            assert mode in ("linear", "proc")
+            print(
+                "// %s hoisting in -> %s after %s" % (mode, fin, after),
+                file=self.output,
+            )
+            self.expected_labels.add("hoist_finish")
+            self.on_asm([], self.arch.unconditional_jump, "hoist_finish")
+            self.function_state.hoisting = True
+            return
+        elif self.function_state.hoisting and self.function_state.past_hoist_end_marker:
+            self.on_label([], "hoist_finish")
+            self.function_state.hoisting = False
+        elif (
+            self.function_state.hoisting
+            and not self.function_state.hoist_mode_is_proc()
+        ):
+            self.on_asm([], self.arch.unconditional_jump, "hoist_finish")
+            return
+
+        if self.function_state.wide_vectors:
+            self.on_asm([], self.arch.wide_vector_exit, "")
+            self.function_state.clobbers.update(self.arch.wide_vector_exit_clobbers)
+
+        regs = list(zip(self.arch.fn_arg_regs, self.function_state.parameter_map)) + (
+            [(self.arch.fn_ret_reg, self.function_state.return_map)]
+            if self.function_state.return_map
+            else []
+        )
+
+        arg_regs = set()
+        for reg, (dir, param) in regs:
+            print('%s("%s") %s,' % (dir, reg, param), file=self.output)
+            arg_regs.add(reg)
+
+        for c in sorted(self.function_state.referenced_constant_syms):
+            print(
+                "%s = sym %s," % (c, self.constant_sym_same_as.get(c, c)),
+                file=self.output,
+            )
+
+        print("// clobbers", file=self.output)
+        for c in sorted(self.function_state.clobbers):
+            if c in arg_regs:
+                continue
+            if c in self.arch.ignore_clobber:
+                continue
+            print('out("%s") _,' % c, file=self.output)
+        if self.att_syntax:
+            print("options(att_syntax),", file=self.output)
+        print("    )};", file=self.output)
+
+        if self.function_state.return_value:
+            _, rname, rexpr = self.function_state.return_value
+            print("    %s" % rexpr, file=self.output)
+
+        print("}", file=self.output)
+
+        # finally, restore original output and emit macros before
+        # function body
+        self.output = self.function_state.old_output
+        if not self.function_state.skip:
+            self.output.write(self.function_state.macros_inside_function.getvalue())
+            self.output.write(self.function_state.output().getvalue())
+        self.function_state = None
+
+    def on_eof(self):
+        if self.function_state and self.function_state.several_exits:
+            self.on_label([], "exit")
+            self.finish_function()
+        self.finish_constant_array()
+        self.emit_harness()
+
+    def emit_harness(self):
+        """Emits the test that calls each function through
+        `crate::low::abi`, on CPUs with the features its instructions need."""
+        assert len(self.harness) <= 1, "one harness test per file"
+        for rust_decl, func_attrs, abi_args in self.harness:
+            name, params = parse_rust_decl(rust_decl)
+            if abi_args is None:
+                abi_args = ABI_ARGS.get(name, [None] * len(params))
+            assert len(abi_args) == len(params), name
+            abi_args = [
+                a if a is not None else default_abi_arg(name, ty)
+                for a, ty in zip(abi_args, params)
+            ]
+            features = self.arch.required_features(self.mnemonics)
+            print(
+                """
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+#[test]
+fn abi() {""",
+                file=self.output,
+            )
+            if features:
+                detected = " && ".join(
+                    '%s!("%s")' % (self.arch.feature_detector, f) for f in features
+                )
+                if len(features) > 1:
+                    detected = "(%s)" % detected
+                print("if !%s { return; }" % detected, file=self.output)
+            call = ", ".join([name] + abi_args)
+            if func_attrs or rust_decl.lstrip().startswith("unsafe "):
+                print(
+                    "// SAFETY: the CPU has the features checked above.\n"
+                    "unsafe { crate::low::abi::call!(unsafe %s); }" % call,
+                    file=self.output,
+                )
+            else:
+                print("crate::low::abi::call!(%s);" % call, file=self.output)
+            print("}", file=self.output)
+
+
+def parse_rust_decl(rust_decl):
+    """Returns a declaration's function name and its parameters' types."""
+    m = re.fullmatch(
+        r"\s*(?:unsafe )?fn (\w+)\((.*)\)(\s*->.*)?\s*", rust_decl, re.S
+    )
+    assert m, rust_decl
+    params, depth, start = [], 0, 0
+    text = m.group(2)
+    for i, c in enumerate(text + ","):
+        if c in "[(<":
+            depth += 1
+        elif c in "])>":
+            depth -= 1
+        elif c == "," and depth == 0:
+            param = text[start:i].strip()
+            start = i + 1
+            if param:
+                params.append(param.split(":", 1)[1].strip())
+    return m.group(1), params
+
+
+INTEGERS = "u8 u16 u32 u64 usize i8 i16 i32 i64".split()
+
+# Harness arguments for the functions taking what has no zero to default to,
+# such as a slice, sized to satisfy their assertions. `None` takes the
+# default.
+ABI_ARGS = {
+    "bignum_add": ["&mut [0; 4]", "&[1; 4]", "&[2; 3]"],
+    "bignum_bitsize": ["&[1, 2, 3, 4]"],
+    "bignum_cmp_lt": ["&[1, 2, 3, 4]", "&[1, 2, 3]"],
+    "bignum_coprime": ["&[3; 4]", "&[5; 4]", "&mut [0; 8]"],
+    "bignum_copy_row_from_table": ["&mut [0; 4]", "&[7; 12]", "3", "4", "2"],
+    "bignum_copy_row_from_table_8n": ["&mut [0; 8]", "&[7; 24]", "3", "8", "2"],
+    "bignum_copy_row_from_table_16": ["&mut [0; 16]", "&[7; 48]", "3", "2"],
+    "bignum_copy_row_from_table_32": ["&mut [0; 32]", "&[7; 96]", "3", "2"],
+    "bignum_ctz": ["&[0, 0, 4, 1]"],
+    "bignum_demont": ["&mut [0; 4]", "&[1; 4]", "&[u64::MAX; 4]"],
+    "bignum_digitsize": ["&[1, 2, 0, 0]"],
+    "bignum_emontredc_8n": ["&mut [0; 16]", "&[u64::MAX; 8]", "1"],
+    "bignum_eq": ["&[1; 4]", "&[1; 3]"],
+    "bignum_kmul_16_32": ["&mut [0; 32]", "&[1; 16]", "&[2; 16]", None],
+    "bignum_kmul_32_64": ["&mut [0; 64]", "&[1; 32]", "&[2; 32]", None],
+    "bignum_ksqr_16_32": ["&mut [0; 32]", "&[1; 16]", None],
+    "bignum_ksqr_32_64": ["&mut [0; 64]", "&[1; 32]", None],
+    "bignum_mod_n25519": [None, "&[u64::MAX; 8]"],
+    "bignum_modadd": ["&mut [0; 4]", "&[1; 4]", "&[2; 4]", "&[u64::MAX; 4]"],
+    "bignum_modinv": ["&mut [0; 4]", "&[3; 4]", "&[u64::MAX; 4]", "&mut [0; 12]"],
+    "bignum_modsub": ["&mut [0; 4]", "&[1; 4]", "&[2; 4]", "&[u64::MAX; 4]"],
+    "bignum_montifier": ["&mut [0; 4]", "&[u64::MAX; 4]", "&mut [0; 4]"],
+    "bignum_montmul": ["&mut [0; 4]", "&[1; 4]", "&[2; 4]", "&[u64::MAX; 4]"],
+    "bignum_montredc": ["&mut [0; 4]", "&[1; 8]", "&[u64::MAX; 4]", "1"],
+    "bignum_montsqr": ["&mut [0; 4]", "&[1; 4]", "&[u64::MAX; 4]"],
+    "bignum_mul": ["&mut [0; 8]", "&[1, 2, 3, 4]", "&[5, 6, 7, 8]"],
+    "bignum_mux": ["1", "&mut [0; 4]", "&[1; 4]", "&[2; 4]"],
+    "bignum_negmodinv": ["&mut [0; 4]", "&[u64::MAX; 4]"],
+    "bignum_optsub": ["&mut [0; 4]", "&[1; 4]", "&[2; 4]", "1"],
+    "mlkem_rej_uniform_vartime": [
+        None,
+        "&[0x55; 168]",
+        "&super::mlkem::MLKEM_REJ_UNIFORM_TABLE",
+    ],
+    "mldsa_rej_uniform_vartime": [
+        None,
+        "&[0x55; 840]",
+        "&super::mldsa::MLDSA_REJ_UNIFORM_TABLE",
+    ],
+}
+# AES-GCM's `blocks` counts 128-byte strides, eight AES blocks each.
+for bits in (128, 256):
+    for op in ("enc", "dec"):
+        for alt in ("", "_alt"):
+            ABI_ARGS["aes%d_gcm_%s%s" % (bits, op, alt)] = [
+                "[[0; 16]; 8].as_mut_ptr()",
+                "1",
+            ] + [None] * 4
+
+
+def zero_value(ty):
+    m = re.fullmatch(r"\[(.*);\s*(\w+)\]", ty)
+    if m:
+        return "[%s; %s]" % (zero_value(m.group(1).strip()), m.group(2))
+    if ty in INTEGERS:
+        return "0"
+    return "crate::low::abi::zeroed()"
+
+
+def default_abi_arg(name, ty):
+    """An argument of type `ty` for the harness call: zero, in an array
+    where it is one. A slice has no length to default to, so its function
+    must give `abi_args`."""
+    if ty in INTEGERS:
+        return "0"
+    m = re.fullmatch(r"&(mut )?(.*)", ty)
+    assert m, "%s: give abi_args for %s" % (name, ty)
+    assert not re.fullmatch(r"\[[^;]*\]", m.group(2)), (
+        "%s: give abi_args for %s" % (name, ty)
+    )
+    # Routines may load whole vectors from it with aligned loads.
+    return "&%scrate::low::abi::Aligned(%s).0" % (m.group(1) or "", zero_value(m.group(2)))
+
+
+# A pass to fixup macro definitions that reference labels. This pass runs on the
+# Rust code generated by prior passes to more easily account for macro
+# definitions and label blocks getting moved around by fn hoisting.
+def macro_fixup_pass(rust_output, rust_input, macro_defs, macro_exps):
+    # Rust regex matchers
+    function = re.compile(r"^pub\(crate\) fn (?P<name>[a-zA-Z0-9_]+)\(")
+    macro_def = re.compile(r"^macro_rules! (?P<name>[a-zA-Z0-9_]+) {$")
+    label_def = re.compile(
+        r"^Q!\(Label!\(\"(?P<name>[a-zA-Z0-9_]+)\", (?P<id>\d+)\) \":\"\),$"
+    )
+    label_ref = re.compile(r"Label!\(\"(?P<name>[a-zA-Z0-9_]+)\", -1, Before\)")
+
+    lines = rust_input.getvalue().splitlines()
+
+    # find line numbers for label and fn defs
+    # ... pub(crate) fn name(
+    # ... Label!("name", id) ":"
+
+    defs = {}
+    fixups = {}
+    macro_context = None
+
+    for ln, line in enumerate(lines):
+        m = function.match(line)
+        if m:
+            defs[m.group("name")] = (ln, None)
+            macro_context = None
+            continue
+        m = label_def.match(line)
+        if m:
+            defs[m.group("name")] = (ln, m.group("id"))
+            macro_context = None
+            continue
+        m = macro_def.match(line)
+        if m:
+            macro_context = m.group("name")
+            continue
+        if macro_context is not None:
+            for m in label_ref.finditer(line):
+                key = (macro_context, m.group("name"))
+                fixups.setdefault(key, set()).add(ln)
+
+    # each expansion for a macro-with-label-ref must be uniformly before or
+    # after each label it references for our single fixup at the macro
+    # definition to work
+
+    for name in macro_exps:
+        # build span containing all expansions for this macro
+        exp_lns = [defs[label_name][0] for label_name in macro_exps[name]]
+        (min_exp_ln, max_exp_ln) = (min(exp_lns), max(exp_lns))
+
+        for label_ref in macro_defs[name]:
+            (label_ref_ln, label_ref_id) = defs[label_ref]
+
+            if min_exp_ln <= label_ref_ln <= max_exp_ln:
+                print(
+                    f"macro_fixup_pass: macro ({name}): Unable to fixup label \
+                    ref ({label_ref}) as all macro expansions are not uniformly \
+                    before or after the label definition"
+                )
+                continue
+
+            direction = "Before" if label_ref_ln <= min_exp_ln else "After"
+
+            # rewrite the macro definitions to use the correct label target
+            # ... Label!("name", -1, _)
+            #  -> Label!("name", id, Before|After)
+
+            pat = f'Label!("{label_ref}", -1, Before)'
+            rep = f'Label!("{label_ref}", {label_ref_id}, {direction})'
+            for ln in fixups[(name, label_ref)]:
+                lines[ln] = lines[ln].replace(pat, rep)
+
+    rust_output.write("\n".join(lines))
+
+
+if __name__ == "__main__":
+    assert tokenise("1234+1235") == ["1234", "+", "1235"]
+    assert tokenise("rsp+(3*NUMSIZE)") == ["rsp", "+", "(", "3", "*", "NUMSIZE", ")"]
+    assert tokenise("mul_p25519(P0,P1,P2)") == [
+        "mul_p25519",
+        "(",
+        "P0",
+        ",",
+        "P1",
+        ",",
+        "P2",
+        ")",
+    ]
+    assert tokenise("add 0x1, 0x1234") == ["add", "0x1", ",", "0x1234"]
+    print(tokenise("QWORD PTR [rsp+12*NUMSIZE+8]"))
+
+    tt = tokenise("mov     v9.d[0], xzr")
+    print(repr(tt))
+    assert tokens_to_quoted_asm(tt) == '"mov v9.d[0], xzr"'
+
+    tt = tokenise("add     v22.2s, v2.2s, v3.2s")
+    print(repr(tt))
+    assert tokens_to_quoted_asm(tt) == '"add v22.2s, v2.2s, v3.2s"'
+
+    print(tokens_to_quoted_asm(tokenise("b.ne    curve25519_x25519_invloop")))
+    assert (
+        tokens_to_quoted_asm(tokenise("b.ne    curve25519_x25519_invloop"))
+        == '"b.ne curve25519_x25519_invloop"'
+    )
+    assert (
+        tokens_to_quoted_asm(tokenise("mov    [P0+0x18], r11"))
+        == '"mov [P0 + 0x18], r11"'
+    )
+
+    print(repr(tokenise("stp     x2, x3, [xn+16]")))
+
+    assert tokenise("x0, x1, [xn]") == ["x0", ",", "x1", ",", "[", "xn", "]"]
+    assert tokenise("ldr x0, /* inside comment */ 5") == [
+        "ldr",
+        "x0",
+        ",",
+        "/* inside comment */",
+        "5",
+    ]
+    print(tokenise("movbig( n0, #0xf3b9, #0xcac2, #0xfc63, #0x2551)"))
+    assert tokenise(".Lloop_ssse3:") == [".Lloop_ssse3", ":"]
+    assert tokenise("umlal	v0.2d, v4.2s, v5.2s") == [
+        x.lower() for x in tokenise("umlal	v0.2D, v4.2S, v5.2S")
+    ]

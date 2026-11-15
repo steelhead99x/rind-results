@@ -1,0 +1,931 @@
+#!/usr/bin/env python3
+"""Regenerates the aws-lc assembly under rind/src/low/*/aws_lc.
+
+Usage: admin/import-aws-lc <aws-lc checkout at REV>
+
+Every output starts from one of aws-lc's assembly files, all but three
+pregenerated under `generated-src`, run through cpp, and is escaped for Rust's assembly macros: braces doubled,
+each table a routine loads a `{name}` operand, and each local label tagged
+with its file, since the blocks can share an assembler scope. Undoing those
+edits gives aws-lc's text line for line.
+
+32-bit ARM: one file per source, for `global_asm!`, from the `linux-arm`
+flavor cut down to the routines rind calls and the tables they load, or kept
+whole for the handwritten NEON Poly1305. Each routine's name is a `{name}`
+operand that rind binds to a crate-version qualified symbol.
+
+x86_64 and aarch64: one file per routine and flavor, holding the routine's
+body from after its label through its return, for `naked_asm!` in a naked
+function. rustc then emits the symbol, section, and alignment directives for
+the object format, so aws-lc's `linux` flavor serves ELF and COFF, and its
+Apple flavor, which spells alignment and page relocations differently, serves
+Mach-O. The `linux` flavor opens with aws-lc's alignment for the routine,
+which raises rustc's. The tables move to Rust statics, written as array literals beside the
+routines, which the routines reach through `sym` operands; a label inside a
+table becomes the table's operand plus the label's offset. A `packed` table
+runs on through changes of width, written as bytes, for routines that load
+across its labels. An import's `tables_of` names an earlier import whose
+tables match its own, which it checks and writes none of. Helpers, the local routines the others `bl` to, become
+naked functions of their own, reached the same way, as are the routines of
+another import that a routine `calls`. An `inner` label, an entry point
+inside a routine that falls through to it, does not end the routine, which
+drops the label line; one naming a helper gives that helper its own copy from
+the label on, which opens a CFI frame of its own where the copy closes one.
+One of an import's `labels`, a jump target inside a routine, does not end it
+either, and stays as a local label. A routine that jumps or calls into
+another routine of its file `carries` it: the other's alignment, label, and
+body follow the routine's in the same file, as local labels. One that
+branches to a helper by name `joins` it: the helper follows the routine's
+body under a local label, within the routine's CFI frame, which restarts
+there from the routine's entry state. An import's `cpp` defines
+drop branches rind never takes. Its `aliases` name the
+routine an entry label calls, where that label shares the routine's own,
+which another import may hold. Its `inserts` add an instruction before the
+first that names a symbol, and its `replaces` swap one instruction for another:
+deliberate changes to aws-lc's code, each saying why. Its `dispatches` drop
+a routine's CPU check, from its load of `OPENSSL_ia32cap_P` through its jump
+to a twin, since rind picks the twin itself; a twin that is not global keeps
+its name unprefixed in Apple's flavor. A `vzeroupper` import
+gains that instruction before each return: mlkem-native's routines return
+with the upper halves of the ymm registers dirty, which costs the SSE code
+that runs next a transition on Intel's cores, so rind ends them as
+`admin/parse-asm` does s2n-bignum's.
+"""
+
+import os
+import re
+import subprocess
+import sys
+
+REV = "91c93a8eb860e51482a871a8772cb9b1b310baea"
+
+ROOT = os.path.join(os.path.dirname(__file__), "..", "rind", "src", "low")
+
+# ARM mode, little-endian, built for ARMv7 with the ARMv8 routines kept, as
+# aws-lc builds them for 32-bit Android and Linux.
+ARM_CPP = [
+    "-D__ARMEL__",
+    "-D__ARM_ARCH=7",
+    "-D__ARM_MAX_ARCH__=8",
+    "-DOPENSSL_ARM",
+    "-D__ELF__",
+    "-DAARCH64_VALID_CALL_TARGET=",
+]
+
+ARM_IMPORTS = [
+    {
+        "source": "aesv8-armx.S",
+        "tag": "aes",
+        "perlasm": "crypto/fipsmodule/aes/asm/aesv8-armx.pl",
+        "copyright": "Copyright 2014-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "constants": [(".Lrcon:", 3)],
+        "routines": [
+            "aes_hw_set_encrypt_key",
+            "aes_hw_set_decrypt_key",
+            "aes_hw_encrypt",
+            "aes_hw_decrypt",
+            "aes_hw_ctr32_encrypt_blocks",
+            "aes_hw_cbc_encrypt",
+        ],
+    },
+    {
+        "source": "ghashv8-armx.S",
+        "tag": "ghash",
+        "perlasm": "crypto/fipsmodule/modes/asm/ghashv8-armx.pl",
+        "copyright": "Copyright 2014-2020 The OpenSSL Project Authors. All Rights Reserved.",
+        "constants": [],
+        "routines": ["gcm_init_v8", "gcm_ghash_v8"],
+    },
+    {
+        "source": "sha1-armv4-large.S",
+        "tag": "sha1",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha1-armv4-large.pl",
+        "copyright": "Copyright 2007-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "constants": [(".LK_00_19:.word", 3)],
+        "routines": [
+            "sha1_block_data_order_nohw",
+            "sha1_block_data_order_neon",
+            "sha1_block_data_order_hw",
+        ],
+    },
+    {
+        "source": "sha256-armv4.S",
+        "tag": "sha256",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha256-armv4.pl",
+        "copyright": "Copyright 2007-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        # `sha256_block_data_order_neon` ends its rounds on the zero word
+        # after the table.
+        "constants": [("K256:", 18), (".LK256_shortcut_neon:", 2), (".LK256_shortcut_hw:", 2)],
+        "routines": [
+            "sha256_block_data_order_nohw",
+            "sha256_block_data_order_neon",
+            "sha256_block_data_order_hw",
+        ],
+    },
+    {
+        "source": "sha512-armv4.S",
+        "tag": "sha512",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha512-armv4.pl",
+        "copyright": "Copyright 2007-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "constants": [("K512:", 40)],
+        "routines": ["sha512_block_data_order_nohw", "sha512_block_data_order_neon"],
+    },
+    # Montgomery multiplication, as aws-lc's `bn_mul_mont` picks between them:
+    # NEON for widths of eight 32-bit words, and integer code otherwise.
+    {
+        "source": "armv4-mont.S",
+        "tag": "mont",
+        "perlasm": "crypto/fipsmodule/bn/asm/armv4-mont.pl",
+        "copyright": "Copyright 2007-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "constants": [],
+        "routines": ["bn_mul_mont_nohw", "bn_mul8x_mont_neon"],
+    },
+    {
+        "source": "chacha-armv4.S",
+        "dir": "generated-src/linux-arm/crypto/chacha",
+        "tag": "chacha",
+        "perlasm": "crypto/chacha/asm/chacha-armv4.pl",
+        "copyright": "Copyright 2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "constants": [(".Lsigma:", 3)],
+        "routines": ["ChaCha20_ctr32_nohw", "ChaCha20_ctr32_neon"],
+    },
+    # Written by hand rather than generated, its routines end without `.size`
+    # and its local labels start `._`, so the whole file is kept. aws-lc keeps
+    # BoringSSL's ISC license for it.
+    {
+        "source": "poly1305_arm_asm.S",
+        "dir": "crypto/poly1305",
+        "tag": "poly1305",
+        "notice": [
+            "Public domain: the neon2 version in SUPERCOP by D. J. Bernstein and",
+            "Peter Schwabe, as BoringSSL imported it. Copyright (c) 2014, Google Inc.",
+            "SPDX-License-Identifier: ISC",
+        ],
+        "local": "._",
+        "whole": True,
+        "constants": [],
+        "routines": ["openssl_poly1305_neon2_blocks", "openssl_poly1305_neon2_addmulmod"],
+    },
+]
+
+# Per architecture: the comment leader, and per flavor its directory, the
+# defines that select it, its symbol prefix, and its local label prefix.
+ARCHES = {
+    "x86_64": {
+        "comment": "#",
+        # The S2N_BN macros stand in for the s2n-bignum header that
+        # mlkem-native's routines include.
+        "cpp": [
+            "-DOPENSSL_X86_64",
+            "-D_CET_ENDBR=",
+            "-DS2N_BN_SYM_VISIBILITY_DIRECTIVE(n)=.globl S2N_BN_SYMBOL(n)",
+            "-DS2N_BN_SYM_PRIVACY_DIRECTIVE(n)=",
+            "-DS2N_BN_SIZE_DIRECTIVE(n)=.size S2N_BN_SYMBOL(n),.-S2N_BN_SYMBOL(n)",
+        ],
+        "flavors": {
+            "linux": ("linux-x86_64", ["-D__ELF__", "-DS2N_BN_SYMBOL(n)=n"], "", ".L"),
+            "apple": ("mac-x86_64", ["-D__APPLE__", "-DS2N_BN_SYMBOL(n)=_/**/n"], "_", "L$"),
+        },
+    },
+    "aarch64": {
+        "comment": "//",
+        "cpp": [
+            "-DOPENSSL_AARCH64",
+            "-D__ARM_MAX_ARCH__=8",
+            "-DAARCH64_VALID_CALL_TARGET=",
+            "-DAARCH64_SIGN_LINK_REGISTER=",
+            "-DAARCH64_VALIDATE_LINK_REGISTER=",
+        ],
+        "flavors": {
+            "linux": ("linux-aarch64", ["-D__ELF__"], "", ".L"),
+            "apple": ("ios-aarch64", ["-D__APPLE__"], "_", "L"),
+        },
+    },
+}
+
+IMPORTS_64 = [
+    {
+        "arch": "x86_64",
+        "source": "sha512-x86_64.S",
+        "tag": "sha512",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha512-x86_64.pl",
+        "copyright": "Copyright 2005-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["K512"],
+        "routines": ["sha512_block_data_order_avx", "sha512_block_data_order_nohw"],
+    },
+    {
+        "arch": "x86_64",
+        "source": "sha256-x86_64.S",
+        "tag": "sha256",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha512-x86_64.pl",
+        "copyright": "Copyright 2005-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["K256"],
+        "routines": [
+            "sha256_block_data_order_avx",
+            "sha256_block_data_order_ssse3",
+            "sha256_block_data_order_nohw",
+        ],
+    },
+    # P-256's generator multiplication, as aws-lc's
+    # `ecp_nistz256_point_mul_base` runs it: a constant-time row scan, with
+    # SSE2 or AVX2, and a mixed addition, with `mulq` or with BMI2 and ADX.
+    {
+        "arch": "x86_64",
+        "source": "p256-x86_64-asm.S",
+        "tag": "p256",
+        "perlasm": "crypto/fipsmodule/ec/asm/p256-x86_64-asm.pl",
+        "notice": [
+            "Copyright 2014-2016 The OpenSSL Project Authors. All Rights Reserved.",
+            "Copyright (c) 2014, Intel Corporation. All Rights Reserved.",
+            "Copyright (c) 2015 CloudFlare, Inc.",
+            "SPDX-License-Identifier: Apache-2.0",
+        ],
+        "tables": ["poly", "One", "ONE_mont"],
+        "routines": [
+            "ecp_nistz256_select_w7",
+            "ecp_nistz256_avx2_select_w7",
+            "ecp_nistz256_point_add_affine",
+            "ecp_nistz256_point_add_affinex",
+        ],
+        "helpers": [
+            "__ecp_nistz256_mul_montq",
+            "__ecp_nistz256_sqr_montq",
+            "__ecp_nistz256_sub_fromq",
+            "__ecp_nistz256_subq",
+            "__ecp_nistz256_mul_montx",
+            "__ecp_nistz256_sqr_montx",
+            "__ecp_nistz256_sub_fromx",
+            "__ecp_nistz256_subx",
+        ],
+        "dispatches": ["ecp_nistz256_select_w7", "ecp_nistz256_point_add_affine"],
+    },
+    # The rest of the x86_64 imports are for CPUs without AVX2.
+    {
+        "arch": "x86_64",
+        "source": "sha1-x86_64.S",
+        "tag": "sha1",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha1-x86_64.pl",
+        "copyright": "Copyright 2006-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["K_XX_XX"],
+        "routines": [
+            "sha1_block_data_order_avx",
+            "sha1_block_data_order_ssse3",
+            "sha1_block_data_order_nohw",
+        ],
+    },
+    {
+        "arch": "x86_64",
+        "source": "chacha-x86_64.S",
+        "dir": "chacha",
+        "tag": "chacha",
+        "perlasm": "crypto/chacha/asm/chacha-x86_64.pl",
+        "copyright": "Copyright 2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["zero", "rot16"],
+        "routines": ["ChaCha20_ctr32_ssse3_4x"],
+    },
+    # The routines aws-lc's `bn_mul_mont` picks from, by width and CPU.
+    # `bn_sqrx8x_internal` loads the two scratch words after the 2n-word
+    # product, which `bn_sqr8x_mont` and `bn_powerx5` never write. They reach
+    # only the overflow flag before it is cleared, so results and timing do
+    # not depend on them, but memcheck carries them into every result and
+    # fails `admin/ctgrind`; rind's copies of both zero them first.
+    {
+        "arch": "x86_64",
+        "source": "x86_64-mont.S",
+        "tag": "mont",
+        "perlasm": "crypto/fipsmodule/bn/asm/x86_64-mont.pl",
+        "copyright": "Copyright 2005-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": [],
+        "routines": ["bn_mul_mont_nohw", "bn_mul4x_mont", "bn_mulx4x_mont", "bn_sqr8x_mont"],
+        "calls": ["bn_sqr8x_internal", "bn_sqrx8x_internal"],
+        "inserts": {"bn_sqr8x_mont": [("call", "bn_sqrx8x_internal", "movdqu\t%xmm0,48(%rsp,%r9,2)")]},
+    },
+    # And the exponentiation's: five squarings and a multiplication by a
+    # gathered table entry in one call, for a multiple of eight words, where
+    # each routine carries the multiplication and the reduction it jumps
+    # into. The `mulx`, `adcx`, and `adox` one is its own entry, which the
+    # define below drops, along with the check of aws-lc's
+    # `OPENSSL_ia32cap_P` that picks it, as rind picks it by its own.
+    {
+        "arch": "x86_64",
+        "source": "x86_64-mont5.S",
+        "tag": "mont5",
+        "perlasm": "crypto/fipsmodule/bn/asm/x86_64-mont5.pl",
+        "copyright": "Copyright 2011-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["inc"],
+        "routines": ["bn_sqr8x_internal", "bn_sqrx8x_internal", "bn_powerx5"],
+        "inner": [
+            "__bn_sqr8x_internal",
+            "__bn_sqr8x_reduction",
+            "__bn_sqrx8x_internal",
+            "__bn_sqrx8x_reduction",
+        ],
+        "carries": {"bn_powerx5": ["mulx4x_internal", "__bn_postx4x_internal"]},
+        "aliases": {"__bn_sqrx8x_internal": "bn_sqrx8x_internal"},
+        "inserts": {"bn_powerx5": [("call", "__bn_sqrx8x_internal", "movdqu\t%xmm0,48(%rsp,%r9,2)")]},
+    },
+    {
+        "arch": "x86_64",
+        "source": "x86_64-mont5.S",
+        "tag": "mont5",
+        "perlasm": "crypto/fipsmodule/bn/asm/x86_64-mont5.pl",
+        "copyright": "Copyright 2011-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "cpp": ["-DMY_ASSEMBLER_IS_TOO_OLD_FOR_ADX_AVX2"],
+        "tables": ["inc"],
+        "routines": ["bn_power5"],
+        "carries": {"bn_power5": ["mul4x_internal", "__bn_post4x_internal"]},
+        "aliases": {"__bn_sqr8x_internal": "bn_sqr8x_internal"},
+    },
+    # RSAZ, the exponentiation aws-lc runs for 1024-bit moduli with AVX2 but
+    # without ADX. `scatter_permd` runs on through `gather_permd` and `inc`,
+    # since the gather reads the former before the latter.
+    {
+        "arch": "x86_64",
+        "source": "rsaz-avx2.S",
+        "tag": "rsaz",
+        "perlasm": "crypto/fipsmodule/bn/asm/rsaz-avx2.pl",
+        "notice": [
+            "Copyright 2013-2016 The OpenSSL Project Authors. All Rights Reserved.",
+            "Copyright (c) 2012, Intel Corporation. All Rights Reserved.",
+            "SPDX-License-Identifier: Apache-2.0",
+        ],
+        "tables": ["and_mask", "scatter_permd"],
+        "routines": [
+            "rsaz_1024_sqr_avx2",
+            "rsaz_1024_mul_avx2",
+            "rsaz_1024_norm2red_avx2",
+            "rsaz_1024_red2norm_avx2",
+            "rsaz_1024_scatter5_avx2",
+            "rsaz_1024_gather5_avx2",
+        ],
+    },
+    # RSAZ's dual exponentiation, which aws-lc runs for the CRT of RSA-2048,
+    # 3072, and 4096 with AVX-512 IFMA: products on 256-bit vectors over
+    # 52-bit limbs, two moduli at once, and the gather of a table entry for
+    # each. `ones` runs on through `zeros`. The three sizes' tables match, so
+    # the 3k and 4k imports check theirs against the 2k one's and write none.
+    *[
+        {
+            "arch": "x86_64",
+            "source": f"rsaz-{size}-avx512.S",
+            "tag": f"rsaz_{size}",
+            "perlasm": f"crypto/fipsmodule/bn/asm/rsaz-{size}-avx512.pl",
+            "notice": [
+                "Copyright 2020-2021 The OpenSSL Project Authors. All Rights Reserved.",
+                "Copyright (c) 2020-2021, Intel Corporation. All Rights Reserved.",
+                "SPDX-License-Identifier: Apache-2.0",
+            ],
+            "tables": ["mask52x4", "ones"],
+            **({} if size == "2k" else {"tables_of": "rsaz-2k-avx512"}),
+            "routines": [f"rsaz_amm52x{digits}_x2_ifma256", f"extract_multiplier_2x{digits}_win5"],
+        }
+        for size, digits in [("2k", 20), ("3k", 30), ("4k", 40)]
+    ],
+    # Of those, these are AES and GHASH for CPUs without AVX, or without
+    # AES-NI and PCLMULQDQ.
+    {
+        "arch": "x86_64",
+        "source": "aesni-x86_64.S",
+        "tag": "aesni",
+        "perlasm": "crypto/fipsmodule/aes/asm/aesni-x86_64.pl",
+        "copyright": "Copyright 2009-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": [],
+        "routines": ["aes_hw_ctr32_encrypt_blocks", "aes_hw_cbc_encrypt"],
+        "carries": {
+            "aes_hw_ctr32_encrypt_blocks": ["_aesni_encrypt8"],
+            "aes_hw_cbc_encrypt": [
+                "_aesni_decrypt2",
+                "_aesni_decrypt3",
+                "_aesni_decrypt4",
+                "_aesni_decrypt6",
+                "_aesni_decrypt8",
+            ],
+        },
+    },
+    {
+        "arch": "x86_64",
+        "source": "vpaes-x86_64.S",
+        "tag": "vpaes",
+        "perlasm": "crypto/fipsmodule/aes/asm/vpaes-x86_64.pl",
+        "copyright": "Copyright 2011-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["_vpaes_consts"],
+        "routines": [
+            "vpaes_set_encrypt_key",
+            "vpaes_set_decrypt_key",
+            "vpaes_encrypt",
+            "vpaes_decrypt",
+            "vpaes_ctr32_encrypt_blocks",
+            "vpaes_cbc_encrypt",
+        ],
+        "helpers": [
+            "_vpaes_preheat",
+            "_vpaes_encrypt_core",
+            "_vpaes_encrypt_core_2x",
+            "_vpaes_decrypt_core",
+            "_vpaes_schedule_core",
+            "_vpaes_schedule_192_smear",
+            "_vpaes_schedule_round",
+            "_vpaes_schedule_low_round",
+            "_vpaes_schedule_transform",
+            "_vpaes_schedule_mangle",
+        ],
+        "inner": ["_vpaes_schedule_low_round"],
+    },
+    {
+        "arch": "x86_64",
+        "source": "ghash-ssse3-x86_64.S",
+        "tag": "ghash",
+        "perlasm": "crypto/fipsmodule/modes/asm/ghash-ssse3-x86_64.pl",
+        "notice": ["Copyright (c) 2019, Google Inc.", "SPDX-License-Identifier: ISC"],
+        "tables": ["reverse_bytes", "low4_mask"],
+        "routines": ["gcm_ghash_ssse3"],
+    },
+    # ChaCha20-Poly1305 in one pass, with SSE4.1 or AVX2. The routine picks
+    # its AVX2 half from aws-lc's `OPENSSL_ia32cap_P`, which rind does not
+    # have, so rind's copy reads the same bits from the data block rind
+    # passes it instead, as rind picks each path once per process.
+    {
+        "arch": "x86_64",
+        "source": "chacha20_poly1305_x86_64.S",
+        "dir": "cipher_extra",
+        "tag": "chacha_poly",
+        "perlasm": "crypto/cipher_extra/asm/chacha20_poly1305_x86_64.pl",
+        "notice": ["Copyright (c) 2015, CloudFlare Ltd.", "SPDX-License-Identifier: ISC"],
+        "tables": ["chacha20_consts", "and_masks"],
+        "packed": ["chacha20_consts"],
+        "routines": ["chacha20_poly1305_open", "chacha20_poly1305_seal"],
+        "helpers": ["poly_hash_ad_internal"],
+        "labels": ["process_extra_in_trailer"],
+        "carries": {
+            "chacha20_poly1305_open": ["chacha20_poly1305_open_avx2"],
+            "chacha20_poly1305_seal": ["chacha20_poly1305_seal_avx2"],
+        },
+        "replaces": {
+            name: [("movl", "OPENSSL_ia32cap_P+8(%rip),%eax", "movl\t64(%r9),%eax")]
+            for name in ["chacha20_poly1305_open", "chacha20_poly1305_seal"]
+        },
+    },
+    *[
+        {
+            "arch": "x86_64",
+            "source": f"mlkem_poly_compress_{d}_avx2_asm.S",
+            "path": "crypto/fipsmodule/ml_kem/mlkem/native/x86_64/src",
+            "tag": f"mlkem_{d}",
+            "notice": [
+                "Copyright (c) The mlkem-native project authors",
+                "SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT",
+            ],
+            "tables": [],
+            "routines": [f"mlkem_poly_compress_{d}_avx2_asm"],
+            "vzeroupper": True,
+        }
+        for d in ["d4", "d10"]
+    ],
+    {
+        "arch": "aarch64",
+        "source": "sha512-armv8.S",
+        "tag": "sha512",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha512-armv8.pl",
+        "copyright": "Copyright 2014-2020 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["K512"],
+        "routines": ["sha512_block_data_order_nohw", "sha512_block_data_order_hw"],
+    },
+    {
+        "arch": "aarch64",
+        "source": "sha256-armv8.S",
+        "tag": "sha256",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha512-armv8.pl",
+        "copyright": "Copyright 2014-2020 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["K256"],
+        "routines": ["sha256_block_data_order_nohw", "sha256_block_data_order_hw"],
+    },
+    # Montgomery multiplication, which picks its squaring or 4x routine by
+    # the width itself.
+    {
+        "arch": "aarch64",
+        "source": "armv8-mont.S",
+        "tag": "mont",
+        "perlasm": "crypto/fipsmodule/bn/asm/armv8-mont.pl",
+        "copyright": "Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": [],
+        "routines": ["bn_mul_mont"],
+        "joins": ["__bn_sqr8x_mont", "__bn_mul4x_mont"],
+    },
+    # AES-192-GCM eight blocks at a time, with SHA3's `EOR3`, as s2n-bignum's
+    # stitched kernels take only 128- and 256-bit keys.
+    {
+        "arch": "aarch64",
+        "source": "aesv8-gcm-armv8-unroll8.S",
+        "tag": "gcm8x",
+        "perlasm": "crypto/fipsmodule/modes/asm/aesv8-gcm-armv8-unroll8.pl",
+        "copyright": "Copyright 2020-2022 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": [],
+        "routines": ["aesv8_gcm_8x_enc_192", "aesv8_gcm_8x_dec_192"],
+    },
+    # The rest are for aarch64 CPUs without the crypto extension.
+    {
+        "arch": "aarch64",
+        "source": "sha1-armv8.S",
+        "tag": "sha1",
+        "perlasm": "crypto/fipsmodule/sha/asm/sha1-armv8.pl",
+        "copyright": "Copyright 2014-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": [],
+        "routines": ["sha1_block_data_order_nohw"],
+    },
+    {
+        "arch": "aarch64",
+        "source": "ghash-neon-armv8.S",
+        "tag": "ghash",
+        "perlasm": "crypto/fipsmodule/modes/asm/ghash-neon-armv8.pl",
+        "copyright": "Copyright 2010-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["masks"],
+        "routines": ["gcm_init_neon", "gcm_ghash_neon"],
+    },
+    {
+        "arch": "aarch64",
+        "source": "vpaes-armv8.S",
+        "tag": "vpaes",
+        "perlasm": "crypto/fipsmodule/aes/asm/vpaes-armv8.pl",
+        "copyright": "Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.",
+        "tables": ["_vpaes_consts"],
+        "routines": [
+            "vpaes_set_encrypt_key",
+            "vpaes_set_decrypt_key",
+            "vpaes_encrypt",
+            "vpaes_decrypt",
+            "vpaes_ctr32_encrypt_blocks",
+            "vpaes_cbc_encrypt",
+        ],
+        "helpers": [
+            "_vpaes_encrypt_preheat",
+            "_vpaes_encrypt_core",
+            "_vpaes_encrypt_2x",
+            "_vpaes_decrypt_preheat",
+            "_vpaes_decrypt_core",
+            "_vpaes_decrypt_2x",
+            "_vpaes_key_preheat",
+            "_vpaes_schedule_core",
+            "_vpaes_schedule_192_smear",
+            "_vpaes_schedule_round",
+            "_vpaes_schedule_low_round",
+            "_vpaes_schedule_transform",
+            "_vpaes_schedule_mangle",
+        ],
+        "inner": ["_vpaes_schedule_low_round"],
+        "carries": {"vpaes_cbc_encrypt": ["vpaes_cbc_decrypt"]},
+    },
+    # ChaCha20-Poly1305 in one pass, with NEON.
+    {
+        "arch": "aarch64",
+        "source": "chacha20_poly1305_armv8.S",
+        "dir": "cipher_extra",
+        "tag": "chacha_poly",
+        "perlasm": "crypto/cipher_extra/asm/chacha20_poly1305_armv8.pl",
+        "notice": ["Copyright (c) 2020, CloudFlare Ltd.", "SPDX-License-Identifier: ISC"],
+        "tables": ["chacha20_consts"],
+        "packed": ["chacha20_consts"],
+        "routines": ["chacha20_poly1305_seal", "chacha20_poly1305_open"],
+        "helpers": ["poly_hash_ad_internal"],
+    },
+]
+
+
+def vzeroupper(line):
+    """`line`, after a `vzeroupper` if it returns."""
+    if line.split()[:1] in (["ret"], ["retq"]):
+        yield "\tvzeroupper"
+    yield line
+
+
+def preprocess(path, defines):
+    # The headers only define what the defines already do, or macros for
+    # other architectures.
+    include = re.compile(r'#\s*include (<openssl/|"openssl/|"_internal_s2n_bignum_x86_att\.h")')
+    with open(path) as f:
+        text = "".join(line for line in f if not include.match(line))
+    # As an assembler source, so qhasm's `#` comment lines pass through.
+    cpp = ["cpp", "-x", "assembler-with-cpp", "-traditional-cpp", "-P", "-undef", "-nostdinc"]
+    cpp += [*defines, "-"]
+    out = subprocess.run(cpp, input=text, capture_output=True, text=True, check=True)
+    return out.stdout.splitlines()
+
+
+def find(lines, words, start=0):
+    for i in range(start, len(lines)):
+        if lines[i].split() == words:
+            return i
+    sys.exit(f"missing line: {' '.join(words)}")
+
+
+def constant(lines, label, following):
+    """`label`'s line and the `following` lines, after any `.align` before it."""
+    for i, line in enumerate(lines):
+        if line.startswith(label):
+            if lines[i - 1].split()[:1] == [".align"]:
+                i -= 1
+                following += 1
+            return lines[i : i + 1 + following]
+    sys.exit(f"missing constant: {label}")
+
+
+def routine(lines, name):
+    """`name` from its `.globl` through its `.size`."""
+    start = find(lines, [".globl", name])
+    end = find(lines, [".size", f"{name},.-{name}"], start)
+    return lines[start : end + 1]
+
+
+def source_index(lines, piece):
+    """Where `piece`, a run of `lines`, starts in them."""
+    return next(i for i in range(len(lines)) if lines[i : i + len(piece)] == piece)
+
+
+def spelling(lines, name, local):
+    """How `lines` label `name`: as is, or with the `local` prefix."""
+    for s in (name, local + name):
+        if [s + ":"] in map(str.split, lines):
+            return s
+    sys.exit(f"missing label: {name}")
+
+
+def alignment(lines, name):
+    """The alignment aws-lc puts before `name`'s label, if any, which may
+    precede its `.type` or, in Apple's flavor, the blank line in its place."""
+    i = find(lines, [f"{name}:"]) - 1
+    while lines[i].split()[:1] in ([], [".type"]):
+        i -= 1
+    return lines[i : i + 1] if lines[i].split()[:1] in ([".align"], [".p2align"]) else []
+
+
+def body(lines, label, local, inner=()):
+    """What follows `label` up to the next directive or label that ends a
+    routine: Apple's flavor has no `.size`, so the next routine's label ends
+    one there. Labels with the `local` prefix, or in `inner`, do not."""
+    start = find(lines, [label]) + 1
+    end = start
+    while end < len(lines):
+        words = lines[end].split()
+        if words[:1] in ([".size"], [".section"], [".text"], [".globl"]):
+            break
+        if words and words[0].endswith(":") and not words[0].startswith(local) and words[0][:-1] not in inner:
+            break
+        end += 1
+    # Some routines close their CFI frame after `.size`.
+    after = [line.split()[:1] for line in lines[end : end + 2]]
+    closing = lines[end + 1 : end + 2] if after == [[".size"], [".cfi_endproc"]] else []
+    # What separates it from the next routine: blank lines, comments, and
+    # the next routine's alignment.
+    while lines[end - 1].split()[:1] in ([], [".align"]) or lines[end - 1].lstrip().startswith(("//", "#")):
+        end -= 1
+    return lines[start:end] + closing
+
+
+def one_frame(frames):
+    """The routines of `frames`, each a CFI frame, in one frame that
+    restarts from the first's entry state where each later one opened.
+    Apple's ld64 splits code at each frame and dead-strips one that only
+    branches without a relocation reach, such as a joined routine's."""
+    out = []
+    for i, frame in enumerate(frames):
+        last = i + 1 == len(frames)
+        for line in frame:
+            directive = line.split()[:1]
+            if directive == [".cfi_startproc"]:
+                out += [line if i == 0 else ".cfi_restore_state"] + ([] if last else [".cfi_remember_state"])
+            elif directive != [".cfi_endproc"] or last:
+                out.append(line)
+    return out
+
+
+def table(lines, label, local, packed=False):
+    """The values from `label` up to the first line that is not one of the
+    same width, their width in bytes, and the offset of each label within
+    them, keyed without `local`. A label just before a change of width starts
+    the next table, which a spec names separately, unless the table is
+    `packed`: then it runs on to the first line that is not data, as bytes."""
+    start = find(lines, [label]) + 1
+    widths = {".quad": 8, ".long": 4, ".byte": 1}
+    values, width, offsets = [], None, {}
+    for line in lines[start:]:
+        # Character constants, such as the ChaCha20 constant's.
+        line = re.sub(r"'(.)'", lambda m: str(ord(m[1])), line)
+        words = re.sub(r"(//|#).*", "", line).replace(",", " ").split()
+        if not words:
+            continue
+        if len(words) == 1 and words[0].startswith(local) and words[0].endswith(":"):
+            offsets[words[0][len(local) : -1]] = len(values) * width if width else 0
+            continue
+        if words[0] not in widths:
+            break
+        if packed:
+            size = widths[words[0]]
+            values += [f"0x{b:02x}" for v in words[1:] for b in int(v, 0).to_bytes(size, "little")]
+            width = 1
+            continue
+        if width not in (None, widths[words[0]]):
+            break
+        width = widths[words[0]]
+        values += words[1:]
+    if not values:
+        sys.exit(f"empty table: {label}")
+    end = len(values) * width
+    return values, width, {sub: offset for sub, offset in offsets.items() if offset < end}
+
+
+def words(names):
+    """Matches any of `names` as a whole symbol."""
+    return re.compile(r"(?<![\w.$])(" + "|".join(map(re.escape, names)) + r")(?![\w$])")
+
+
+def escape(lines, operands, local, tag, comment):
+    """Doubles braces, writes each key of `operands`, an `(operand, offset)`,
+    as `{operand}` plus any offset after its page modifier outside `comment`s,
+    and tags each label `lines` defines with the `local` prefix."""
+    lines = list(lines)
+    defined = re.compile(re.escape(local) + r"[\w$]+(?=:)")
+    labels = [m[0] for m in map(defined.match, lines) if m]
+    operands_re = re.compile(words(operands).pattern + r"(@PAGE(?:OFF)?)?") if operands else None
+
+    def operand(m):
+        name, offset = operands[m[1]]
+        return "{" + name + "}" + (m[2] or "") + (f"+{offset}" if offset else "")
+
+    labels_re = words(labels) if labels else None
+    for line in lines:
+        code, leader, text = line.replace("{", "{{").replace("}", "}}").partition(comment)
+        if operands_re:
+            code = operands_re.sub(operand, code)
+        line = code + leader + text
+        if labels_re:
+            line = labels_re.sub(lambda m: local + tag + "_" + m[1][len(local) :], line)
+        yield line
+
+
+def header(comment, spec, source):
+    notice = spec.get("notice", [spec.get("copyright"), "SPDX-License-Identifier: Apache-2.0"])
+    origin = f"{comment} {source}"
+    if "perlasm" in spec:
+        origin += f", which aws-lc generates from {spec['perlasm']}"
+    return [f"{comment} {line}" for line in notice] + [
+        f"{comment}",
+        f"{comment} Generated by admin/import-aws-lc from aws-lc {REV}:",
+        origin + ".",
+        f"{comment} Do not edit by hand.",
+    ]
+
+
+def write(path, lines):
+    # Renamed into place, so a failure partway leaves the committed file whole.
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, path)
+
+
+def import_arm(aws_lc):
+    out_dir = os.path.join(ROOT, "arm", "aws_lc")
+    for spec in ARM_IMPORTS:
+        directory = spec.get("dir", "generated-src/linux-arm/crypto/fipsmodule")
+        source = os.path.join(directory, spec["source"])
+        lines = preprocess(os.path.join(aws_lc, source), ARM_CPP)
+
+        if spec.get("whole"):
+            text = "\n".join(lines).strip("\n").split("\n")
+        else:
+            # In aws-lc's order, which keeps each routine's `adr` and literal
+            # `ldr` within reach of the constants it loads.
+            pieces = [constant(lines, label, following) for label, following in spec["constants"]]
+            pieces += [routine(lines, name) for name in spec["routines"]]
+            text = [line for piece in sorted(pieces, key=lambda p: source_index(lines, p)) for line in piece]
+
+        out = os.path.join(out_dir, spec["source"].removesuffix(".S") + ".s")
+        operands = {name: (name, 0) for name in spec["routines"]}
+        local = spec.get("local", ".L")
+        write(out, header("@", spec, source) + list(escape(text, operands, local, spec["tag"], "@")))
+
+
+def import_64(aws_lc):
+    for spec in IMPORTS_64:
+        arch = ARCHES[spec["arch"]]
+        out_dir = os.path.join(ROOT, spec["arch"], "aws_lc")
+        stem = spec["source"].removesuffix(".S")
+        for flavor, (directory, defines, prefix, local) in arch["flavors"].items():
+            if "path" in spec:
+                source = os.path.join(spec["path"], spec["source"])
+            else:
+                source = os.path.join("generated-src", directory, "crypto", spec.get("dir", "fipsmodule"), spec["source"])
+            lines = preprocess(os.path.join(aws_lc, source), arch["cpp"] + defines + spec.get("cpp", []))
+
+            # A flavor names a table with or without its local prefix, and a
+            # label inside it by the table's operand plus its offset.
+            operands = {}
+            for name in spec["tables"]:
+                label = spelling(lines, name, local)
+                values, width, offsets = table(lines, label + ":", local, name in spec.get("packed", []))
+                operand = name.lstrip("_")
+                operands |= {s: (operand, 0) for s in (name, local + name)}
+                operands |= {local + sub: (operand, offset) for sub, offset in offsets.items()}
+                if flavor == "linux":
+                    per_row = 16 // width
+                    rows = [f"    {', '.join(values[i : i + per_row])}," for i in range(0, len(values), per_row)]
+                    if "tables_of" in spec:
+                        with open(os.path.join(out_dir, f"{spec['tables_of']}.{operand}.rs")) as f:
+                            if f.read().splitlines()[-len(rows) - 2 :] != ["["] + rows + ["]"]:
+                                sys.exit(f"{stem}: {operand} differs from {spec['tables_of']}'s")
+                        continue
+                    rs = os.path.join(out_dir, f"{stem}.{operand}.rs")
+                    write(rs, header("//", spec, source) + ["["] + rows + ["]"])
+
+            # And a helper with or without it.
+            helpers = spec.get("helpers", [])
+            operands |= {s: (name.lstrip("_"), 0) for name in helpers for s in (name, local + name)}
+            # Routines of another import that these call.
+            operands |= {prefix + name: (name, 0) for name in spec.get("calls", [])}
+            # Entries that share a routine's own, by the routine.
+            operands |= {
+                spelling(lines, alias, prefix): (name, 0) for alias, name in spec.get("aliases", {}).items()
+            }
+            # A routine's label, which is unprefixed when it is not global.
+            defined = [line.split() for line in lines]
+
+            def label_of(name):
+                return next(s for s in (prefix + name, name) if [s + ":"] in defined) + ":"
+
+            entries = [(label_of(name), name) for name in spec["routines"]]
+            entries += [(spelling(lines, name, local) + ":", name.lstrip("_")) for name in helpers]
+            inner = spec.get("inner", [])
+            labels = spec.get("labels", [])
+            # A routine falls through these labels, which name helpers with
+            # their own copy.
+            dropped = [[f"{name}:"] for name in inner]
+            joined = []
+            joins = spec.get("joins", [])
+            for other in joins:
+                text = body(lines, f"{other}:", local)
+                end = [line.split()[:1] for line in text].index([".cfi_endproc"])
+                joined.append(alignment(lines, other) + [f"{local}{other}:"] + text[: end + 1])
+            for label, name in entries:
+                text = [line for line in body(lines, label, local, inner + labels) if line.split() not in dropped]
+                # rustc aligns a naked function to only 4 bytes, but on ELF
+                # and COFF gives each its own section, so aws-lc's alignment
+                # at the body's start raises the section's and pads nothing.
+                # Mach-O shares one section, where it would pad after the
+                # label, in the path of every call.
+                if flavor == "linux":
+                    text = alignment(lines, label[:-1]) + text
+                carried = spec.get("carries", {}).get(name, [])
+                for other in carried:
+                    text += alignment(lines, other) + [f"{local}{other}:"] + body(lines, f"{other}:", local)
+                if name in spec["routines"] and joined:
+                    text = one_frame([text] + joined)
+                if labels or carried or joins:
+                    local_re = words(labels + carried + joins)
+                    text = [local_re.sub(lambda m: local + m[1], line) for line in text]
+                directives = [line.split()[:1] for line in text]
+                if label[:-1] in inner and [".cfi_endproc"] in directives and [".cfi_startproc"] not in directives:
+                    text = [".cfi_startproc"] + text
+                # Its CPU check, through the jump to its twin.
+                if name in spec.get("dispatches", []):
+                    at = [i for i, old in enumerate(text) if "OPENSSL_ia32cap_P" in old]
+                    if len(at) != 1:
+                        sys.exit(f"{name}: expected one CPU check")
+                    end = next(i for i in range(at[0], len(text)) if text[i].split()[0].startswith("j"))
+                    del text[at[0] : end + 1]
+                # Before the first instruction that names this symbol, which
+                # has no prefix if it is not global.
+                for op, symbol, line in spec.get("inserts", {}).get(name, []):
+                    at = [i for i, old in enumerate(text) if old.split() in ([op, prefix + symbol], [op, symbol])]
+                    if not at:
+                        sys.exit(f"{name}: expected {op} {symbol}")
+                    text.insert(at[0], "\t" + line)
+                # The one instruction with these operands, which name a symbol.
+                for op, args, line in spec.get("replaces", {}).get(name, []):
+                    at = [i for i, old in enumerate(text) if old.split() == [op, prefix + args]]
+                    if len(at) != 1:
+                        sys.exit(f"{name}: expected one {op} {args}")
+                    text[at[0]] = "\t" + line
+                if spec.get("vzeroupper"):
+                    text = [new for line in text for new in vzeroupper(line)]
+                # ld64 would split off and could drop the second (see `one_frame`).
+                if flavor == "apple" and sum(line.split()[:1] == [".cfi_startproc"] for line in text) > 1:
+                    sys.exit(f"{name}: more than one CFI frame for Mach-O")
+                text = escape(text, operands, local, spec["tag"], arch["comment"])
+                write(os.path.join(out_dir, f"{name}.{flavor}.s"), header(arch["comment"], spec, source) + list(text))
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    aws_lc = sys.argv[1]
+    rev = subprocess.run(
+        ["git", "-C", aws_lc, "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    if rev != REV:
+        sys.exit(f"aws-lc is at {rev}, expected {REV}")
+
+    import_arm(aws_lc)
+    import_64(aws_lc)
+
+
+if __name__ == "__main__":
+    main()

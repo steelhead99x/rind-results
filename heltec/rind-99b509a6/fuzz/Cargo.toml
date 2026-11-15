@@ -1,0 +1,179 @@
+[package]
+name = "rind-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+rust-version.workspace = true
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
+aws-lc-rs = { version = "1.19", features = ["non-fips", "ring-io"], default-features = false }
+# What aws-lc-rs does not expose: XChaCha20-Poly1305, bare ChaCha20, MD5,
+# AES-GCM with any IV, AES-192 key wrap, and RSA-PSS with any salt length.
+aws-lc-sys = { version = "0.47", default-features = false }
+# Tells which Ed25519 keys are of small order, which rind refuses.
+curve25519-dalek = { version = "5", default-features = false }
+# The adapters, each compared with its upstream's aws-lc-rs provider.
+arrayvec = "0.7"
+dimpl = { version = "0.9", default-features = false, features = ["aws-lc-rs", "_crypto-common"] }
+rind-dimpl = { path = "../rind-dimpl" }
+rind-rcgen = { path = "../rind-rcgen" }
+rind-rustls = { path = "../rind-rustls" }
+rind-str0m = { path = "../rind-str0m" }
+rcgen = { version = "0.14", default-features = false }
+rustls = { version = "0.23.20", default-features = false, features = ["aws-lc-rs", "std", "tls12"] }
+str0m = { version = "0.25", default-features = false }
+str0m-aws-lc-rs = "0.7"
+
+[dependencies.rind]
+path = "../rind"
+
+[[bin]]
+name = "legacy"
+path = "fuzzer/legacy.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cipher"
+path = "fuzzer/cipher.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sign"
+path = "fuzzer/sign.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sha2"
+path = "fuzzer/sha2.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sha3"
+path = "fuzzer/sha3.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "aead"
+path = "fuzzer/aead.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "kx"
+path = "fuzzer/kx.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "keys"
+path = "fuzzer/keys.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "verify"
+path = "fuzzer/verify.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hkdf"
+path = "fuzzer/hkdf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pbkdf2"
+path = "fuzzer/pbkdf2.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "aes_cbc"
+path = "fuzzer/aes_cbc.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "key_wrap"
+path = "fuzzer/key_wrap.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "xchacha"
+path = "fuzzer/xchacha.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "kem"
+path = "fuzzer/kem.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hpke"
+path = "fuzzer/hpke.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "blind_rsa"
+path = "fuzzer/blind_rsa.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "oaep"
+path = "fuzzer/oaep.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rustls"
+path = "fuzzer/rustls.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dimpl"
+path = "fuzzer/dimpl.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "str0m"
+path = "fuzzer/str0m.rs"
+test = false
+doc = false
+bench = false

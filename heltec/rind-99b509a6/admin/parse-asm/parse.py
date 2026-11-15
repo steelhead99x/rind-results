@@ -1,0 +1,397 @@
+import enum
+import glob
+import io
+import re
+import string
+import subprocess
+from collections import namedtuple
+from os import path
+
+from cpp import Preprocessor
+
+MACRO = re.compile(r"^(?P<name>[a-z0-9_]+)\s*\((?P<args>[a-z0-9_,\[\]\+\* \#]*)\);?$")
+ASM = re.compile(
+    r"^(?P<opcode>[a-z][a-z0-9\.]*)\s?(?P<operands>[A-Za-z0-9_,\s\(\)\[\]{}\+\*\-~\t#\.!%$@]*) ?;? ?(//(?P<comment>[A-Za-z0-9 =\/@#\*\+\(\)^\.\<\>\-_:,\!\?\|%\[\]'])*)?$"
+)
+CONST = re.compile(r"\s?(?P<type>\.(quad|long))\s+(?P<value>((0x[0-9a-fA-F]+),?)+)")
+LABEL = re.compile(r"^(?P<name>(\.L)?[a-zA-Z0-9_]+):$")
+SET_SYMBOL = re.compile(r"^\.set\s+(?P<name>[a-z_]+),\s*(?P<value>.+)$")
+
+
+class Type(enum.StrEnum):
+    COMMENT = enum.auto()
+    DEFINE = enum.auto()
+    VERTICAL_WHITESPACE = enum.auto()
+    MACRO = enum.auto()
+    ASM = enum.auto()
+    CONST = enum.auto()
+    ALIGN = enum.auto()
+    LABEL = enum.auto()
+    DIRECTIVE = enum.auto()
+    EOF = enum.auto()
+    CPP = enum.auto()
+    SOURCE = enum.auto()
+
+
+def tidy_linewise(lines):
+    # multiline fixups prior to parsing
+
+    # remove cf-protection comment
+    if (
+        lines[-6] == '.section\t.note.gnu.property,"a",@note\n'
+        and lines[-5] == "\t.long\t4,2f-1f,5\n"
+        and lines[-4] == "\t.byte\t0x47,0x4E,0x55,0\n"
+        and lines[-3] == "1:\t.long\t0xc0000002,4,3\n"
+        and lines[-2] == ".align\t8\n"
+        and lines[-1] == "2:\n"
+    ):
+        lines = lines[:-6]
+
+    return lines
+
+
+def merge_blank_lines(lines):
+    run_start = None
+    run_count = 0
+    spans = []
+
+    for i in range(len(lines)):
+        if lines[i].strip() == "":
+            if run_start is None:
+                run_start = i
+            run_count += 1
+        else:
+            if run_count > 1:
+                spans.append((run_start, run_count))
+
+            run_start = None
+            run_count = 0
+
+    for start, count in reversed(spans):
+        lines[start : start + count] = ["\n"]
+
+    while len(lines) and lines[0].strip() == "":
+        lines.pop(0)
+
+    return lines
+
+
+def unroll_repeats(lines):
+    # Writes out each `.rep` block in full, replacing the `#symbol` immediates
+    # its `.set` lines count with, since the Rust output has no assembler
+    # symbols.
+    symbols = {}
+
+    def substitute(line):
+        for name, value in symbols.items():
+            line = re.sub(r"#%s\b" % name, "#%d" % value, line)
+        return line
+
+    def set_symbol(line):
+        m = SET_SYMBOL.match(line.strip())
+        if m is None:
+            return False
+        value = m.group("value")
+        for name, v in symbols.items():
+            value = re.sub(r"\b%s\b" % name, str(v), value)
+        assert re.fullmatch(r"[0-9+\-*() ]+", value), value
+        symbols[m.group("name")] = eval(value)
+        return True
+
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.strip().startswith(".rep"):
+            _, count = line.split()
+            end = next(
+                j for j in range(i + 1, len(lines)) if lines[j].strip() == ".endr"
+            )
+            body = lines[i + 1 : end]
+            assert not any(b.strip().startswith(".rep") for b in body)
+            for _ in range(int(count)):
+                out.extend(substitute(b) for b in body if not set_symbol(b))
+            i = end + 1
+        elif not set_symbol(line):
+            out.append(substitute(line))
+            i += 1
+        else:
+            i += 1
+    return out
+
+
+def parse_file(f, visit):
+    continuation = None
+    contexts = []
+    cpp = Preprocessor()
+    visit(Type.SOURCE, f.name)
+    visit(Type.CPP, cpp)
+    cpp.set("__LF", ";")
+    cpp.function("S2N_BN_SYM_VISIBILITY_DIRECTIVE", lambda *args: "")
+    cpp.function("S2N_BN_SYM_PRIVACY_DIRECTIVE", lambda *args: "")
+    cpp.function("S2N_BN_FUNCTION_TYPE_DIRECTIVE", lambda *args: "")
+    cpp.function("S2N_BN_SYMBOL", lambda s: s)
+    cpp.function("S2N_BN_SIZE_DIRECTIVE", lambda *args: "")
+    cpp.set("CFI_START", "")
+    cpp.function("CFI_DEC_RSP", lambda a: f"sub rsp, {a}")
+    cpp.function("CFI_INC_RSP", lambda a: f"add rsp, {a}")
+    cpp.function("CFI_DEC_SP", lambda a: f"sub sp, sp, #({a}+0)")
+    cpp.function(
+        "CFI_INC_SP",
+        lambda a: f"add sp, sp, #({a}+0)",
+    )
+    cpp.function("CFI_CALL", lambda a: f"call {a}")
+    cpp.set("CFI_RET", "ret")
+    cpp.function("CFI_BL", lambda a: f"bl {a}")
+    cpp.function("CFI_PUSH", lambda a: f"push {a}")
+    cpp.function(
+        "CFI_PUSH2",
+        lambda lo, hi: (f"stp {lo}, {hi}, [sp, #-16]!",),
+    )
+    cpp.function(
+        "CFI_POP",
+        lambda a: f"pop {a}",
+    )
+    cpp.function(
+        "CFI_POP2",
+        lambda lo, hi: f"ldp {lo}, {hi}, [sp], #16",
+    )
+    cpp.function(
+        "CFI_STACKSAVE2X",
+        lambda lo, hi, offset, _: f"stp {lo}, {hi}, [sp, #({offset}+0)]",
+    )
+    cpp.function(
+        "CFI_STACKSAVE2",
+        lambda lo, hi, offset: f"stp {lo}, {hi}, [sp, #({offset})]",
+    )
+    cpp.function(
+        "CFI_STACKLOAD2", lambda lo, hi, offset: f"ldp {lo}, {hi}, [sp, #({offset}+0)]"
+    )
+
+    lines = f.readlines()
+    lines = tidy_linewise(lines)
+    lines = cpp.apply_lines(lines)
+    lines = unroll_repeats(lines)
+    lines = merge_blank_lines(lines)
+
+    for l in lines:
+        l = l.lstrip()
+
+        if continuation:
+            lr = l.rstrip().rstrip("\\").rstrip()
+            if l.endswith("\\\n"):
+                continuation.append(lr)
+                continue
+            else:
+                continuation.append(lr)
+                visit(*continuation)
+                continuation = None
+                continue
+
+        if l.startswith("// "):
+            visit(Type.COMMENT, l[3:])
+        elif l.startswith("//"):
+            visit(Type.COMMENT, l[2:])
+        elif l.startswith("#define "):
+            if "//" in l:
+                l, _ = l.split("//", maxsplit=1)
+            _def, name, val = l.split(maxsplit=2)
+            if len(tokenise(name)) != 1:
+                # needs full tokenisation
+                l_without_continuation = l.rstrip().rstrip("\\").rstrip()
+                tokens = tokenise(l_without_continuation)
+                assert tokens[0] == "#"
+                assert tokens[1] == "define"
+                tokens = tokens[2:]
+
+                name = tokens[0]
+                if len(tokens) == 2:
+                    val = tokens[1]
+                elif tokens[1] == "(":
+                    end = tokens.index(")")
+                    name += "".join(tokens[1 : end + 1])
+                    val = ""
+                else:
+                    val = "".join(tokens[1])
+
+            if l.endswith("\\\n"):
+                continuation = [Type.DEFINE, name.strip(), val]
+            else:
+                visit(Type.DEFINE, name.strip(), val)
+        elif l.startswith(".set"):
+            _, name, value = l.split()
+            visit(Type.DEFINE, name.strip(), value.strip())
+        elif l.replace(", ", ",").startswith('.section .note.GNU-stack,"",%progbits'):
+            continue
+        elif l.startswith("#include "):
+            continue
+        elif l.startswith(".intel_syntax noprefix"):
+            continue
+        elif l.startswith(".text"):
+            continue
+        elif l.startswith("_CET_ENDBR"):
+            m = ASM.match("endbr64")
+            visit(
+                Type.ASM,
+                contexts,
+                m.group("opcode").strip(),
+                m.group("operands").strip(),
+            )
+        elif l.strip() == "":
+            visit(Type.VERTICAL_WHITESPACE)
+        elif l.startswith("# "):
+            visit(Type.COMMENT, l[2:])
+        elif MACRO.match(l):
+            m = MACRO.match(l)
+            visit(Type.MACRO, m.group("name"), m.group("args"))
+        elif LABEL.match(l):
+            m = LABEL.match(l)
+            visit(Type.LABEL, contexts, m.group("name"))
+        elif ASM.match(l):
+            m = ASM.match(l)
+            visit(
+                Type.ASM,
+                contexts,
+                m.group("opcode").strip(),
+                m.group("operands").strip(),
+            )
+        elif CONST.match(l):
+            m = CONST.match(l)
+            for v in m.group("value").split(","):
+                visit(Type.CONST, contexts, m.group("type"), v)
+        elif l.startswith(".balign 4"):
+            visit(Type.ALIGN, contexts, "4")
+        elif l.strip().startswith("."):
+            l, _, comment = l.partition("//")
+            if comment:
+                visit(Type.COMMENT, comment.strip())
+            parts = [x.strip() for x in l.strip().split()]
+            visit(Type.DIRECTIVE, contexts, *parts)
+        else:
+            raise ValueError("UNHANDLED line " + repr(l))
+
+    visit(Type.EOF)
+
+
+def is_comment(s):
+    s = s.strip()
+    return s.startswith("/*") and s.endswith("*/")
+
+
+register = namedtuple("Register", "reg suffix")
+
+
+def register_from_token(t):
+    # fix up registers that are tokenised as one, but
+    # need to be treated as two for macro expansion,
+    # eg `ventry4.16b` needs to be split into `ventry4`
+    # (`ventry4` being a macro name) and `.16b` (neon
+    # width spec)
+    if t.count(".") == 1:
+        idx = t.find(".")
+        return register(t[:idx], t[idx:])
+
+
+def tokenise(s):
+    def tokenise_gen(s):
+        symbol = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_@]*")
+        register = re.compile(r"^%?[a-z]\.?[a-z0-9]+(\.[a-z]\[\d+\]|\.[a-zA-Z0-9]+)?")
+        label = re.compile(r"^\.?[a-zA-Z][a-zA-Z0-9_]+")
+        comment = re.compile(r"^/\*.*?\*/")
+        number = re.compile(r"^[\$#]?(-?0x[0-9a-fA-F]+|-?[0-9]+)")
+        operator = re.compile(r'^["\(\)\[\]{}\+\*/\-,;:#\.!~][{}]?')
+        whitespace = re.compile(r"^\s+")
+
+        while s:
+            longest_pat = None
+            longest_match = None
+
+            for pat in (symbol, register, label, comment, number, operator, whitespace):
+                m = pat.match(s)
+                if m:
+                    if (longest_match is None) or (
+                        longest_match is not None and m.end() > longest_match.end()
+                    ):
+                        longest_pat = pat
+                        longest_match = m
+
+            if longest_match is not None:
+                # print('match', longest_pat, longest_match.group())
+                if longest_pat != whitespace:
+                    yield longest_match.group()
+                s = s[longest_match.end() :]
+                continue
+
+            print("failed to match", repr(s))
+            raise ValueError()
+
+    x = list(tokenise_gen(s))
+    return x
+
+
+def extract_header_comment(file, ignore="#!", prefix="#"):
+    comment_lines = []
+
+    for line in file.readlines():
+        if line.startswith(ignore):
+            continue
+        elif line.startswith(prefix):
+            comment_lines.append(line.rstrip().lstrip(prefix + " "))
+        else:
+            break
+
+    return comment_lines
+
+
+def assemble_and_disassemble(file, tool_prefix, defines=[]):
+    comment_lines = []
+    for line in file:
+        if line.startswith("#"):
+            break
+        comment_lines.append(line)
+
+    subprocess.check_call(
+        [
+            tool_prefix + "cpp",
+            "-I" + path.dirname(file.name) + "/../../include",
+            *["-D" + d for d in defines],
+            "-o",
+            "preprocessed.S",
+            file.name,
+        ]
+    )
+
+    m_option = ["-Mintel"] if "x86" in tool_prefix else []
+
+    subprocess.check_call([tool_prefix + "as", "-o", "assembled.o", "preprocessed.S"])
+    out = subprocess.check_output(
+        [tool_prefix + "objdump", "--no-addresses"] + m_option + ["-d", "assembled.o"],
+        encoding="utf-8",
+    )
+    # open("disasm.txt", "w").write(out)
+
+    ret = io.StringIO()
+    for line in comment_lines:
+        ret.write(line)
+
+    skipping = True
+    for line in out.splitlines():
+        if line.startswith("<") and line.rstrip().endswith(":"):
+            sym = line.rstrip()
+            sym = sym.replace("<", "").replace(">", "").replace(":", "")
+            if skipping:
+                ret.write("S2N_BN_SYMBOL(%s):\n" % sym)
+            else:
+                ret.write("\n%s:\n" % sym)
+            skipping = False
+        elif not skipping:
+            if line.count("\t") >= 2:
+                parts = line.split("\t")
+                asm = "\t".join(parts[2:])
+                asm = asm.replace("<", "").replace(">", "")
+                ret.write("    " + asm + "\n")
+
+    ret.name = file.name
+    ret.seek(0)
+    # open("result.S", "w").write(ret.getvalue())
+    return ret

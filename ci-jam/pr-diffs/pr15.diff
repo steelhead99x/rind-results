@@ -1,0 +1,1848 @@
+diff --git a/.editorconfig b/.editorconfig
+index a80d734..4303009 100644
+--- a/.editorconfig
++++ b/.editorconfig
+@@ -10,3 +10,6 @@ indent_size = 2
+ 
+ [*.rs]
+ indent_size = 4
++
++[*.py]
++indent_size = 4
+diff --git a/.gitignore b/.gitignore
+index ea8c4bf..04ae708 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1 +1,3 @@
+ /target
++__pycache__/
++*.pyc
+diff --git a/README.md b/README.md
+index beedb73..281f50b 100644
+--- a/README.md
++++ b/README.md
+@@ -25,6 +25,9 @@ This is an independent project, not maintained by or affiliated with moq-dev.
+ | [`rind-git`](skills/rind-git/SKILL.md) | Branching, committing, pushing, or squash-merging a change. |
+ | [`rind-crypto-review`](skills/rind-crypto-review/SKILL.md) | Reviewing a diff: correctness, hostile input, constant time, wiping, API shape. |
+ | [`rind-bench-and-verify`](skills/rind-bench-and-verify/SKILL.md) | Benchmarks, cross-architecture tests, constant-time tooling, proofs. |
++| [`rind-bench-hosts`](skills/rind-bench-hosts/SKILL.md) | Measuring the report on a host outside `admin/bench-report`'s six. |
++| [`rind-bench-results`](skills/rind-bench-results/SKILL.md) | A side sheet for those hosts, and a results repository for the JSON. |
++| [`rind-bench-baremetal`](skills/rind-bench-baremetal/SKILL.md) | Backup and compile checks before flashing an RP2040 or an EFR32MG24. |
+ | [`rind-quest-run`](skills/rind-quest-run/SKILL.md) | Working rind's `quest/` backlog with `quest skill spawn` or `quest skill run`. |
+ | [`rind-quest-fleet`](skills/rind-quest-fleet/SKILL.md) | Running more than one rind quest from a fork. |
+ 
+diff --git a/skills/rind-bench-and-verify/SKILL.md b/skills/rind-bench-and-verify/SKILL.md
+index 8af1615..8eadfaf 100644
+--- a/skills/rind-bench-and-verify/SKILL.md
++++ b/skills/rind-bench-and-verify/SKILL.md
+@@ -12,17 +12,54 @@ before `just check` or `just ci`, or the gate stops early.
+ 
+ ## Benchmarks
+ 
++The published comparison is `admin/bench-report`.
++
+ ```shell
+-cargo bench                              # local criterion benches
+-admin/bench-report collect               # report benches on each bench host over ssh
+-admin/bench-report render --from DIR     # regenerate BENCHMARKS.md and SVGs
++cargo bench -p rind-bench -- <filter>   # one local harness, criterion's own timing
++admin/bench-report run --host NAME --commit REV --jobs N --target-dir DIR --out FILE
++                                        # the report's operations, filter, and timing
++admin/bench-report summary DIR          # rind versus the fastest other library; HOSTS only
++admin/bench-report collect              # the six hosts in HOSTS, over ssh
++admin/bench-report render --from DIR    # rewrite this checkout's BENCHMARKS.md and SVGs
+ ```
+ 
++`cargo bench` with no package and no filter builds every harness under
++`rind-bench/benches` and uses criterion's defaults, 3 s of warm-up and 5 s
++of measurement. `admin/bench-report` shortens that to
++`--warm-up-time 1 --measurement-time 3` so one host takes about half an
++hour, and it times only `OPERATIONS` (62 operations at the commit the
++README cites). Harnesses the report never asks for, such as `mldsa44`,
++`mldsa87`, `sha1`, `md5`, `pbkdf2`, and `rsa_gen`, still run under a bare
++`cargo bench`. Use `run` for the report's set.
++
++`collect` is the maintainer path. `HOSTS` is fixed: `nixos`, `desktop`,
++`nixos2`, `kixtop`, `ovh-iad`, `ovh-sea`. Any other `--host` fails with
++`unknown host`. For each name it archives the commit with `git archive`.
++When that name is the first label of this machine's hostname, the archive
++is unpacked locally; otherwise it is copied over ssh. On the host it runs
++`nix shell` of the quest revision pinned in `flake.lock`, then `quest gate`,
++then `nix develop --command python3 admin/bench-report run`. That host
++needs Nix with flakes, and network so Nix can fetch the pinned quest and
++the dev shell's inputs. `summary` considers only those six names.
++
++`render` writes this checkout's `BENCHMARKS.md` and `benchmarks/*.svg`, and
++it deletes a generated SVG the new report does not contain. `--from DIR`
++imports only `<host>.json` files named in `HOSTS`. Any other file is
++ignored. It then exits if a gap over 10% (`SLOWER` is 1.1) has no decision
++in `benchmarks/gaps.toml`, or a decision's `on` is not a `HOSTS` name or a
++nightly tier. Leave a host outside that list out of `render`.
++
++Measuring any other machine is
++[rind-bench-hosts](../rind-bench-hosts/SKILL.md). A sheet for those hosts,
++and a results repository for the JSON, is
++[rind-bench-results](../rind-bench-results/SKILL.md). Both leave the repo's
++`BENCHMARKS.md` untouched.
++
+ Shared hosts are noisy; the nightly `bench` workflow gives the clean numbers.
+-Every gap over 10% needs a quest or a reason in `benchmarks/gaps.toml`.
+-Record the host (CPU and OS) and the date with every number. Re-measure on
+-the head that will merge, or state that hardware and date of the earlier
+-figures.
++Every gap over 10% in the published report needs a quest or a reason in
++`benchmarks/gaps.toml`. Record the host (CPU and OS) and the date with every
++number. Re-measure on the head that will merge, or state that hardware and
++date of the earlier figures.
+ 
+ ## Other architectures
+ 
+diff --git a/skills/rind-bench-baremetal/COMPETITOR-BUILDS.md b/skills/rind-bench-baremetal/COMPETITOR-BUILDS.md
+new file mode 100644
+index 0000000..8488e58
+--- /dev/null
++++ b/skills/rind-bench-baremetal/COMPETITOR-BUILDS.md
+@@ -0,0 +1,58 @@
++# What builds for thumbv6m-none-eabi (RP2040) and nearby bare-metal targets
++
++Run on 2026-11-12, rustc 1.99.1 (stable), on an x86_64 Linux host, with no device involved. Each library is built as a `#![no_std]` rlib in its own crate (`crates/tv-*`) by [`build-matrix.sh`](build-matrix.sh):
++
++```
++cargo build --release --target <triple> -p <crate>
++```
++
++If the first attempt fails in getrandom 0.4, `build-matrix.sh` retries with `RUSTFLAGS='--cfg getrandom_backend="custom"'`. C toolchains for the C-backed crates came from nixpkgs: Arm GNU Toolchain `arm-none-eabi-gcc` 15.3.1 for the Arm targets, and `clang` 21.1.8 (bare, with no libc headers) for riscv32.
++
++What this checks is compilation only: no link, and nothing run. Most crates just re-export the library (`pub use`), so its generic code isn't monomorphized. The ring, sha2, and curve25519-dalek crates each call one function.
++
++Versions are those `rind-bench` uses (`rind-bench/Cargo.toml` at a4759c48), with default features off.
++
++| Library (version, features) | thumbv6m (M0+) | thumbv7em (M4/M7) | thumbv8m.main (M33: EFR32MG24) | riscv32imc | riscv32imac | getrandom backend / CAS |
++|---|---|---|---|---|---|---|
++| rind 0.3.2 (none) | no | no | no | no | no | custom cfg needed first; then `can't find crate for std` |
++| rind 0.3.2's portable-backend dependencies¹ | yes | yes | yes | yes | yes | custom cfg (getrandom 0.4) |
++| ring 0.17.14 (none) | no | no | no | no | no | needs getrandom 0.2 `custom` feature, then a C toolchain; see below |
++| aws-lc-rs 1.19.0 (`aws-lc-sys`) | no | no | no | no | no | C build expects an OS (pthreads, `clock_gettime`) |
++| rustls 0.23.46 (no provider) | no | yes | yes | no | yes | needs CAS and atomic `Arc` |
++| rustls 0.23.46 + `ring` | no | no | no | no | no | fails in ring |
++| rustls 0.23.46 + `aws-lc-rs` | no | no | no | no | no | fails in aws-lc-sys or CAS |
++| rustls-rustcrypto 0.1.0-pre.0 (`alloc`, `tls12`) | no | yes | yes | no | yes | custom cfg; needs CAS and atomic `Arc` |
++| sha2 0.11.1 | yes | yes | yes | yes | yes | none |
++| hmac 0.13.0 + sha2 | yes | yes | yes | yes | yes | none |
++| aes-gcm 0.11.1 (`aes`) | yes | yes | yes | yes | yes | none |
++| chacha20poly1305 0.11.0 | yes | yes | yes | yes | yes | none |
++| p256 0.14.0 (`arithmetic`, `ecdsa`) | yes | yes | yes | yes | yes | none |
++| curve25519-dalek 5.0.0 (`precomputed-tables`) | yes | yes | yes | yes | yes | none |
++| x25519-dalek 3.0.0 | yes | yes | yes | yes | yes | none |
++| ed25519-dalek 3.0.0 | yes | yes | yes | yes | yes | none |
++
++¹ curve25519-dalek 5 (`precomputed-tables`), fiat-crypto 0.3, libcrux-hacl-rs 0.0.6 (`alloc`), libcrux-poly1305 0.0.7, libcrux-sha2 0.0.9, libcrux-macros 0.0.4, getrandom 0.4. These also pass on thumbv7m, thumbv8m.base, and riscv32i. rind 0.3.2 itself fails on all three with the same `std` error.
++
++## First errors
++
++- **rind 0.3.2**: without the cfg, getrandom 0.4.3 fails with `error: target is not supported. You may need to define a custom backend`. With it, rind fails with `error[E0463]: can't find crate for std`.
++- **ring 0.17.14**:
++  - **No cross C compiler:** `ToolNotFound: failed to find tool "arm-none-eabi-gcc"`.
++  - **No getrandom 0.2 `custom` feature:** `error: target is not supported, for more information see: https://docs.rs/getrandom/#unsupported-targets`.
++  - **thumbv6m, with both:** the assembler rejects `crypto/curve25519/asm/x25519-asm-arm.S`: `selected processor does not support 'vpush {q4,q5,q6,q7}' in Thumb mode`.
++  - **thumbv7em / thumbv8m.main:** the same file fails with `r13 not allowed here -- 'and sp,sp,#0xffffffe0'`.
++  - **riscv32 with bare clang:** `include/ring-core/check.h:27:11: fatal error: 'assert.h' file not found`. A riscv32 newlib toolchain wasn't tried.
++- **aws-lc-rs 1.19.0 / aws-lc-sys 0.47.0**:
++  - **No cross C compiler:** `ToolNotFound: failed to find tool "arm-none-eabi-gcc"`.
++  - **Arm, with the C compiler:** `include/openssl/thread.h:31:9: error: unknown type name 'pthread_rwlock_t'`, and jitterentropy `implicit declaration of function 'clock_gettime'`.
++  - **riscv32 with bare clang:** `'stdlib.h' file not found`.
++- **rustls 0.23.46, rustls-rustcrypto** (no-CAS targets thumbv6m and riscv32imc):
++  - **First:** `error[E0599]: no method named 'compare_exchange' found for struct 'Atomic<T>'`, in once_cell 1.21.4's `race` module.
++  - **With once_cell's `portable-atomic` feature and portable-atomic's `critical-section`:** `error[E0433]: cannot find 'sync' in 'alloc'` at `rustls-0.23.46/src/lib.rs:425`. rustls's own comment there says forks for targets without atomic pointers swap in `portable_atomic_util::Arc`.
++  - **Without `alloc`:** rustls-rustcrypto fails with `error: Rustls currently does not support alloc-less environments`.
++
++## Notes
++
++- The RustCrypto crates and the dalek crates need no randomness backend and no CAS at these features. Their RNG-using APIs take a caller-supplied `rand_core` RNG.
++- On thumbv6m, Rust's compiler-builtins lowers a 32×32→64 product to `__aeabi_lmul`. Disassembled on this toolchain, it's four 16×16 `muls` plus `adds`/`adcs`, with no branch. BearSSL's table notes that libgcc's routine of the same name branches; that matters for C code linked against libgcc. See [TARGET-SURVEY.md](TARGET-SURVEY.md).
++- **EFR32MG24 (thumbv8m.main-none-eabihf):** the column above is this chip's target. Re-checked against the kept workspace's `logs/thumbv8m.main-none-eabihf/` on 2026-11-12: same results. The M33 has CAS (`target_has_atomic` 8/16/32/ptr), so rustls with no provider and rustls-rustcrypto build where thumbv6m fails. rind still fails only on `std`; ring fails in its Armv7 x25519 assembly; aws-lc-sys fails on pthreads/`clock_gettime`. Nothing here was run on the chip: compile only.
+diff --git a/skills/rind-bench-baremetal/SKILL.md b/skills/rind-bench-baremetal/SKILL.md
+new file mode 100644
+index 0000000..97a2f39
+--- /dev/null
++++ b/skills/rind-bench-baremetal/SKILL.md
+@@ -0,0 +1,85 @@
++---
++name: rind-bench-baremetal
++description: Use when building or flashing rind for a microcontroller, or backing up an RP2040 or an EFR32MG24 before any write.
++---
++
++# Microcontrollers
++
++rind has no `#![no_std]`. At `a4759c48` with rustc 1.99.1,
++`cargo build -p rind --release --target thumbv6m-none-eabi` needs
++`RUSTFLAGS='--cfg getrandom_backend="custom"'`, then fails with
++`can't find crate for std` (1672 errors on that build).
++`std::thread_local!` is in `rind/src/low/cpu.rs` and `rind/src/low/entry.rs`.
++No `no_std` quest is in the tree. The portable-backend dependencies do
++compile for that target. Do not flash a rind binary.
++
++## Back up first
++
++Read the flash at least twice. The sha256 values must match. Keep the
++image out of git. Do not erase. Do not unlock debug.
++
++RP2040 (Cortex-M0+, 2 MiB at `0x10000000` through `0x10200000`, 264 KiB
++RAM): open the USB serial at 1200 baud to enter the bootrom, then
++`picotool save -r 0x10000000 0x10200000 backup.bin`. Save a second read.
++Restore by writing that image back and checking the readback sha256.
++
++EFR32MG24 (Cortex-M33, CMSIS-DAP, probe-rs): the part that was read has
++1536 KiB of main flash at `0x08000000` through `0x08180000`. Read it three
++times. A 1 KiB user-data page at `0x0FE00000` was read twice and left
++unwritten. The bootloader occupies `0x08000000` through `0x08006000`. A
++demo write covers only the application region after that.
++[mg24-restore.sh](mg24-restore.sh) downloads `BACKUP` at `BASE` with
++`--verify`, reads `LENGTH` bytes back, checks the sha256, and resets. It
++does not erase or unlock. Set `CHIP` to the probe-rs part name. Set
++`PROBE` only when several probes are attached, and do not commit it.
++
++## What compiles
++
++[build-matrix.sh](build-matrix.sh) release-builds each `crates/tv-*`
++member and retries with `getrandom_backend="custom"` when getrandom
++refuses the target. Copy it into a workspace of one `#![no_std]` rlib per
++library. The 2026-11-12 compile-only results are in
++[COMPETITOR-BUILDS.md](COMPETITOR-BUILDS.md). rind fails on every target
++there. RustCrypto and dalek crates pass. ring fails in its ARM x25519
++assembly, or for lack of a C compiler. aws-lc-rs fails on pthreads and
++`clock_gettime`.
++
++## Constant time
++
++The table and sources are in [TARGET-SURVEY.md](TARGET-SURVEY.md).
++
++- M0, M0+, and M23: `muls` is fixed-time. A 32×32→64 product goes through
++  compiler-builtins `__aeabi_lmul`, branch-free on rustc 1.99.1. libgcc's
++  routine of the same name branches.
++- M3: `umull` and `umlal` finish early. Not constant time.
++- M4 and M7: `umull` is single-cycle and fixed.
++- M33, including EFR32MG24: rustc 1.99.1 emits one `umull` for a
++  u32×u32→u64 product. The M33 TRM documents early termination for the
++  divider, not for `umull`. Measure with a cycle counter before calling it
++  constant time.
++- riscv32 without M: software multiply loops exit early.
++- Hazard3: constant time only with `MUL_FAST` and `MULH_FAST`.
++- ESP32-C3, ESP32-C6, ESP32-H2, and Xtensa: multiply timing is
++  undocumented.
++
++## CI and benches
++
++Compile-check the library, with and without `wipe`, and with the getrandom
++custom cfg:
++
++1. `thumbv6m-none-eabi` (RP2040 and other M0/M0+).
++2. `thumbv7em-none-eabihf` (M4/M7).
++3. `thumbv8m.main-none-eabihf` (M33: EFR32MG24, RP2350).
++4. `riscv32imc-unknown-none-elf` (ESP32-C3, no CAS).
++5. `riscv32imac-unknown-none-elf` (ESP32-C6, ESP32-H2, RP2350 Hazard3).
++
++Chips worth timing once rind builds: RP2040, RP2350 (both cores),
++ESP32-C3, a Cortex-M4F part, and EFR32MG24 (software against the secure
++engine). Nothing rind-related was flashed.
++
++## Demo screen
++
++Optional, display only. An SSD1306 at I2C `0x3C` (I2C1, PC4 SDA, PC5 SCL)
++cycles three 128×64 frames. Logos are not in this repo. See
++[oled-demo/README.md](oled-demo/README.md). Flash the application region
++only, after the backup hashes match.
+diff --git a/skills/rind-bench-baremetal/TARGET-SURVEY.md b/skills/rind-bench-baremetal/TARGET-SURVEY.md
+new file mode 100644
+index 0000000..052ad8c
+--- /dev/null
++++ b/skills/rind-bench-baremetal/TARGET-SURVEY.md
+@@ -0,0 +1,79 @@
++# Microcontroller targets that share the RP2040's constraints for rind
++
++Surveyed on 2026-11-12. The constraints rind's no_std quest has to handle:
++
++- **No std / no OS:** every target here.
++- **No CAS:** no compare-and-swap, so `compare_exchange`/`fetch_max` are missing and so is `alloc::sync::Arc`.
++- **Multiplier:** no 32×32→64 multiply, or a multiply whose time depends on its operands.
++- **Little RAM.**
++- **No hardware RNG:** getrandom needs a board-supplied source.
++
++CAS comes from `rustc --print cfg --target <triple>` (rustc 1.99.1): a target without `target_has_atomic="32"` has no CAS. The compile column is [COMPETITOR-BUILDS.md](COMPETITOR-BUILDS.md), for rind 0.3.2's portable-backend dependencies (`tv-rind-portable-deps`) and for rind itself.
++
++| Family (chips) | Rust target | CAS | 32×32→64 multiply, timing | Crypto accelerators, RNG | SRAM | rind blockers | Compile check |
++|---|---|---|---|---|---|---|---|
++| Cortex-M0/M0+ (RP2040, STM32G0, STM32L0, STM32F0, nRF51, SAMD21) | `thumbv6m-none-eabi` | No | None in hardware: `muls` is 32×32→32, 1 or 32 cycles by the vendor's implementation option, fixed either way [Arm M0+ TRM][m0p], [BearSSL][ctmul]. Rust lowers 32×32→64 to compiler-builtins' `__aeabi_lmul`, which disassembles to four `muls` plus `adds`/`adcs` with no branch (checked on rustc 1.99.1). libgcc's routine of the same name branches [BearSSL][ctmul] | RP2040: none, no TRNG (ring-oscillator bit only) [RP2040][rp2040]. STM32G0/L0: AES and RNG on some parts. nRF51: AES-ECB, RNG. STM32F0, SAMD21: none | 4–264 KB (RP2040 264 KB) | std, CAS, getrandom backend; slow software 64-bit products; little RAM on most parts | deps yes, rind no (`std`) |
++| Cortex-M23 (v8-M baseline) | `thumbv8m.base-none-eabi` | Yes | As M0+: no `umull` | vendor-specific | varies | std, getrandom | deps yes, rind no |
++| Cortex-M3 (STM32F1/F2, LPC17xx) | `thumbv7m-none-eabi` | Yes | `umull`/`umlal` take 3–5 cycles, finishing early on small operands [Arm M3 TRM][m3]. Measured early exits on zero and power-of-two operands too [BearSSL][ctmul]: **not constant time** | vendor-specific | 8–128 KB typical | std, getrandom, variable-time multiply | deps yes, rind no |
++| Cortex-M4/M7 (STM32F4, STM32F7, nRF52832/52840) | `thumbv7em-none-eabihf` | Yes | `umull` single cycle, fixed [Arm M4 TRM][m4], [BearSSL][ctmul] | STM32F4: RNG on most parts, CRYP/HASH on F415/417/437/439. nRF52840: CryptoCell-310 and RNG. nRF52832: AES-ECB/CCM and RNG [nRF52840][nrf52840] | 64–512 KB | std, getrandom | deps yes, rind no |
++| Cortex-M33 (EFR32MG24, RP2350 Arm side, nRF5340, STM32U5/L5) | `thumbv8m.main-none-eabihf` | Yes | `umull`/`umlal` present (rustc 1.99.1 lowers a u32×u32→u64 product to one `umull`). Arm publishes no per-instruction cycle table for the M33; its TRM names operand-dependent early termination only for the divider [Arm M33 TRM][m33], unlike the M3 TRM, which states it for `umull`. Likely fixed-time, **not documented**: confirm with a DWT_CYCCNT sweep on the chip | EFR32MG24 (Secure Vault High): a separate Hardware Secure Engine with AES-128/192/256 (GCM, CCM, CTR…), ChaCha20-Poly1305, SHA-1/SHA-2 up to 512, ECDSA/ECDH P-192 to P-521, X25519, Ed25519, HKDF/PBKDF2, TRNG, DPA countermeasures [EFR32MG24][mg24]. RP2350: SHA-256 accelerator, TRNG [RP2350][rp2350]. nRF5340: CryptoCell-312 | 256–2500 KB (MG24 256 KB, RP2350 520 KB) | std, getrandom | deps yes, rind no |
++| RP2350 RISC-V side (Hazard3) | `riscv32imac-unknown-none-elf` | Yes | `mul`/`mulhu` 1 cycle with Hazard3's `MUL_FAST` and `MULH_FAST`. Hazard3 claims Zkt constant time only in that configuration; the sequential `mulh`/`mulhsu` vary [Hazard3][hazard3]. Check RP2350's configuration in [its datasheet][rp2350] | SHA-256, TRNG (shared with the Arm side) | 520 KB | std, getrandom | deps yes, rind no |
++| ESP32-C3 | `riscv32imc-unknown-none-elf` | **No** (no A extension) | `mulhu` present; timing not documented by Espressif [ESP32-C3][c3] | AES, SHA, RSA, HMAC, digital signature, RNG | 400 KB | std, CAS, getrandom; multiply timing unknown | deps yes, rind no |
++| ESP32-C6, ESP32-H2 | `riscv32imac-unknown-none-elf` | Yes | timing not documented [ESP32-C6][c6], [ESP32-H2][h2] | AES, SHA, RSA, ECC, HMAC, digital signature (H2 adds ECDSA), RNG | C6 512 KB, H2 320 KB | std, getrandom; multiply timing unknown | deps yes, rind no |
++| Other riscv32 with M, no A (CH32V003 is `rv32ec`; GD32VF103 is `rv32imac`) | `riscv32imc-unknown-none-elf` and others | No (imc) | implementation-defined | vendor-specific | 2–32 KB typical | as ESP32-C3, less RAM | deps yes (imc) |
++| riscv32 without M | `riscv32i-unknown-none-elf` | No | Software only: compiler-builtins' `__mulsi3`/`__muldi3` are shift-and-add loops that exit when the operand runs out of bits (disassembled on rustc 1.99.1): **not constant time** | — | tiny | as above, plus a variable-time multiply | deps yes, rind no |
++| ESP32, ESP32-S3 (Xtensa LX6/LX7) | `xtensa-esp32-none-elf`, `xtensa-esp32s3-none-elf` (tier 3, needs Espressif's toolchain via `espup`) | Yes (`s32c1i`) | timing not documented [ESP32][esp32], [ESP32-S3][s3] | AES, SHA, RSA, RNG (S3 adds HMAC, digital signature) | 520 KB / 512 KB | std, getrandom; out-of-tree toolchain | not compiled |
++| MSP430 | `msp430-none-elf` (tier 3, nightly) | No | 16-bit; hardware multiplier only on some parts | some parts: AES | 0.5–66 KB | **out of scope**: 16-bit, too little RAM for RSA/ML-KEM | not compiled |
++| AVR (ATmega) | `avr-none` (tier 3, nightly) | No | 8×8→16 only | none | 0.5–16 KB | **out of scope**: 8-bit, 16-bit pointers, too little RAM | not compiled |
++
++CAS per `rustc --print cfg`: thumbv6m, riscv32i, riscv32imc, msp430, and avr report no `target_has_atomic`. The rest report 8/16/32/ptr.
++
++## Suggestions for the quest
++
++**Compile-check in CI** (library only, with and without `wipe`, with `--cfg getrandom_backend="custom"`):
++
++1. `thumbv6m-none-eabi`: no CAS, no `umull` (RP2040, the STM32G0/L0 and nRF51 families).
++2. `thumbv7em-none-eabihf`: the most common Cortex-M (M4/M7).
++3. `thumbv8m.main-none-eabihf`: M33 (EFR32MG24, RP2350, nRF5340, STM32U5).
++4. `riscv32imc-unknown-none-elf`: RISC-V without CAS (ESP32-C3).
++5. `riscv32imac-unknown-none-elf`: RISC-V with CAS (ESP32-C6/H2, RP2350's Hazard3).
++
++These five cover both CAS cases on both ISAs, and every hardware-multiply case except the M3's. Skip thumbv7m/thumbv8m.base (same code paths as 3 and 1) and Xtensa (out-of-tree toolchain).
++
++**Constant-time caveats for PLATFORMS.md:**
++
++- Cortex-M0/M0+/M23: `muls` is fixed-time in both implementation options. 32×32→64 products go through compiler-builtins' `__aeabi_lmul`, branch-free as of rustc 1.99.1. `admin/ct-vartime` should scan for it, because a C library linked against libgcc gets a branching routine of the same name.
++- Cortex-M3: `umull`/`umlal` finish early on small operands (documented), and on zero and power-of-two operands (measured). The portable backend's 32-bit limb arithmetic is therefore not constant time there. This is the same class as the Cortex-A53 entry.
++- Cortex-M33: `umull` timing is undocumented by Arm. The TRM lists early termination for the divider only. Treat it as unverified until a cycle counter on the chip measures it.
++- riscv32 without M: software multiply loops exit early, so not constant time.
++- riscv32 with M: `mulhu` timing is implementation-defined. Hazard3 is constant time only with `MUL_FAST` and `MULH_FAST`. Espressif documents no multiply timing for ESP32-C3/C6/H2 or Xtensa, so list them as unknown.
++- Randomness: rind takes no position. The binary supplies getrandom's custom backend. The RP2040 has no TRNG, and its ring-oscillator bit is not a vetted source.
++
++**Suggested benchmark chips:**
++
++- **RP2040** (M0+, 125 MHz): the floor.
++- **RP2350**: M33 and Hazard3 on one chip, the same memory, and a TRNG. It gives an Arm-vs-RISC-V comparison at equal clock.
++- **EFR32MG24** (M33F, 78 MHz, 1536 KB flash, 256 KB RAM): with a CMSIS-DAP probe, after a verified full-flash backup. It's the one chip here where rind's software path can be timed against the SoC's own crypto engine (AES-GCM, ChaCha20-Poly1305, SHA-2, P-256, X25519, Ed25519).
++- **ESP32-C3**: riscv32imc without CAS, the most common RISC-V MCU.
++- **STM32F4 or nRF52840** (M4F): the most common Cortex-M class.
++
++## Sources
++
++[m0p]: https://developer.arm.com/documentation/ddi0484/latest "Arm Cortex-M0+ Technical Reference Manual (DDI 0484): MULS 1 or 32 cycles"
++[m3]: https://developer.arm.com/documentation/ddi0337/latest "Arm Cortex-M3 Technical Reference Manual (DDI 0337): instruction timing, UMULL early termination"
++[m4]: https://developer.arm.com/documentation/ddi0439/latest "Arm Cortex-M4 Technical Reference Manual (DDI 0439)"
++[m33]: https://developer.arm.com/documentation/100230/latest "Arm Cortex-M33 Technical Reference Manual (100230)"
++[ctmul]: https://www.bearssl.org/ctmul.html "BearSSL: Constant-Time Mul, per-CPU table"
++[hazard3]: https://wren.wtf/hazard3/doc/ "Hazard3 Design Guide: 1.1.4 Multiply/Divide, 1.1.5 Constant-time Execution, A.2"
++[rp2040]: https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf "RP2040 datasheet"
++[mg24]: https://www.silabs.com/documents/public/data-sheets/efr32mg24-datasheet.pdf "EFR32MG24 data sheet, 3.8 Secure Vault features"
++[rp2350]: https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf "RP2350 datasheet"
++[nrf52840]: https://docs.nordicsemi.com/bundle/ps_nrf52840/page/keyfeatures_html5.html "nRF52840 product specification"
++[c3]: https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf "ESP32-C3 datasheet"
++[c6]: https://www.espressif.com/sites/default/files/documentation/esp32-c6_datasheet_en.pdf "ESP32-C6 datasheet"
++[h2]: https://www.espressif.com/sites/default/files/documentation/esp32-h2_datasheet_en.pdf "ESP32-H2 datasheet"
++[esp32]: https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf "ESP32 datasheet"
++[s3]: https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf "ESP32-S3 datasheet"
++
++- Rust platform support (target tiers): https://doc.rust-lang.org/nightly/rustc/platform-support.html
++- Wouter de Groot's Cortex-M3 multiply measurements, cited by BearSSL above.
+diff --git a/skills/rind-bench-baremetal/build-matrix.sh b/skills/rind-bench-baremetal/build-matrix.sh
+new file mode 100755
+index 0000000..3dcd42e
+--- /dev/null
++++ b/skills/rind-bench-baremetal/build-matrix.sh
+@@ -0,0 +1,21 @@
++#!/usr/bin/env bash
++# Usage: ./build-matrix.sh [target] [crate...]
++# Builds each crates/tv-* member as a no_std rlib for the target. If the first
++# attempt fails in getrandom, it retries with getrandom's custom backend cfg.
++# Prints one TSV line per crate: crate, result, getrandom-cfg, first error.
++set -u
++T=${1:-thumbv6m-none-eabi}; shift || true
++cd "$(dirname "$0")"
++CRATES=${*:-$(ls crates)}
++mkdir -p logs/$T
++for c in $CRATES; do
++  log=logs/$T/$c.log; cfg=no
++  cargo build --release --target "$T" -p "$c" >"$log" 2>&1; rc=$?
++  if [ $rc -ne 0 ] && grep -q 'getrandom' "$log" && grep -qi 'custom backend\|not supported' "$log"; then
++    cfg=yes
++    RUSTFLAGS='--cfg getrandom_backend="custom"' cargo build --release --target "$T" -p "$c" >"$log" 2>&1; rc=$?
++  fi
++  if [ $rc -eq 0 ]; then res=PASS; err=""; else res=FAIL
++    err=$( (grep -m1 -E '^error' "$log" || grep -m1 -iE 'error' "$log") | cut -c1-240); fi
++  printf '%s\t%s\tgetrandom-custom=%s\t%s\n' "$c" "$res" "$cfg" "$err"
++done
+diff --git a/skills/rind-bench-baremetal/mg24-restore.sh b/skills/rind-bench-baremetal/mg24-restore.sh
+new file mode 100755
+index 0000000..6884b64
+--- /dev/null
++++ b/skills/rind-bench-baremetal/mg24-restore.sh
+@@ -0,0 +1,73 @@
++#!/bin/sh
++# Restore an EFR32MG24 main-flash image and check it by readback.
++# Does not erase and does not unlock. Set LENGTH to the saved image's
++# size in bytes, the same span that was read before anything was written.
++#
++#   CHIP=<probe-rs part name> BACKUP=backup.bin LENGTH=<bytes> ./mg24-restore.sh
++#   BASE=0x08000000          default
++#   PROBE=<selector>         only when more than one probe is attached; do not commit it
++#   SHA256=<hex>             when set, the backup and the readback must both match it
++set -eu
++
++: "${CHIP:?set CHIP to the probe-rs part name for this EFR32MG24}"
++: "${BACKUP:?set BACKUP to the saved image}"
++: "${LENGTH:?set LENGTH to the image size in bytes}"
++BASE=${BASE:-0x08000000}
++
++hash_of() {
++  if command -v sha256sum >/dev/null 2>&1; then
++    sha256sum "$1" | awk '{print $1}'
++  else
++    shasum -a 256 "$1" | awk '{print $1}'
++  fi
++}
++
++download() {
++  if [ -n "${PROBE:-}" ]; then
++    probe-rs download --probe "$PROBE" --chip "$CHIP" --binary-format bin \
++      --base-address "$BASE" --verify "$BACKUP"
++  else
++    probe-rs download --chip "$CHIP" --binary-format bin \
++      --base-address "$BASE" --verify "$BACKUP"
++  fi
++}
++
++readback() {
++  if [ -n "${PROBE:-}" ]; then
++    probe-rs read --probe "$PROBE" --chip "$CHIP" -o "$1" -f binary b32 "$BASE" "$LENGTH"
++  else
++    probe-rs read --chip "$CHIP" -o "$1" -f binary b32 "$BASE" "$LENGTH"
++  fi
++}
++
++reset_chip() {
++  if [ -n "${PROBE:-}" ]; then
++    probe-rs reset --probe "$PROBE" --chip "$CHIP"
++  else
++    probe-rs reset --chip "$CHIP"
++  fi
++}
++
++if [ -n "${SHA256:-}" ]; then
++  got=$(hash_of "$BACKUP")
++  if [ "$got" != "$SHA256" ]; then
++    echo "mg24-restore: backup sha256 is $got, expected $SHA256" >&2
++    exit 1
++  fi
++fi
++
++download
++out=$(mktemp)
++trap 'rm -f "$out"' EXIT
++readback "$out"
++if [ -n "${SHA256:-}" ]; then
++  got=$(hash_of "$out")
++  if [ "$got" != "$SHA256" ]; then
++    echo "mg24-restore: readback sha256 is $got, expected $SHA256" >&2
++    exit 1
++  fi
++else
++  cmp "$BACKUP" "$out"
++fi
++reset_chip
++echo "mg24-restore: readback matches $BACKUP"
+diff --git a/skills/rind-bench-baremetal/oled-demo/README.md b/skills/rind-bench-baremetal/oled-demo/README.md
+new file mode 100644
+index 0000000..c37c448
+--- /dev/null
++++ b/skills/rind-bench-baremetal/oled-demo/README.md
+@@ -0,0 +1,18 @@
++# EFR32MG24 SSD1306 frames
++
++Three 128×64 screens, 4 s each, I2C `0x3C` (I2C1, PC4 SDA, PC5 SCL):
++
++1. The moq.dev mark, from <https://moq.dev/layout/favicon.svg>.
++2. The rind wordmark, `admin/wordmark-light.svg` in
++   [moq-dev/rind](https://github.com/moq-dev/rind/blob/main/admin/wordmark-light.svg).
++3. One TLS handshake line from a single run at rind `b6651423`. Replace the
++   numbers in `tools/gen_frames.py` before reuse.
++
++Save the SVGs, unmodified, as `assets/moqdev-layout_favicon.svg` and
++`assets/wordmark-light.svg`. Then `python3 tools/gen_frames.py`. It writes
++`oled_demo/frames.h` and preview PNGs. Do not commit those outputs.
++
++`oled_demo/oled_demo.ino` probes `0x3C` then `0x3D` and prints one JSON line
++at 115200 baud. Compile with the core you use for this chip. Flash only the
++application region with `probe-rs download --verify`, after the backup in
++[the parent skill](../SKILL.md) matches. Do not erase or unlock.
+diff --git a/skills/rind-bench-baremetal/oled-demo/oled_demo/oled_demo.ino b/skills/rind-bench-baremetal/oled-demo/oled_demo/oled_demo.ino
+new file mode 100644
+index 0000000..998bac1
+--- /dev/null
++++ b/skills/rind-bench-baremetal/oled-demo/oled_demo/oled_demo.ino
+@@ -0,0 +1,80 @@
++/* EFR32MG24 OLED demo: cycles the moq.dev mark, the rind wordmark, and one
++ * benchmark screen on an SSD1306 (128x64, I2C 0x3C, I2C1, PC4 SDA, PC5 SCL).
++ * Wire.begin() uses the core's default I2C pins; pass pins if they differ.
++ * Frames come from tools/gen_frames.py (frames.h, not committed).
++ * Serial at 115200 prints the probe result and each frame change. */
++#include <Arduino.h>
++#include <Wire.h>
++#include "frames.h"
++
++static uint8_t oled_addr = 0;
++static const uint32_t FRAME_MS = 4000;
++
++static bool ack(uint8_t a) {
++  Wire.beginTransmission(a);
++  return Wire.endTransmission() == 0;
++}
++
++static void cmd(uint8_t c) {
++  Wire.beginTransmission(oled_addr);
++  Wire.write(0x00);
++  Wire.write(c);
++  Wire.endTransmission();
++}
++
++static void oled_init(void) {
++  static const uint8_t seq[] = {
++    0xAE, 0xD5, 0x80, 0xA8, 0x3F, 0xD3, 0x00, 0x40, 0x8D, 0x14,
++    0x20, 0x00, 0xA1, 0xC8, 0xDA, 0x12, 0x81, 0xCF, 0xD9, 0xF1,
++    0xDB, 0x40, 0xA4, 0xA6, 0x2E, 0xAF };
++  for (size_t i = 0; i < sizeof(seq); i++) cmd(seq[i]);
++}
++
++static void oled_blit(const uint8_t *buf) {
++  cmd(0x21); cmd(0); cmd(127);
++  cmd(0x22); cmd(0); cmd(7);
++  for (int i = 0; i < 1024; i += 16) {
++    Wire.beginTransmission(oled_addr);
++    Wire.write(0x40);
++    Wire.write(buf + i, 16);
++    Wire.endTransmission();
++  }
++}
++
++void setup() {
++  Serial.begin(115200);
++  pinMode(LED_BUILTIN, OUTPUT);
++  Wire.begin();
++  Wire.setClock(400000);
++  delay(50);
++  if (ack(0x3C)) oled_addr = 0x3C;
++  else if (ack(0x3D)) oled_addr = 0x3D;
++  if (oled_addr) {
++    oled_init();
++  }
++}
++
++void loop() {
++  static uint8_t f = 0;
++  static uint32_t last = 0;
++  static bool first = true;
++  if (!oled_addr) {
++    /* No OLED: say so every second and blink. */
++    Serial.println("{\"app\":\"oled-demo\",\"oled\":\"absent\",\"probed\":[\"0x3c\",\"0x3d\"]}");
++    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
++    delay(1000);
++    return;
++  }
++  if (first || millis() - last >= FRAME_MS) {
++    first = false;
++    last = millis();
++    oled_blit(demo_frames[f]);
++    Serial.print("{\"app\":\"oled-demo\",\"oled\":\"0x");
++    Serial.print(oled_addr, HEX);
++    Serial.print("\",\"frame\":");
++    Serial.print(f);
++    Serial.println("}");
++    f = (f + 1) % DEMO_FRAME_COUNT;
++  }
++  delay(10);
++}
+diff --git a/skills/rind-bench-baremetal/oled-demo/tools/gen_frames.py b/skills/rind-bench-baremetal/oled-demo/tools/gen_frames.py
+new file mode 100644
+index 0000000..dda7f40
+--- /dev/null
++++ b/skills/rind-bench-baremetal/oled-demo/tools/gen_frames.py
+@@ -0,0 +1,128 @@
++#!/usr/bin/env python3
++"""Build three 128x64 1-bit frames for an EFR32MG24 SSD1306 demo.
++
++Inputs (kept in ../assets/, downloaded unmodified):
++  moqdev-layout_favicon.svg  https://moq.dev/layout/favicon.svg (the MoQ "MQ + arrow" mark)
++  wordmark-light.svg         moq-dev/rind admin/wordmark-light.svg (the rind wordmark)
++Outputs: ../oled_demo/frames.h (SSD1306 page order, LSB = top), ../preview*.png
++"""
++import io, os
++import cairosvg
++from PIL import Image, ImageDraw, ImageFont
++
++HERE = os.path.dirname(os.path.abspath(__file__))
++A = os.path.join(HERE, "..", "assets")
++OUT = os.path.join(HERE, "..")
++W, H = 128, 64
++SANS_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
++SANS = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
++MONO = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
++
++def svg_rgba(name, px_w=None, px_h=None):
++    png = cairosvg.svg2png(url=os.path.join(A, name), output_width=px_w, output_height=px_h)
++    return Image.open(io.BytesIO(png)).convert("RGBA")
++
++def to_bits(img, lit):
++    """img RGBA -> 1-bit 'L' image (255 lit) by predicate lit(r,g,b,a)."""
++    out = Image.new("L", img.size, 0)
++    px, op = img.load(), out.load()
++    for y in range(img.size[1]):
++        for x in range(img.size[0]):
++            if lit(*px[x, y]):
++                op[x, y] = 255
++    return out
++
++def downsample(mask, size, thr=110):
++    small = mask.resize(size, Image.BOX)
++    return small.point(lambda v: 255 if v >= thr else 0)
++
++def text(d, xy, s, font, size):
++    d.fontmode = "1"
++    d.text(xy, s, fill=255, font=ImageFont.truetype(font, size))
++
++def center_text(d, y, s, font, size, x0=0, x1=W):
++    f = ImageFont.truetype(font, size)
++    w = d.textlength(s, font=f)
++    d.fontmode = "1"
++    d.text((x0 + (x1 - x0 - w) // 2, y), s, fill=255, font=f)
++
++frames = []
++
++# 1. moq.dev: the MQ mark (favicon, background dropped: white letters + green arrow lit)
++icon = svg_rgba("moqdev-layout_favicon.svg", 512, 512)
++lum = lambda r, g, b, a: a > 128 and (0.299 * r + 0.587 * g + 0.114 * b) > 90
++mark = downsample(to_bits(icon, lum), (60, 60))
++f1 = Image.new("L", (W, H), 0)
++f1.paste(mark, (2, 2))
++d = ImageDraw.Draw(f1)
++center_text(d, 8, "moq.dev", SANS_B, 13, 64, 128)
++center_text(d, 30, "Media over", SANS, 10, 64, 128)
++center_text(d, 42, "QUIC", SANS_B, 10, 64, 128)
++frames.append(("moq", f1))
++
++# 2. rind: the wordmark from the rind repo (cream highlight left dark as a gap)
++wm = svg_rgba("wordmark-light.svg", 1000)
++lum2 = lambda r, g, b, a: a > 128 and (0.299 * r + 0.587 * g + 0.114 * b) < 225
++wmask = to_bits(wm, lum2)
++wmask = wmask.crop(wmask.getbbox())
++h = 48; w = round(wmask.size[0] * h / wmask.size[1])
++wsmall = downsample(wmask, (w, h), 100)
++f2 = Image.new("L", (W, H), 0)
++f2.paste(wsmall, ((W - w) // 2, 1))
++d = ImageDraw.Draw(f2)
++center_text(d, 52, "pure-Rust crypto", SANS, 9)
++frames.append(("rind", f2))
++
++# 3. Benchmark headline from one run at rind b6651423. Replace before reuse.
++f3 = Image.new("L", (W, H), 0)
++d = ImageDraw.Draw(f3)
++center_text(d, 0, "TLS 1.3 handshake", SANS_B, 9)
++center_text(d, 10, "X25519, full", SANS, 9)
++d.line((0, 21, 127, 21), fill=255)
++rows = [("", "rind", "aws-lc"), ("Xeon", "228µs", "299µs"), ("M1 Pro", "284µs", "425µs"), ("A76", "1.57ms", "1.33ms")]
++for i, (a, b, c) in enumerate(rows):
++    y = 23 + i * 10
++    fnt = SANS_B if i == 0 else SANS
++    text(d, (0, y), a, fnt, 9)
++    text(d, (48, y), b, fnt, 9)
++    text(d, (90, y), c, fnt, 9)
++frames.append(("bench", f3))
++
++# Header in SSD1306 page order
++lines = ["/* Generated by tools/gen_frames.py. 128x64, SSD1306 page order (8 pages x 128 cols, LSB = top row), 1 = lit. */",
++         "#pragma once", "#include <stdint.h>", f"#define DEMO_FRAME_COUNT {len(frames)}"]
++for name, f in frames:
++    px = f.load(); buf = []
++    for page in range(8):
++        for x in range(W):
++            v = 0
++            for bit in range(8):
++                if px[x, page * 8 + bit]: v |= 1 << bit
++            buf.append(v)
++    lines.append(f"static const uint8_t frame_{name}[1024] = {{")
++    for i in range(0, 1024, 16):
++        lines.append("  " + ", ".join(f"0x{b:02x}" for b in buf[i:i + 16]) + ",")
++    lines.append("};")
++lines.append("static const uint8_t *const demo_frames[DEMO_FRAME_COUNT] = {" + ", ".join(f"frame_{n}" for n, _ in frames) + "};")
++os.makedirs(os.path.join(OUT, "oled_demo"), exist_ok=True)
++open(os.path.join(OUT, "oled_demo", "frames.h"), "w").write("\n".join(lines) + "\n")
++
++# Previews: each frame at 4x, solid pixels, white-on-black, plus a combined strip
++S = 4
++def preview(f):
++    big = Image.new("RGB", (W * S, H * S), (0, 0, 0))
++    pb, pf = big.load(), f.load()
++    for y in range(H):
++        for x in range(W):
++            if pf[x, y]:
++                for dy in range(S):
++                    for dx in range(S):
++                        pb[x * S + dx, y * S + dy] = (235, 245, 255)
++    return big
++pad = 16
++strip = Image.new("RGB", (W * S + 2 * pad, len(frames) * (H * S + pad) + pad), (40, 40, 40))
++for i, (name, f) in enumerate(frames):
++    p = preview(f); p.save(os.path.join(OUT, f"preview-{i+1}-{name}.png"))
++    strip.paste(p, (pad, pad + i * (H * S + pad)))
++strip.save(os.path.join(OUT, "preview.png"))
++print("ok", [n for n, _ in frames])
+diff --git a/skills/rind-bench-hosts/SKILL.md b/skills/rind-bench-hosts/SKILL.md
+new file mode 100644
+index 0000000..f32d6aa
+--- /dev/null
++++ b/skills/rind-bench-hosts/SKILL.md
+@@ -0,0 +1,219 @@
++---
++name: rind-bench-hosts
++description: Use when measuring rind's benchmark report on a host outside admin/bench-report's six, including a shared machine, a Mac, a board reached through another machine, or an Android phone.
++---
++
++# Measuring rind on your own hosts
++
++`admin/bench-report run` is the host side. `collect` accepts only the six
++names in `HOSTS`. For a side sheet, use
++[rind-bench-results](../rind-bench-results/SKILL.md). Command details are in
++[rind-bench-and-verify](../rind-bench-and-verify/SKILL.md).
++
++One speed run per machine. `run` calls `admin/build-cost` after the
++benchmarks. Other heavy builds on that machine wait. Separate machines can
++run together.
++
++## Command
++
++`nix develop` sets `IN_RIND_DEV_SHELL=1`.
++
++```shell
++nix develop --command python3 admin/bench-report run \
++  --host <name> --commit <full-sha> --jobs <n> \
++  --target-dir <work>/target --out <work>/<name>.json
++```
++
++`<name>` is recorded. It is not looked up in `HOSTS`. The report uses 3
++jobs on its shared 15 GB host and 4 to 16 on the others. Cap jobs to what
++this machine can compile without swapping.
++
++`run` builds `rind-bench` with `--features __bench_openssl` and times
++`OPERATIONS` (62 at the commit the README cites) with `CRITERION_ARGS`.
++Python must be 3.11 or newer (`tomllib`). The dev shell provides
++`pkg-config` and OpenSSL.
++
++Ship the commit with `git archive --format=tar`, as `collect` does.
++Submodule contents are omitted. Unpack into a directory you can delete.
++
++## Refusals
++
++1. `check_idle` samples 5 seconds and refuses when busy logical CPUs exceed
++   `max(1, 0.1 * logical CPUs)`. On 8 CPUs the limit is 1.0. One shared
++   8-vCPU VM at 2.3 was refused. The JSON is `status` `busy`.
++2. `toolchain()` requires `IN_RIND_DEV_SHELL=1` and a `rustc -vV` release
++   equal to `flake.nix`'s `rust-bin.stable` pin (`1.98.1` at the commit the
++   README cites). `fail()` writes no file. The text is `bench-report: `
++   plus `run inside the dev shell: ...` or `rustc <version> is not the pinned <pin>`.
++3. `check_idle` runs again before the benchmarks. A refusal writes
++   `status` `busy` with the toolchain fields filled in.
++
++A failed `cargo` invocation raises and writes no file. `admin/build-cost`
++then applies its own 25% check.
++
++## Off the dev shell
++
++[host-run.py](host-run.py) replaces `toolchain()` and `check_idle()`, so it
++skips the dev-shell check and the pin check. Busy counts still land in
++`load`, and `run` still sets `load.noisy`. Stderr prints
++`host-run: N of M CPUs busy <when> (harness limit L); continuing`. A missing
++name exits before measuring.
++
++Use it when the host will not go idle, or when the dev shell will not fit
++on the disk. Record `toolchain.rustc` in the host note when it is not the
++pin.
++
++```shell
++RIND_ROOT=/path/to/rind python3 host-run.py \
++  --host <name> --commit <full-sha> --jobs <n> \
++  --target-dir <work>/target --out <work>/<name>.json
++```
++
++Omit `RIND_ROOT` when the script is in the checkout root.
++`HOSTRUN_FREE_TARGET=1` deletes `CARGO_TARGET_DIR` before build-cost.
++`build_env` drops `CARGO_TARGET_*`, so build-cost uses
++`<checkout>/.tmp/build-cost`. `HOSTRUN_SKIP_BUILD_COST=1` stores
++`build_cost.status` `failed` with reason
++`skipped by host-run (HOSTRUN_SKIP_BUILD_COST)`.
++
++Copy the wrapper with the archive. Do not copy a target directory or a
++cargo registry back.
++
++## Disk
++
++Check free space on the work directory's filesystem before `nix develop`
++and before `run`. Start at 5 GiB or more. Stop and delete the target
++directory under 1.5 GiB. Keep the checkout, `CARGO_HOME`, and
++`--target-dir` in that directory.
++
++Those floors are from one run, not from the rind scripts: the release
++target was about 2 GB, the crate cache about 220 MB, and a disk with about
++6 GB free filled up. Vendored OpenSSL is the large build-cost fixture.
++
++Linux: `df -B1 --output=avail <work>`. macOS: `df -k <work>` (1024-byte
++blocks). After a successful run, delete the target directory,
++`CARGO_HOME`, and `<checkout>/.tmp`. Keep the JSON.
++
++## Build cost
++
++`admin/build-cost` cold-builds (`cargo build --release --frozen`, three
++runs) each fixture in `admin/build-cost-fixtures`: `rind`, `aws-lc-rs`,
++`ring`, `rustcrypto`, `graviola`, `libcrux`, `openssl`,
++`openssl-vendored`, `rustls-rind`, `rustls-aws-lc-rs`, `rustls-ring`. The
++JSON has wall time, CPU time, `stripped_bytes`, tools beyond `rustc` and a
++linker, and the crate list. The sheet prints decimal MB
++(`stripped_bytes / 1e6`).
++
++It exits `error: host is busy (N of M CPUs busy)` when `busy_cpus()`
++exceeds `0.25 * cpus()`. On Linux the sample is the next 5 seconds of
++`/proc/stat` scaled by `os.cpu_count()`, and `cpus()` is
++`len(os.sched_getaffinity(0))`. On macOS `busy_cpus()` is the 1-minute
++load average, so N in the message is that average, and a run started
++immediately can fail on an idle Mac. `run` stores a non-zero exit as
++`build_cost.status` `failed` and keeps the speed numbers. The published
++`nixos` row is this failure. Its stored reason still says
++`load average ...`. The script at the cited commit prints
++`N of M CPUs busy`.
++
++The script does not check the dev shell or the pin. It records `rustc` and
++`cc` on `PATH`. Rerun when under the 25% line:
++
++```shell
++nix develop --command python3 admin/build-cost
++```
++
++Stdout is a new object. To show it, set the host's `build_cost` to that
++object plus `"status": "ok"` and `"started"`.
++
++## OpenSSL headers without root
++
++`run` calls `openssl version` and stores it at `libraries.openssl.linked`.
++A missing CLI fails the run. On a Debian-family board with the library and
++the CLI but no headers and no root:
++
++1. Stop if `pkg-config --exists openssl` succeeds.
++2. `apt-get download libssl-dev` and `dpkg -x` into the work directory.
++   Do not install it.
++3. Copy `usr/include/<triplet>/openssl/*.h` (`gcc -print-multiarch`) into
++   `usr/include/openssl/`.
++4. Point `OPENSSL_LIB_DIR` at `libssl.so` and `libcrypto.so` symlinks to
++   the system's `libssl.so.3` and `libcrypto.so.3`. Point
++   `OPENSSL_INCLUDE_DIR` at the unpacked `usr/include`. `openssl-sys` 0.9
++   skips pkg-config when both are set.
++
++On Apple silicon, `openssl-sys` looks under `/opt/homebrew` before
++pkg-config. Record `rustc` when it is not the pin.
++`rind-bench/benches/mldsa.rs` skips OpenSSL ML-DSA when the linked
++OpenSSL is older than 3.5.
++
++## Another machine
++
++From the machine that already has a key: `ssh -o BatchMode=yes`. On
++failure, stop. Do not try a password. Some images have no default account.
++
++To identify a board you own, read `ip neigh` or `arp -a` and match the
++vendor MAC prefix.
++
++Copy the archive and `host-run.py`. One `nohup` job, log in the work
++directory, copy the JSON back, delete the target directory there. The hop
++machine can run its own suite.
++
++## Android
++
++Cross-compile `rind-bench` for `aarch64-linux-android` with the NDK. Push
++with `adb`, run under `/data/local/tmp`, then delete that directory.
++
++Save `dumpsys battery` as `battery-before.txt` and `battery-after.txt`,
++`/proc/stat` as `stat-before` and `stat-after`, `getprop` as `getprop.txt`,
++the criterion tree, `cpuid.json` from a same-target `rind-cpuid`, and
++ISO-8601 `started` and `finished`.
++
++[android-convert.py](android-convert.py) imports `admin/bench-report` and
++parses criterion as `run()` does. Pass `--host`, `--commit`, the cross
++`rustc` and `cargo` lines, `--cpu-model`, `--logical-cpus`, and
++`--openssl-linked` (or `openssl-linked.txt`). One capture linked vendored
++static OpenSSL.
++
++`load.system_busy_share_during_run` includes the benchmarks, so
++`load.noisy` is null. `build_cost.status` is `failed` because the binaries
++were cross-compiled. `dumpsys` temperature is tenths of a degree; the
++converter stores Celsius.
++
++## Noisy
++
++`load.noisy` is set when other CPUs during the run, after subtracting the
++benchmark process, exceed `busy_limit()`. `summary` prints `(noisy)`.
++`measured()` adds `, noisy`. The published `nixos` row is that mark.
++
++Say in the host note when the machine was shared, including when `noisy`
++is false and the pre-check counts were high. A small gap on a noisy host
++is not a finding. The nightly `bench` workflow is the clean comparison.
++
++## Apple silicon
++
++`rind_rows()` in `rind-bench/benches/criterion/mod.rs` adds `rind-dit-held`
++only for Apple `aarch64` with DIT detected, holding `rind::cpu::Dit::hold()`
++across the timed loop. `VARIANTS` keeps that column out of the
++fastest-library and gap calculations. The published `kixtop` note
++attributes short-input gaps to per-call DIT. Read the DIT-held column
++before calling a short-input gap a regression.
++
++## ML-DSA
++
++Published `BENCHMARKS.md` marks ML-DSA-65 keygen, sign, and verify not
++timed on every `HOSTS` entry. `OPERATIONS` includes those three, and `run`
++times them. `mldsa44` and `mldsa87` are outside `OPERATIONS`. Compare the
++three rows with another run that timed them.
++
++## aarch64 without SHA-3
++
++`quest/m2/bench/README.md` says no report host and no forced tier times
++aarch64 with the crypto extension and without SHA-3. Name the chip. The
++published aarch64 column is a different configuration.
++
++## Time
++
++`CRITERION_ARGS` is shortened so a host takes about half an hour. One
++Cortex-A76 board took about 70 minutes of criterion. Build-cost on that
++run added about 10 to 30 minutes per host. Those longer figures are from
++that run.
+diff --git a/skills/rind-bench-hosts/android-convert.py b/skills/rind-bench-hosts/android-convert.py
+new file mode 100755
+index 0000000..afe6ab2
+--- /dev/null
++++ b/skills/rind-bench-hosts/android-convert.py
+@@ -0,0 +1,208 @@
++#!/usr/bin/env python3
++"""Turn an Android capture into an admin/bench-report host JSON.
++
++The phone does not run `admin/bench-report run`. This imports that script
++and parses criterion the same way `run()` does: `benchmark.json` plus
++`estimates.json`, slope if present, otherwise mean.
++
++The capture directory holds:
++
++  getprop.txt, stat-before, stat-after
++  battery-before.txt, battery-after.txt
++  started, finished          ISO-8601 timestamps
++  cpuid.json                 rind-cpuid's JSON, or {"cpuid": {}}
++  criterion/**/new/benchmark.json and estimates.json
++  openssl-linked.txt         optional; else pass --openssl-linked
++"""
++
++import argparse
++import glob
++import importlib.machinery
++import importlib.util
++import json
++import os
++import re
++import sys
++from pathlib import Path
++
++
++def load_renderer(rind):
++    path = rind / "admin" / "bench-report"
++    if not path.is_file():
++        sys.exit(f"android-convert: no {path}")
++    loader = importlib.machinery.SourceFileLoader("bench_report", str(path))
++    spec = importlib.util.spec_from_loader("bench_report", loader)
++    module = importlib.util.module_from_spec(spec)
++    loader.exec_module(module)
++    for name in ("operation_of", "OPERATIONS", "LIBRARIES", "CRATES", "locked_versions", "CRITERION_ARGS", "operation_regex"):
++        if not hasattr(module, name):
++            sys.exit(f"android-convert: admin/bench-report has no {name}")
++    return module
++
++
++def read_text(path):
++    try:
++        return path.read_text(encoding="utf-8", errors="replace").strip()
++    except OSError as error:
++        sys.exit(f"android-convert: {path}: {error}")
++
++
++def getprop(path):
++    props = {}
++    for line in read_text(path).splitlines():
++        match = re.match(r"\[(.+?)\]: \[(.*)\]", line)
++        if match:
++            props[match.group(1)] = match.group(2)
++    return props
++
++
++def cpu_times(text):
++    fields = [int(part) for part in text.split()[1:9]]
++    idle = fields[3] + fields[4]
++    return sum(fields) - idle, sum(fields)
++
++
++def dumpsys_map(text):
++    out = {}
++    for line in text.splitlines():
++        if ":" not in line:
++            continue
++        key, value = line.split(":", 1)
++        out[key.strip()] = value.strip()
++    return out
++
++
++def temperature_c(battery):
++    try:
++        return int(battery.get("temperature", "0")) / 10
++    except ValueError:
++        return None
++
++
++def results_of(module, capture):
++    found_results = []
++    pattern = str(capture / "criterion" / "**" / "new" / "benchmark.json")
++    for path in sorted(glob.glob(pattern, recursive=True)):
++        meta = json.loads(Path(path).read_text(encoding="utf-8"))
++        found = module.operation_of(meta["full_id"])
++        if not found:
++            continue
++        operation, library = found
++        estimates_path = Path(path).parent / "estimates.json"
++        estimates = json.loads(estimates_path.read_text(encoding="utf-8"))
++        estimate = estimates.get("slope") or estimates["mean"]
++        found_results.append(
++            {
++                "operation": operation,
++                "library": module.LIBRARIES.get(library, library),
++                "id": meta["full_id"],
++                "ns": estimate["point_estimate"],
++                "ns_low": estimate["confidence_interval"]["lower_bound"],
++                "ns_high": estimate["confidence_interval"]["upper_bound"],
++                "throughput": meta.get("throughput"),
++            }
++        )
++    order = {operation: index for index, operation in enumerate(module.OPERATIONS)}
++    found_results.sort(key=lambda row: (order[row["operation"]], row["library"]))
++    return found_results
++
++
++def refused_of(module, host):
++    if not hasattr(module, "REQUIRED") or not hasattr(module, "host_arch"):
++        return {}
++    cpuid = host["rind_cpu"].get("cpuid", {})
++    arch = module.host_arch(host)
++    refused = {}
++    for library, features in module.REQUIRED.items():
++        missing = [feature for feature in features.get(arch, []) if not cpuid.get(feature)]
++        if missing:
++            refused[library] = missing
++    return refused
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("--rind", required=True, type=Path)
++    parser.add_argument("--capture", required=True, type=Path)
++    parser.add_argument("--out", required=True, type=Path)
++    parser.add_argument("--host", required=True)
++    parser.add_argument("--commit", required=True)
++    parser.add_argument("--rustc", required=True, help="first line of rustc -vV on the build machine")
++    parser.add_argument("--cargo", required=True)
++    parser.add_argument("--target", required=True, help="triple, API level, and NDK, as text")
++    parser.add_argument("--cpu-model", required=True)
++    parser.add_argument("--logical-cpus", required=True, type=int)
++    parser.add_argument("--openssl-linked", default="", help="what the binary linked; else openssl-linked.txt")
++    args = parser.parse_args()
++    if any(ch.isspace() or ch == "`" for ch in args.host):
++        sys.exit("android-convert: host name must be a token without spaces or backticks")
++
++    capture = args.capture
++    linked_path = capture / "openssl-linked.txt"
++    linked = args.openssl_linked.strip() or (read_text(linked_path) if linked_path.is_file() else "")
++    if not linked:
++        sys.exit("android-convert: pass --openssl-linked or provide openssl-linked.txt")
++
++    module = load_renderer(args.rind.resolve())
++    props = getprop(capture / "getprop.txt")
++    busy0, total0 = cpu_times(read_text(capture / "stat-before"))
++    busy1, total1 = cpu_times(read_text(capture / "stat-after"))
++    busy_share = (busy1 - busy0) / max(1, total1 - total0)
++    before = dumpsys_map(read_text(capture / "battery-before.txt"))
++    after = dumpsys_map(read_text(capture / "battery-after.txt"))
++    cpuid_path = capture / "cpuid.json"
++    rind_cpu = json.loads(read_text(cpuid_path)) if cpuid_path.is_file() else {"cpuid": {}}
++
++    locked = module.locked_versions()
++    libraries = {
++        library: {crate: ", ".join(locked.get(crate, ["?"])) for crate in crates}
++        for library, crates in module.CRATES.items()
++    }
++    libraries["openssl"]["linked"] = linked
++
++    host = {
++        "schema": 1,
++        "host": args.host,
++        "commit": args.commit,
++        "started": read_text(capture / "started"),
++        "cpu": {"model": args.cpu_model, "arch": "aarch64", "logical_cpus": args.logical_cpus},
++        "os": (
++            f"Android {props.get('ro.build.version.release', '?')} "
++            f"(API {props.get('ro.build.version.sdk', '?')}, "
++            f"build {props.get('ro.build.id', '?')})"
++        ),
++        "toolchain": {"rustc": args.rustc, "cargo": args.cargo, "target": args.target},
++        "libraries": libraries,
++        "rind_cpu": rind_cpu,
++        "status": "ok",
++        "finished": read_text(capture / "finished"),
++        "criterion_args": module.CRITERION_ARGS + [module.operation_regex(())],
++        "load": {
++            "limit_cpus": round(max(1.0, 0.1 * args.logical_cpus), 2),
++            "system_busy_share_during_run": round(busy_share, 3),
++            "note": (
++                "whole-system busy share across the run, benchmarks included; "
++                "not the harness's other-work count"
++            ),
++            "noisy": None,
++        },
++        "battery": {
++            "before": before,
++            "after": after,
++            "temperature_c": {"before": temperature_c(before), "after": temperature_c(after)},
++        },
++        "results": results_of(module, capture),
++        "build_cost": {
++            "status": "failed",
++            "started": "",
++            "reason": "not measured: the binaries were cross-compiled on another host",
++        },
++    }
++    host["refused"] = refused_of(module, host)
++    args.out.parent.mkdir(parents=True, exist_ok=True)
++    args.out.write_text(json.dumps(host, indent=1) + "\n", encoding="utf-8")
++    print(f"{len(host['results'])} results; busy share {busy_share:.3f}")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/skills/rind-bench-hosts/host-run.py b/skills/rind-bench-hosts/host-run.py
+new file mode 100755
+index 0000000..435d886
+--- /dev/null
++++ b/skills/rind-bench-hosts/host-run.py
+@@ -0,0 +1,85 @@
++#!/usr/bin/env python3
++"""Run rind's `admin/bench-report run` when that script would refuse the host.
++
++Same operations, criterion arguments, parsing, and JSON. What changes:
++
++* `toolchain()` does not require `IN_RIND_DEV_SHELL`, and it does not require
++  the rustc release `flake.nix` pins. The host's `rustc -vV` first line is
++  what the JSON stores.
++* `check_idle()` does not refuse a busy host. It still returns the busy-CPU
++  count, so `run()` stores it under `load` and still sets `load.noisy` from
++  other work during the benchmarks.
++* If `HOSTRUN_FREE_TARGET` is `1`, the benchmark target directory is deleted
++  before `admin/build-cost`. If `HOSTRUN_SKIP_BUILD_COST` is `1`, build cost
++  is recorded as failed with a reason that says it was skipped.
++
++Prefer `nix develop --command python3 admin/bench-report run` when the host
++can meet the real checks. Point `RIND_ROOT` at the checkout if this file is
++not in that checkout's root.
++"""
++
++import importlib.machinery
++import importlib.util
++import os
++import shutil
++import sys
++
++root = os.environ.get("RIND_ROOT") or os.path.dirname(os.path.abspath(__file__))
++path = os.path.join(root, "admin", "bench-report")
++loader = importlib.machinery.SourceFileLoader("bench_report", path)
++spec = importlib.util.spec_from_loader("bench_report", loader)
++br = importlib.util.module_from_spec(spec)
++loader.exec_module(br)
++
++for _name in (
++    "toolchain",
++    "check_idle",
++    "build_cost",
++    "busy_cpus",
++    "cpu_count",
++    "busy_limit",
++    "output",
++    "main",
++):
++    if not hasattr(br, _name):
++        sys.exit(f"host-run: admin/bench-report has no {_name}; this wrapper is out of date")
++
++
++def toolchain(env):
++    version = br.output(["rustc", "-vV"], env)
++    cargo = br.output(["cargo", "-V"], env)
++    return ["cargo"], {"rustc": version.splitlines()[0], "cargo": cargo}, "openssl"
++
++
++def check_idle(when):
++    busy = br.busy_cpus()
++    limit = br.busy_limit()
++    print(
++        f"host-run: {busy:.1f} of {br.cpu_count()} CPUs busy {when} "
++        f"(harness limit {limit:.1f}); continuing",
++        file=sys.stderr,
++        flush=True,
++    )
++    return round(busy, 2)
++
++
++orig_build_cost = br.build_cost
++
++
++def build_cost(env, jobs, refused):
++    if os.environ.get("HOSTRUN_FREE_TARGET") == "1":
++        shutil.rmtree(env["CARGO_TARGET_DIR"], ignore_errors=True)
++    if os.environ.get("HOSTRUN_SKIP_BUILD_COST") == "1":
++        return {
++            "status": "failed",
++            "started": "",
++            "reason": "skipped by host-run (HOSTRUN_SKIP_BUILD_COST)",
++        }
++    return orig_build_cost(env, jobs, refused)
++
++
++br.toolchain = toolchain
++br.check_idle = check_idle
++br.build_cost = build_cost
++sys.argv = ["bench-report", "run", *sys.argv[1:]]
++br.main()
+diff --git a/skills/rind-bench-results/SKILL.md b/skills/rind-bench-results/SKILL.md
+new file mode 100644
+index 0000000..000d471
+--- /dev/null
++++ b/skills/rind-bench-results/SKILL.md
+@@ -0,0 +1,88 @@
++---
++name: rind-bench-results
++description: Use when rendering a side benchmark sheet for hosts outside admin/bench-report's HOSTS, or committing that sheet and the raw JSON to a results repository.
++---
++
++# A side sheet, and where the JSON goes
++
++How the host was measured is in
++[rind-bench-hosts](../rind-bench-hosts/SKILL.md). Why `render` cannot take
++a new host is in
++[rind-bench-and-verify](../rind-bench-and-verify/SKILL.md).
++
++`report()` returns Markdown and SVGs. It does not write them. Point
++`HOSTS`, `REPORT`, and `REPORT_DIR` at the side hosts and a directory
++outside the checkout. Pass `tiers=None` and `gaps=None`. `load_verified()`
++still reads the checkout's `benchmarks/verified.toml` (`VERIFIED` is set at
++import). With `tiers=None` the CPU-tier section would say there are no
++nightly results. Replace that section, the generated-by comment, and the
++sentence that every host used the pinned toolchain and ran only when idle,
++unless that sentence is true of every host in the sheet.
++
++[render-side.py](render-side.py) does that and writes only under `--out`.
++`--out` inside the rind checkout is an error. A JSON whose `status` is not
++`ok` is an error. Host order on the command line is the sheet's order. A
++note is one paragraph, `--note <host> <file>` or `<stem>.note` beside the
++JSON. The script rejects a heading. It exits if `report()` no longer has
++the comment, the toolchain sentence, or the `## CPU tiers` and
++`## Verified code` headings.
++
++```shell
++python3 render-side.py \
++  --rind /path/to/rind \
++  --out /path/to/results/render \
++  --note <host> /path/to/<host>.note \
++  /path/to/<host>.json
++```
++
++The sheet is `<out>/BENCHMARKS.md`. SVGs are `<out>/benchmarks/`. Gaps come
++from `gaps_of` where rind is slower than `SLOWER` (1.1). They are
++measurements. `benchmarks/gaps.toml` stays the maintainers' file.
++`rind-dit-held` is excluded (`VARIANTS`).
++
++The host note adds what the JSON does not already show: a rustc other than
++the pin, or a run outside `nix develop`; a shared or in-use machine;
++OpenSSL headers unpacked locally; an aarch64 part with the crypto extension
++and without SHA-3; on Apple silicon, that short gaps need the DIT-held
++column; that ML-DSA-65 was timed here while the published sheet has dashes
++on those three rows.
++
++## Results repository
++
++Commit the JSON and the sheet to a repository other than rind and other
++than this skills repository. Layout:
++
++```text
++<host>/<host>.json
++<host>/<host>.note
++<host>/run.log
++render/BENCHMARKS.md
++render/benchmarks/*.svg
++```
++
++Do not commit a target directory, `CARGO_HOME`, a source archive, a
++checkout, or `.tmp/`. Do not put a token in a remote URL. Push from an
++account that can write the repository.
++
++[stage-repo.py](stage-repo.py) writes that per-host directory from the
++JSON, trims a `.log` to timing lines, and copies a rendered sheet from
++`--render` (`BENCHMARKS.md` or `STATS.md`, plus `benchmarks/`). It rewrites
++home-directory paths and private IPv4 addresses. Pass
++`--replace REGEX=TEXT` for a machine name or a board product name.
++
++```shell
++python3 stage-repo.py --out /path/to/results-repo \
++  --json /path/to/<host>.json --rename <captured>=<published> \
++  --render /path/to/render --log <published>=/path/to/run.log
++```
++
++A JSON with `status` other than `ok` can sit beside the sheet. `render-side.py`
++accepts only `status` `ok`. After a clean `admin/build-cost`, merge that
++stdout into `build_cost` as
++[rind-bench-hosts](../rind-bench-hosts/SKILL.md) describes, then render
++again.
++
++[page-data.py](page-data.py) prints a compact page from a summary object
++with `order`, `columns`, and per-host `rows`, `cpu`, `os`, `rustc`,
++`commit`, `started`, `load`, `lead`, `timed`, and `build_cost`.
++`render-side.py` does not write that object.
+diff --git a/skills/rind-bench-results/page-data.py b/skills/rind-bench-results/page-data.py
+new file mode 100755
+index 0000000..4d65529
+--- /dev/null
++++ b/skills/rind-bench-results/page-data.py
+@@ -0,0 +1,85 @@
++#!/usr/bin/env python3
++"""Print a compact page JSON from a benchmark summary object.
++
++The input is one object with `order`, `columns`, and `hosts`. Each host has
++`rows` (operation -> {label, times}), `cpu`, `os`, `rustc`, `commit`,
++`started`, `load`, `lead`, `timed`, `source`, and `build_cost`.
++`render-side.py` does not write this file.
++
++  page-data.py summary.json
++"""
++
++import json
++import sys
++from pathlib import Path
++
++
++def main():
++    if len(sys.argv) != 2:
++        sys.exit("usage: page-data.py summary.json")
++    summary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
++    order = summary["order"]
++    columns = list(summary["columns"])
++    labels = {}
++    for host in summary["hosts"].values():
++        for row, value in host["rows"].items():
++            labels[row] = value["label"]
++    rows = [[row, labels[row]] for row in order if row in labels]
++    hosts = []
++    for name, host in summary["hosts"].items():
++        times = []
++        for row, _label in rows:
++            value = host["rows"].get(row)
++            times.append(
++                [
++                    float(f"{value['times'][column]:.4g}") if value and column in value["times"] else None
++                    for column in columns
++                ]
++            )
++        cost = host.get("build_cost") or {}
++        if cost.get("status") == "ok":
++            builds = [
++                [
++                    build["name"],
++                    build["median_seconds"],
++                    round(build["median_cpu_seconds"]),
++                    round(build["stripped_bytes"] / 1e6, 2),
++                    len(build["packages"]),
++                ]
++                for build in cost.get("builds", [])
++            ]
++            failed = None
++        else:
++            builds = []
++            failed = cost.get("reason")
++        load = host.get("load") or {}
++        hosts.append(
++            {
++                "id": name,
++                "ours": host.get("source") == "this run",
++                "cpu": host["cpu"]["model"],
++                "arch": host["cpu"]["arch"],
++                "os": host["os"],
++                "rustc": host["rustc"].split(" (")[0],
++                "commit": host["commit"][:8],
++                "date": host["started"][:10],
++                "noisy": bool(load.get("noisy")),
++                "busy": load.get("other_busy_cpus_during_run"),
++                "lead": host["lead"],
++                "timed": host["timed"],
++                "t": times,
++                "builds": builds,
++                "bcfail": failed,
++            }
++        )
++    page = {
++        "rows": rows,
++        "cols": [[column, summary["columns"][column]] for column in columns],
++        "hosts": hosts,
++    }
++    json.dump(page, sys.stdout, separators=(",", ":"))
++    sys.stdout.write("\n")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/skills/rind-bench-results/render-side.py b/skills/rind-bench-results/render-side.py
+new file mode 100755
+index 0000000..309a25f
+--- /dev/null
++++ b/skills/rind-bench-results/render-side.py
+@@ -0,0 +1,197 @@
++#!/usr/bin/env python3
++"""Write a BENCHMARKS.md-style sheet for hosts outside admin/bench-report's HOSTS.
++
++Imports `report()` from a rind checkout and writes only under --out, which
++must be outside that checkout. Does not read or write the checkout's
++BENCHMARKS.md, benchmarks/, or benchmarks/gaps.toml.
++"""
++
++import argparse
++import importlib.machinery
++import importlib.util
++import json
++import sys
++from pathlib import Path
++
++GENERATED = (
++    "<!-- Generated by `admin/bench-report render` from benchmarks/data, "
++    "benchmarks/verified.toml, and benchmarks/gaps.toml. -->"
++)
++GENERATED_SIDE = (
++    "<!-- Generated by calling report() in rind's admin/bench-report on host "
++    "JSON from outside that script's HOSTS. This is not the repo's BENCHMARKS.md. -->"
++)
++PINNED = (
++    "Each host builds with the pinned toolchain in the Nix dev shell, and runs "
++    "`admin/bench-report` only when idle. Times are criterion's estimates."
++)
++PINNED_SIDE = (
++    "Times are criterion's estimates from `admin/bench-report run`. A host measured "
++    "through host-run.py kept that script's operations, criterion arguments, parsing, "
++    "and JSON, and recorded a busy host or a rustc other than the Nix pin instead of "
++    "refusing them. The toolchain and the load are whatever each host's JSON records. "
++    "A host run outside the Nix dev shell, or while other work was on the machine, says "
++    "so in its note. A host the JSON marks noisy had other work during the run."
++)
++
++NEEDED = ("report", "load_verified", "gaps_of", "label", "COLUMNS", "HOSTS", "REPORT", "REPORT_DIR")
++
++
++def load_renderer(rind):
++    path = rind / "admin" / "bench-report"
++    if not path.is_file():
++        sys.exit(f"render-side: no {path}")
++    loader = importlib.machinery.SourceFileLoader("bench_report", str(path))
++    spec = importlib.util.spec_from_loader("bench_report", loader)
++    module = importlib.util.module_from_spec(spec)
++    loader.exec_module(module)
++    missing = [name for name in NEEDED if not hasattr(module, name)]
++    if missing:
++        sys.exit(
++            "render-side: admin/bench-report is missing "
++            + ", ".join(missing)
++            + "; this script is out of date"
++        )
++    return module
++
++
++def load_host(path):
++    try:
++        host = json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as error:
++        sys.exit(f"render-side: {path}: {error}")
++    if host.get("status") != "ok":
++        sys.exit(
++            f"render-side: {path}: status {host.get('status')}: {host.get('reason', 'not ok')}"
++        )
++    name = host.get("host")
++    if not isinstance(name, str) or not name or any(c.isspace() or c == "`" for c in name):
++        sys.exit(f"render-side: {path}: host name must be a token without spaces or backticks")
++    for key in ("results", "started", "commit", "os"):
++        if key not in host:
++            sys.exit(f"render-side: {path}: missing {key}")
++    cpu = host.get("cpu") or {}
++    if "model" not in cpu or "arch" not in cpu:
++        sys.exit(f"render-side: {path}: missing cpu.model or cpu.arch")
++    if not (host.get("toolchain") or {}).get("rustc"):
++        sys.exit(f"render-side: {path}: missing toolchain.rustc")
++    return name, host
++
++
++def read_note(path):
++    try:
++        text = path.read_text(encoding="utf-8").strip()
++    except OSError as error:
++        sys.exit(f"render-side: {path}: {error}")
++    if not text:
++        sys.exit(f"render-side: {path}: empty note")
++    if text.startswith("#") or "\n#" in text:
++        sys.exit(f"render-side: {path}: a note is prose, not a Markdown heading")
++    return text
++
++
++def rewrite(markdown, module, hosts):
++    for old, new, what in (
++        (GENERATED, GENERATED_SIDE, "generated-by comment"),
++        (PINNED, PINNED_SIDE, "toolchain sentence"),
++    ):
++        if old not in markdown:
++            sys.exit(f"render-side: report() no longer contains the {what} this script replaces")
++        markdown = markdown.replace(old, new, 1)
++    marker = "## CPU tiers"
++    verified = "## Verified code"
++    if marker not in markdown or verified not in markdown:
++        sys.exit("render-side: report() no longer has the sections this script replaces")
++    head, _, rest = markdown.partition(marker)
++    _, _, tail = rest.partition(verified)
++    gaps = module.gaps_of(hosts, None)
++    lines = [
++        "## Gaps on these hosts",
++        "",
++        "Each operation where another library is more than 10% faster than rind, "
++        "computed by `gaps_of` the way `admin/bench-report` computes gaps (`SLOWER` is 1.1). "
++        "These are measurements. `benchmarks/gaps.toml` holds the maintainers' decisions for "
++        "the hosts in `HOSTS`, and this sheet does not read or write it.",
++        "",
++    ]
++    if gaps:
++        lines += [
++            "| Operation | On | rind's time over the fastest |",
++            "|---|---|---|",
++        ]
++        order = list(hosts)
++        ranked = sorted(gaps.items(), key=lambda item: (order.index(item[0][1]), -item[1][0]))
++        for (row, host), (ratio, best) in ranked:
++            shown = module.COLUMNS.get(best, best)
++            lines.append(f"| {module.label(row)} | `{host}` | {ratio:.2f}× ({shown}) |")
++    else:
++        lines.append("None.")
++    return head + "\n".join(lines) + "\n\n## Verified code" + tail
++
++
++def outside(rind, path):
++    return path != rind and rind not in path.parents
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("--rind", required=True, type=Path, help="checkout to import, not to modify")
++    parser.add_argument("--out", required=True, type=Path, help="directory outside that checkout")
++    parser.add_argument(
++        "--note",
++        nargs=2,
++        action="append",
++        metavar=("HOST", "FILE"),
++        default=[],
++        help="one-paragraph note for HOST; else <json-stem>.note beside the JSON",
++    )
++    parser.add_argument("json", nargs="+", type=Path, help="status-ok host JSON, sheet order")
++    args = parser.parse_args()
++
++    rind = args.rind.resolve()
++    out = args.out.resolve()
++    if not outside(rind, out):
++        sys.exit("render-side: --out is inside the rind checkout; pick a directory outside it")
++
++    notes = {name: read_note(Path(path)) for name, path in args.note}
++    hosts = {}
++    table = {}
++    for path in args.json:
++        name, host = load_host(path)
++        if name in hosts:
++            sys.exit(f"render-side: two files are named {name}")
++        beside = path.with_suffix(".note")
++        if name not in notes and beside.is_file():
++            notes[name] = read_note(beside)
++        entry = {}
++        if name in notes:
++            entry["note"] = notes[name]
++        table[name] = entry
++        hosts[name] = host
++    unused = sorted(set(notes) - set(hosts))
++    if unused:
++        sys.exit("render-side: notes for hosts with no JSON: " + ", ".join(unused))
++
++    module = load_renderer(rind)
++    module.HOSTS = table
++    module.REPORT = str(out / "BENCHMARKS.md")
++    module.REPORT_DIR = str(out / "benchmarks")
++    verified = module.load_verified()
++    files = module.report(hosts, None, verified, None)
++    sheet = module.REPORT
++    if sheet not in files:
++        sys.exit("render-side: report() did not return the sheet")
++    files[sheet] = rewrite(files[sheet], module, hosts)
++
++    for path, content in files.items():
++        dest = Path(path)
++        if not outside(rind, dest):
++            sys.exit(f"render-side: refused to write inside the rind checkout: {dest}")
++        dest.parent.mkdir(parents=True, exist_ok=True)
++        text = content if content.endswith("\n") else content + "\n"
++        dest.write_text(text, encoding="utf-8")
++    print(out / "BENCHMARKS.md")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/skills/rind-bench-results/stage-repo.py b/skills/rind-bench-results/stage-repo.py
+new file mode 100755
+index 0000000..79483ea
+--- /dev/null
++++ b/skills/rind-bench-results/stage-repo.py
+@@ -0,0 +1,184 @@
++#!/usr/bin/env python3
++"""Stage a results repository from host JSON and an optional rendered sheet.
++
++Rewrites home-directory paths and private IPv4 addresses. Pass
++--replace REGEX=TEXT for a machine name or a board product name.
++
++  stage-repo.py --out DIR --json FILE [--rename OLD=NEW] [--render DIR]
++                [--log NAME=FILE] [--replace REGEX=TEXT]
++"""
++
++import argparse
++import json
++import re
++import sys
++from pathlib import Path
++
++HOME = re.compile("(?:/" + "Users|/" + "home)/" + r"\S+")
++PRIVATE_IP = re.compile(
++    r"\b(?:192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
++    r"172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})\b"
++)
++LOG_KEEP = re.compile(
++    r"^(Benchmarking \S+$|\s+time:|\s+thrpt:|host-run:|Warning:|error|"
++    r"bench-report|start |end |WATCHDOG|ABORT|libssl|.*Finished|.*failed|.*panicked)"
++)
++
++
++def scrubber(replacements):
++    compiled = [(re.compile(pattern), text) for pattern, text in replacements]
++
++    def scrub(value):
++        value = HOME.sub("~", value)
++        value = PRIVATE_IP.sub("<lan-ip>", value)
++        for pattern, text in compiled:
++            value = pattern.sub(text, value)
++        return value
++
++    return scrub
++
++
++def load_host(path, scrub):
++    try:
++        host = json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, json.JSONDecodeError) as error:
++        sys.exit(f"stage-repo: {path}: {error}")
++    try:
++        host = json.loads(scrub(json.dumps(host)))
++    except json.JSONDecodeError as error:
++        sys.exit(f"stage-repo: scrubbing {path} broke the JSON: {error}")
++    return host
++
++
++def notes_for(host):
++    load = host.get("load") or {}
++    cost = host.get("build_cost") or {}
++    openssl = (host.get("libraries") or {}).get("openssl") or {}
++    cost_line = f"- Build cost: {cost.get('status')}"
++    if cost.get("status") == "ok":
++        tool = cost.get("host") or {}
++        cost_line += f", {tool.get('cc')}, {tool.get('jobs')} jobs"
++    elif cost.get("reason"):
++        cost_line += f" ({cost.get('reason')})"
++    timed = len({row["operation"] for row in host.get("results") or []})
++    lines = [
++        f"# `{host.get('host')}`",
++        "",
++        f"- CPU: {host.get('cpu', {}).get('model')} ({host.get('cpu', {}).get('arch')}, "
++        f"{host.get('cpu', {}).get('logical_cpus')} logical CPUs)",
++        f"- OS: {host.get('os')}",
++        f"- Toolchain: {(host.get('toolchain') or {}).get('rustc')}; "
++        f"{(host.get('toolchain') or {}).get('cargo')}",
++        f"- Commit: {host.get('commit')}",
++        f"- Started / finished (UTC): {host.get('started')} / {host.get('finished')}",
++        f"- Busy CPUs before build {load.get('busy_cpus_before_build')}, "
++        f"before run {load.get('busy_cpus_before_run')}, "
++        f"during run {load.get('other_busy_cpus_during_run')} "
++        f"(harness limit {load.get('limit_cpus')})",
++        f"- Noisy flag (harness): {load.get('noisy')}",
++        f"- Libraries refused for missing CPU features: {host.get('refused') or 'none'}",
++        f"- OpenSSL linked: {openssl.get('linked')}",
++        cost_line,
++        f"- Operations timed: {timed}; results: {len(host.get('results') or [])}",
++        "",
++    ]
++    return "\n".join(lines)
++
++
++def trim_log(text):
++    kept = []
++    for line in text.splitlines():
++        if not LOG_KEEP.match(line):
++            continue
++        if line.startswith("Benchmarking ") and kept and kept[-1].startswith("Benchmarking "):
++            kept[-1] = line
++        else:
++            kept.append(line)
++    return "\n".join(kept) + ("\n" if kept else "")
++
++
++def copy_tree_text(source, dest, scrub):
++    dest.mkdir(parents=True, exist_ok=True)
++    for path in source.rglob("*"):
++        if not path.is_file():
++            continue
++        relative = path.relative_to(source)
++        target = dest / relative
++        target.parent.mkdir(parents=True, exist_ok=True)
++        target.write_text(scrub(path.read_text(encoding="utf-8", errors="replace")), encoding="utf-8")
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("--out", required=True, type=Path)
++    parser.add_argument("--json", required=True, action="append", type=Path)
++    parser.add_argument("--rename", action="append", default=[], metavar="OLD=NEW")
++    parser.add_argument("--replace", action="append", default=[], metavar="REGEX=TEXT")
++    parser.add_argument("--render", type=Path, help="directory with BENCHMARKS.md or STATS.md and benchmarks/")
++    parser.add_argument("--log", action="append", default=[], metavar="NAME=FILE")
++    parser.add_argument("--note", action="append", default=[], metavar="NAME=FILE")
++    args = parser.parse_args()
++
++    renames = {}
++    for item in args.rename:
++        old, sep, new = item.partition("=")
++        if not sep or not old or not new:
++            sys.exit(f"stage-repo: --rename must be OLD=NEW, not {item!r}")
++        renames[old] = new
++    replacements = []
++    for item in args.replace:
++        pattern, sep, text = item.partition("=")
++        if not sep or not pattern:
++            sys.exit(f"stage-repo: --replace must be REGEX=TEXT, not {item!r}")
++        replacements.append((pattern, text))
++    scrub = scrubber(replacements)
++    logs = {}
++    notes = {}
++    for flag, store in (("--log", logs), ("--note", notes)):
++        for item in getattr(args, flag[2:]):
++            name, sep, path = item.partition("=")
++            if not sep or not name or not path:
++                sys.exit(f"stage-repo: {flag} must be NAME=FILE, not {item!r}")
++            store[name] = Path(path)
++
++    out = args.out
++    for path in args.json:
++        host = load_host(path, scrub)
++        name = renames.get(host.get("host"), host.get("host"))
++        if not isinstance(name, str) or not name or any(ch.isspace() or ch == "`" for ch in name):
++            sys.exit(f"stage-repo: {path}: host name must be a token")
++        host["host"] = name
++        dest = out / name
++        dest.mkdir(parents=True, exist_ok=True)
++        (dest / f"{name}.json").write_text(json.dumps(host, indent=1) + "\n", encoding="utf-8")
++        extra = ""
++        if name in notes:
++            extra = scrub(notes[name].read_text(encoding="utf-8", errors="replace"))
++            if extra and not extra.endswith("\n"):
++                extra += "\n"
++        (dest / "NOTES.md").write_text(scrub(notes_for(host)) + extra, encoding="utf-8")
++        if name in logs:
++            raw = logs[name].read_text(encoding="utf-8", errors="replace")
++            body = trim_log(raw) if logs[name].suffix == ".log" else raw
++            if body and not body.endswith("\n"):
++                body += "\n"
++            (dest / logs[name].name).write_text(scrub(body), encoding="utf-8")
++
++    if args.render:
++        sheet = None
++        for candidate in ("BENCHMARKS.md", "STATS.md"):
++            path = args.render / candidate
++            if path.is_file():
++                sheet = path
++                break
++        if sheet is None:
++            sys.exit(f"stage-repo: {args.render} has no BENCHMARKS.md or STATS.md")
++        (out / "README.md").write_text(scrub(sheet.read_text(encoding="utf-8")), encoding="utf-8")
++        benchmarks = args.render / "benchmarks"
++        if benchmarks.is_dir():
++            copy_tree_text(benchmarks, out / "benchmarks", scrub)
++    print(out)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/skills/rind-contribute/SKILL.md b/skills/rind-contribute/SKILL.md
+index d83b372..f644f57 100644
+--- a/skills/rind-contribute/SKILL.md
++++ b/skills/rind-contribute/SKILL.md
+@@ -79,7 +79,9 @@ Things that trip `just check` on new code:
+ 
+ Touching performance: run the relevant `cargo bench` before and after, and
+ compare against aws-lc-rs. Put the numbers in the PR, with the host and the
+-date.
++date. For the published report's operations and timing, follow
++[rind-bench-and-verify](../rind-bench-and-verify/SKILL.md): that run is
++`admin/bench-report`, and an unfiltered `cargo bench` times a different set.
+ 
+ ## Git, commits and pull requests
+ 
+diff --git a/skills/rind-quest-run/SKILL.md b/skills/rind-quest-run/SKILL.md
+index 1a383c1..e8dc074 100644
+--- a/skills/rind-quest-run/SKILL.md
++++ b/skills/rind-quest-run/SKILL.md
+@@ -12,7 +12,10 @@ stubs call the `quest` CLI, which carries the real instructions.
+ 
+ 1. Install and pin `quest` per <https://github.com/moq-dev/quest/blob/main/SETUP.md>.
+    Confirm `quest --version` and `quest check`. Without Nix, build the commit
+-   the flake pins; don't use a GitHub release the setup guide says to skip.
++   the flake pins: `bun install --frozen-lockfile && bun run build` in that
++   checkout, then `bun <checkout>/dist/quest.js` from the target repo.
++   Running `src/cli/bin.ts` from another directory fails. Skip a GitHub
++   release the setup guide says to skip.
+ 2. `quest context` and follow it.
+ 3. `quest skill spawn` and follow its output to start quests in parallel.
+    `quest skill run` (the repo's `quest-run` stub) works one session: it
+@@ -181,6 +184,19 @@ fork is in [rind-quest-fleet](../rind-quest-fleet/SKILL.md).
+ 
+ Change direction mid-run with a short steer, not a restart.
+ 
++After an agent finishes, send the `rind-crypto-review` findings as one
++follow-up. If upstream now covers that quest, stop the agent. A scheduled
++run can reply only to agents launched in that same conversation. Write
++other follow-ups into the conversation that launched them. Jobs that skip
++pull requests need a separate clone, one worktree per PR, an isolated
++`CARGO_HOME`, and `target/` removed afterward. Run them at the PR head and
++at the parent commit. `nix develop --profile <logs>/dev-profile --command bash --noprofile --norc -c '...'`
++keeps the tools from being garbage-collected and keeps a login `PATH` from
++shadowing the shell. On macOS, if `xcode-select` points at the Command Line
++Tools, set `DEVELOPER_DIR` to the Xcode app for `simctl` and `xcrun`. When
++nothing unclaimed remains, deepen open fork PRs or fix CI on upstream
++`main`.
++
+ ## Salvaging a closed pull request
+ 
+ Re-verify each piece moved into the new pull request on its own. Resolve

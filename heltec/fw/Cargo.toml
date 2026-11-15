@@ -1,0 +1,39 @@
+cargo-features = ["profile-rustflags"]
+
+[package]
+name = "rind-heltec-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "rind-heltec-bench"
+harness = false
+
+[profile.release]
+opt-level = 3
+debug = true
+
+[profile.dev]
+opt-level = "s"
+
+# Xtensa LLVM aborts on libcrux-hacl-rs at opt-level 3 (seen by the
+# ~/rind-bench/esp32 port); rind's portable backend depends on it.
+[profile.release.package.libcrux-hacl-rs]
+opt-level = 2
+
+[dependencies]
+esp-idf-svc = { version = "0.53", default-features = false, features = ["std", "binstart", "native"] }
+rind = { path = "../rind-99b509a6/rind" }
+
+[build-dependencies]
+embuild = "0.33"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(espidf_time64)'] }
+
+# rind 99b509a6's portable MD5 uses an empty asm! as a reassociation barrier,
+# which is feature-gated on Xtensa. Enable the gate for the rind crate only,
+# from this scratch crate; rind's source is untouched.
+[profile.release.package.rind]
+rustflags = ["-Zcrate-attr=feature(asm_experimental_arch)"]

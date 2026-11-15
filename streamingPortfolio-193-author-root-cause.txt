@@ -1,0 +1,46 @@
+streamingPortfolio #193 squash merge authorship
+
+Commit: 52d19e4ea517db184ed69344a535621729903ccd
+Author: steelhead99x <224322244+steelhead99x@users.noreply.github.com>
+Committer: GitHub <noreply@github.com> (web-flow; merged via GitHub API, not a local commit)
+Merged by: steelhead99x at 2026-11-12 8:58:56 PM PT (2026-11-13T03:58:56Z)
+PR author: bitprairie
+PR: https://github.com/bitprairie-team/streamingPortfolio/pull/193
+
+Contrast: #199, #198, and #195, also squash-merged by steelhead99x via GitHub,
+are authored steelhead99x <224322244+steelhead99x@users.noreply.github.com>.
+Those PRs were opened by steelhead99x.
+
+Root cause:
+GitHub attributes a squash-merge commit to the pull request *author* (the
+account that opened the PR), not to the account that clicked merge.
+Official docs (Merging a pull request): the squash email selector "is only
+shown if you are the pull request author and you have more than one email
+address associated with your account."
+
+gh pr merge --author-email maps to GraphQL mergePullRequest.authorEmail.
+That field can only select a verified email on the account GitHub will use
+as the author. steelhead99x's noreply address is not a verified email on
+the bitprairie account, so the flag does not override the opener. The merge
+steelhead99x <224322244+steelhead99x@users.noreply.github.com>, which is
+bitprairie's author identity.
+
+This is not a gh 2.87.0 bug, not a missing git config, and not a missing
+link of the noreply address to steelhead99x (that address already authored
+#199/#198/#195). The MSI global git identity is already
+steelhead99x <224322244+steelhead99x@users.noreply.github.com>; local
+commits from this machine are fine. gh is logged in as steelhead99x
+(scopes: gist, read:org, repo; no user scope, so user/emails cannot be
+listed). The pre-change backup is ~/.gitconfig.bak-20261112-commit-identity
+steelhead99x <224322244+steelhead99x@users.noreply.github.com>).
+
+Fix going forward (no history rewrite of 52d19e4):
+- Keep the global git user as steelhead99x (already set).
+- Helper installed: ~/bin/gh-pr-merge-steelhead
+  * If the PR author is steelhead99x: `gh pr merge --squash --author-email 224322244+steelhead99x@users.noreply.github.com` plus the Cursor Agent trailer.
+  * If the PR author is someone else: squash-commit locally as steelhead99x, fast-forward-push the base branch, and close the PR with a pointer. That avoids GitHub's opener-authorship rule.
+- Do not use plain `gh pr merge --squash --author-email` on PRs opened by
+  bitprairie, cursor[bot], or any other account and expect the author to
+  become steelhead99x.
+
+Not rewritten: main / 52d19e4.

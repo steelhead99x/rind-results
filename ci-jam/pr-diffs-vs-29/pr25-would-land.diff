@@ -1,0 +1,83 @@
+diff --git a/README.md b/README.md
+index beedb73..967ab58 100644
+--- a/README.md
++++ b/README.md
+@@ -14,6 +14,11 @@ The skills condense rind's own
+ Where they disagree, rind's repository is authoritative. They were last
+ checked against rind at
+ [`7ab9f85`](https://github.com/moq-dev/rind/commit/7ab9f8524e27d8a186d3eb35681d07cd2a5203d7).
++Mutation testing in
++[`rind-bench-and-verify`](skills/rind-bench-and-verify/SKILL.md) and the
++platform-workflow sentence in
++[`rind-contribute`](skills/rind-contribute/SKILL.md) were checked against
++[`aee2586a`](https://github.com/moq-dev/rind/commit/aee2586a75ed4ef6838f9c0b09f13070d9661486).
+ 
+ This is an independent project, not maintained by or affiliated with moq-dev.
+ 
+diff --git a/skills/rind-bench-and-verify/SKILL.md b/skills/rind-bench-and-verify/SKILL.md
+index 8af1615..33001ee 100644
+--- a/skills/rind-bench-and-verify/SKILL.md
++++ b/skills/rind-bench-and-verify/SKILL.md
+@@ -147,19 +147,36 @@ a shared box.
+ 
+ ## Mutation testing
+ 
+-The nightly `mutants` workflow, through `admin/mutants`, mutates recent
+-Rust on each architecture rind has a runner for, on armv7 under qemu, and
+-on the AVX-512 paths under Intel SDE. A mutant no architecture's tests
+-catch fails the run; combine the `mutants.out` directories with
++The `mutants` workflow runs nightly and on `workflow_dispatch`. Like
++fuzzing, it never runs on pull requests. Nightly, through
++`admin/mutants`, it mutates the Rust that changed in the last day, on
++each architecture rind has a runner for, on armv7 under qemu, and on
++the AVX-512 paths under Intel SDE. A mutant no architecture's tests
++catch fails the run. `alert.yml` reports that failure when the run was
++scheduled. Combine the `mutants.out` directories with
+ `admin/mutants --survivors`. macOS arm64 covers only the DIT code.
+ `.github/workflows/mutants.yml` and `admin/mutants` have the details.
+ 
+-A pull request that touches the mutation inputs also gets a run over its
+-diff. That run is advisory, but fix a red one before merging, as
+-`CONTRIBUTING.md` says. A large diff can exceed the job limit: shard it
+-with cargo-mutants' `--shard k/n`, choosing `n` from `--list`'s count so
+-each shard fits, then combine the shards with `admin/mutants --survivors`.
+-The planned work is in `quest/m2/confidence/mutants-large-diffs.md`.
++`CONTRIBUTING.md` still names a mutation run over a pull request's
++diff. The workflow does not start it. For evidence on a branch,
++dispatch the workflow or run `admin/mutants` locally on the touched
++crates.
++
++`gh workflow run mutants --ref <branch>` dispatches it. With no `base`
++input it mutates the last day on that ref. Set `base` to mutate what
++the branch changed since that revision.
++
++A local run uses the dev shell, which provides cargo-mutants.
++Arguments pass through, and the run covers this host's architecture:
++
++```shell
++nix develop --command admin/mutants -p <crate>
++```
++
++`quest/m2/confidence/mutants-adapters.md` uses that `-p <crate>` form.
++Pass `--in-diff` a diff of `*.rs` since the merge-base of `<base>` and
++`HEAD` to limit the run to the branch, as the workflow's diff step
++does.
+ 
+ ## Proofs
+ 
+diff --git a/skills/rind-contribute/SKILL.md b/skills/rind-contribute/SKILL.md
+index 94f6fea..f569110 100644
+--- a/skills/rind-contribute/SKILL.md
++++ b/skills/rind-contribute/SKILL.md
+@@ -106,8 +106,9 @@ the entry once it lists no workaround. The rule is rind's
+ 
+ A pull request that touches the platform workflow inputs also gets a
+ cheap subset of those workflows: one ctgrind row, the armv7, portable,
+-and Dart jobs of `build`, a mutation run over the PR's diff, and a
+-timing build. These are advisory, but fix a red one before merging.
++and Dart jobs of `build`, and a timing build. These are advisory, but
++fix a red one before merging. Mutation evidence is in
++[Mutation testing](../rind-bench-and-verify/SKILL.md#mutation-testing).
+ The list is in `CONTRIBUTING.md`. An instruction-set or cross job the
+ author cannot run locally stays open until that job is green. The check
+ is in [Platform rules](../rind-crypto-review/SKILL.md#platform-rules).

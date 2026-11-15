@@ -1,0 +1,55 @@
+diff --git a/skills/rind-contribute/SKILL.md b/skills/rind-contribute/SKILL.md
+index 94f6fea..90e3f0e 100644
+--- a/skills/rind-contribute/SKILL.md
++++ b/skills/rind-contribute/SKILL.md
+@@ -56,8 +56,22 @@ Things that trip `just check` on new code:
+ - A trait with methods named `add`, `mul` or `sqr` shadows the curve types'
+   methods once it's in scope. Prefix them (`field_mul`).
+ - `nix develop --command bash -lc '...'` starts a login shell that drops the
+-  dev shell's `PATH`, so you get the host's older Cargo. Use
+-  `nix develop --command cargo ...` or `bash -c` without `-l`.
++  dev shell's `PATH`, so you get the host's older Cargo. On macOS a login
++  zsh (`path_helper` and `brew shellenv`) puts Homebrew's `cargo` ahead of
++  the flake toolchain. An isolated `CARGO_HOME` has no `bin/`, so cargo
++  subcommands come from `PATH`. `nix develop --command` also does not
++  register a gcroot. `.envrc` pins only the shell direnv loaded, then runs
++  `nix-collect-garbage --delete-older-than 7d` in the background at most
++  once a week. The age applies to old profile generations; unrooted paths
++  are deleted anyway, and a manual `nix-collect-garbage` does the same.
++  Either can remove `cargo-modules` while `just check` is still running.
++  `sh/dispatch.sh` looks tools up once at startup, so it still runs
++  `structure` (when `rind/src`, `rind/Cargo.toml`, or `admin/structure`
++  changed) and `cargo modules` fails with `no such command: modules`.
++  Root the shell from outside the checkout and skip startup files:
++  `nix develop --profile <dir>/rind-dev-profile --command bash --noprofile --norc -c 'just check <base>'`.
++  Use the same form for `just ci`. Do not collect Nix garbage while a check
++  is running.
+ - In an integration test or fuzz target, `use rind::foo::{self}` hides an
+   external crate also called `foo`. Write `::foo` for the external crate.
+ - `just ci` clippy-checks every crate that depends on `rind`, including a new
+diff --git a/skills/rind-quest-run/SKILL.md b/skills/rind-quest-run/SKILL.md
+index 809b0f6..a5bfe41 100644
+--- a/skills/rind-quest-run/SKILL.md
++++ b/skills/rind-quest-run/SKILL.md
+@@ -216,12 +216,15 @@ the exact text. Collect questions for the maintainer until then.
+    part of the earlier rounds". Re-run the review on the final head if
+    possible, so the table names exactly what gets merged.
+ 6. On the final head, run `just ci`, the ctgrind tests for new secret
+-   paths, and the full `nix develop --command just check`. Every
+-   `rind-crypto-review` item from the second pass is resolved. A pass on
+-   an older head is stale once the head moves. ctgrind under valgrind
+-   needs Linux x86, not Apple Silicon. Re-measure benchmark numbers on
+-   the rebuilt head, or state the hardware and date of the earlier
+-   figures.
++   paths, and the full `nix develop --command just check`, with the dev
++   shell rooted as
++   [Gate locally](../rind-contribute/SKILL.md#gate-locally) describes
++   (`just check up/main` the same way). Do not collect Nix garbage while
++   it runs. Every `rind-crypto-review` item from the second pass is
++   resolved. A pass on an older head is stale once the head moves.
++   ctgrind under valgrind needs Linux x86, not Apple Silicon. Re-measure
++   benchmark numbers on the rebuilt head, or state the hardware and date
++   of the earlier figures.
+ 7. Run `/quest-review` with the other vendor's model and put its `## Review`
+    record, naming the head SHA, in the PR body. If it can't run, say so in
+    that section rather than leaving it out.
