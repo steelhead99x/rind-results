@@ -60,7 +60,7 @@ The body follows rind's quest style (`# [size] title`) with **Why it matters**, 
 | P2 | Q028 | [rind-bench leaves aws-lc-rs out on Xtensa upstream](q028-bench-aws-lc-rows-off-xtensa.md) | S | none | — |
 | P3 | Q030 | [ML-DSA-65 is timed on an MCU](q030-ml-dsa-on-mcus.md) | M | esp32-s3, efr32mg24 | 11 |
 | P3 | Q031 | [EFR32MG24 Secure Engine and nRF52840 CryptoCell baseline rows](q031-hardware-engine-baselines.md) | M | efr32mg24, nrf52840 | 12 |
-| P3 | Q032 | [aarch64 without the crypto extension is checked on a real Pi 4 / A53](q032-aarch64-no-crypto-real-silicon.md) | M | host:pi4 | 13 |
+| P3 | Q032 | [aarch64 without the crypto extension is checked on a real Pi 4 / A53](q032-aarch64-no-crypto-real-silicon.md) | M | host:pi4, host:pi-zero-2w | 13 |
 | P3 | Q033 | [Apple DIT is re-checked on the M1 Pro in a quiet run](q033-m1-dit-quiet-run.md) | S | host:m1pro | 14 |
 | P3 | Q034 | [SHA-3 64 B per-call overhead is rechecked on M4/M33](q034-sha3-64b-overhead.md) | S | nrf52840, efr32mg24 | 15 |
 | P3 | Q035 | [HPKE, VRF and blind RSA rows on one MCU](q035-protocol-rows-on-mcu.md) | S | esp32-s3 | 16 |
