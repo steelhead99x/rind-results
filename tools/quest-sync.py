@@ -56,6 +56,8 @@ def parse(path):
             sys.exit(f"{path}: frontmatter lacks {k}")
     if fm["priority"] not in ("P0", "P1", "P2", "P3") or fm["size"] not in ("S", "M", "L"):
         sys.exit(f"{path}: bad priority or size")
+    if fm["status"] not in ("open", "claimed", "done", "dropped"):
+        sys.exit(f"{path}: bad status {fm['status']!r}")
     return fm
 
 
