@@ -181,6 +181,10 @@ const LAYOUT_NRF: &str = "Relinked builds that move every library by about 1 KB 
 /// rind's gaps.toml. The hardware baseline is never a competitor.
 const RIVALS: &[&str] = &["ring", "rustcrypto", "libcrux", "graviola", "aws-lc-rs"];
 
+/// Firmware provenance paragraph for reports whose images record a legacy SHA.
+/// It must not name the archived private repository.
+const LEGACY_NOTE: &str = "The published images were built from an earlier private firmware repository, now archived. The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware); its first commit (`8d9c1bb`) is a squash of that history. Each image's `rind_hardware` field is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`. See `tools/legacy-rind-bench-map.json`. Build new images from rind-hardware.";
+
 /// A provenance patch: a filename, as published trees record them, or
 /// `{name, sha256}` from a current `cargo xtask provenance`.
 fn patch_label(p: &Value) -> String {
@@ -1349,10 +1353,7 @@ impl Ctx<'_> {
         w("```".into());
         w(String::new());
         if self.has_legacy_images() {
-            w(
-            "The published images were built from `steelhead99x/rind-bench` (private, now archived).              The firmware repo is now the public [steelhead99x/rind-hardware](https://github.com/steelhead99x/rind-hardware);              its first commit (`8d9c1bb`) is a squash of that history. Each image's `rind_hardware` field              is the public commit when the trees match (the RP2040 set maps to `8d9c1bb`), or              `ancestor of 8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3` when the recorded tree is earlier              in the squashed history. The SHA recorded at build time is in `legacy_rind_bench`.              See `tools/legacy-rind-bench-map.json`. Build new images from rind-hardware."
-                .into(),
-        );
+            w(LEGACY_NOTE.into());
             w(String::new());
         }
         if let Some(notes) = self.meta.get("markdown_notes").filter(|v| truthy(v)) {
@@ -1440,6 +1441,13 @@ mod tests {
         assert_eq!(commit, json!(up));
         assert_eq!(upstream, json!(up));
         assert_eq!(fork_commit, Some(json!(fork)));
+    }
+
+    #[test]
+    fn legacy_note_names_no_private_repo() {
+        // No owner/repo path other than rind-hardware.
+        assert!(!LEGACY_NOTE.contains("/rind-bench"));
+        assert!(LEGACY_NOTE.contains("https://github.com/steelhead99x/rind-hardware"));
     }
 
     #[test]
