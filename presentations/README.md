@@ -14,6 +14,7 @@ and board results.
 | [rind-systick](rind-systick/) | SysTick and timing across the benched hardware, including the 12 November harness fixes | `docs/systick-deck` |
 | [rind-aarch64-perf](rind-aarch64-perf/) | rind aarch64 work, phase by phase. Some slides cite data that still lives only on the `results/*` branches listed in that deck's README | `docs/perf-phases-deck` |
 | [rind-spake2plus](rind-spake2plus/) | SPAKE2+ in rind (RFC 9383, Matter PASE) | `docs/spake2plus-deck` |
+| [rind-no-std](rind-no-std/) | Building rind without std: the upstream quest, fork PR #84 and its CI targets, the boards that need it, the hosted speed guard, and open questions | `docs/no-std-deck` |
 
 Older copies of the same decks on `docs/rp2040-deck`, `docs/rp2040-deck-r2`,
 `docs/rp2040-deck-r3`, `docs/systick-deck`, `docs/perf-phases-deck` and
