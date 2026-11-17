@@ -6,7 +6,7 @@
 //! time format (through [`crate::tables`]), so the IDs, library names and
 //! sections are the report's. It writes:
 //!
-//! - `<out>/<board>.json` (`esp32s3.json`, `nrf52840.json`, `efr32mg24.json`): one host in
+//! - `<out>/<board>.json` (`esp32s3.json`, `nrf52840.json`, `efr32mg24.json`, `rp2040.json`): one host in
 //!   `admin/bench-report`'s schema 1, with `results` for every report
 //!   operation. `ns` is the median over runs of each run's median; `ns_low`
 //!   and `ns_high` are the lowest and highest run medians, so they show
@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(clap::Args)]
 pub struct Args {
-    #[arg(long, default_value = "esp32s3", value_parser = ["esp32s3", "nrf52840", "efr32mg24"])]
+    #[arg(long, default_value = "esp32s3", value_parser = ["esp32s3", "nrf52840", "efr32mg24", "rp2040"])]
     board: String,
     #[arg(long, default_value = "results/raw")]
     raw: PathBuf,
@@ -66,6 +66,8 @@ struct Board {
     libs: &'static [&'static str],
     intro: &'static str,
     layout: &'static str,
+    /// The independent clock the boot-time clock check uses, and over how long.
+    clock_ref: &'static str,
     repro: &'static [&'static str],
     legend: &'static str,
 }
@@ -95,6 +97,7 @@ const ESP32S3: Board = Board {
     layout: "Relinking an image moves its short-input rows far more than that: see \
              `diag/layout-relink-2026-11-12/` and, at this pin, the three-layout table in \
              `diag/esp32s3-relink-fixed-98568332/relink-short.md`; read short-input ratios with the README's layout caveat.",
+    clock_ref: "(ESP-IDF's SYSTIMER, from the 40 MHz crystal) over a busy second",
     repro: &[
         "git clone --recursive https://github.com/steelhead99x/rind-hardware   # the firmware port",
         "git clone https://github.com/steelhead99x/rind-results",
@@ -123,6 +126,7 @@ const NRF52840: Board = Board {
     intro: "rind-bench's own benches, run unchanged but for the aws-lc-rs rows, on the nRF52840 of a Seeed \
             T1000-E at 64 MHz, timed with the Cortex-M4's DWT cycle counter.",
     layout: LAYOUT_NRF,
+    clock_ref: CLOCK_REF_NONE,
     repro: &[
         "git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware",
         "cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images nrf",
@@ -154,7 +158,8 @@ const EFR32MG24: Board = Board {
     libs: &["rind", "ring", "rustcrypto", "libcrux"],
     intro: "rind-bench's own benches, run unchanged but for the aws-lc-rs rows, on the EFR32MG24 of a Seeed \
             XIAO MG24 at 78 MHz, timed with the Cortex-M33's DWT cycle counter.",
-    layout: "No relinked build has run on this board yet; read short-input ratios with the README's layout caveat.",
+    layout: LAYOUT_NONE,
+    clock_ref: CLOCK_REF_NONE,
     repro: &[
         "git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware",
         "cargo xtask apply-patches && cargo xtask vendor-ring && cargo xtask build-images mg24",
@@ -169,6 +174,68 @@ const EFR32MG24: Board = Board {
              hardware baseline: the chip's AES and SHA engines sit behind the Secure Engine. getrandom is a seeded \
              SplitMix64 (the TRNG is behind the Secure Engine too), the same for every library.",
 };
+
+fn rp2040_os(_: Option<&Value>) -> String {
+    "none (bare metal, no_std); output over USB CDC-ACM (embassy-usb), flushed between benchmarks"
+        .into()
+}
+
+const RP2040: Board = Board {
+    title: "rind on an RP2040 (Raspberry Pi Pico)",
+    model: "Raspberry Pi RP2040 (Arm Cortex-M0+), 125 MHz",
+    arch: "arm",
+    os: rp2040_os,
+    criterion: "rind-bench-criterion-esp (no_std): SysTick cycles at the processor clock (24-bit, extended to \
+                32 bits in software), 0.2 s warm-up, 2 ms samples, 11-51 samples per benchmark",
+    note: "One core of an RP2040 at 125 MHz (12 MHz crystal and PLL) with the 16 KB XIP cache on, timed with \
+           SysTick at the processor clock; core 1 parked, USB output only between benchmarks, no radio.",
+    libs: &["rind", "rustcrypto", "libcrux"],
+    intro: "rind-bench's own benches, run unchanged but for the aws-lc-rs and ring rows, on the RP2040 of a \
+            Raspberry Pi Pico at 125 MHz, timed with SysTick at the processor clock (the Cortex-M0+ has no DWT \
+            cycle counter).",
+    layout: LAYOUT_NONE,
+    clock_ref: "(the RP2040's 1 MHz TIMER, from the 12 MHz crystal) over about 300 ms",
+    repro: &[
+        "git clone --recursive https://github.com/steelhead99x/rind-hardware && cd rind-hardware",
+        "cargo xtask apply-patches && cargo xtask build-images rp2040   # rp2040/images/<bench>.{elf,bin,uf2}",
+        "picotool load -x rp2040/images/<bench>.elf   # from BOOTSEL, once per image; back up the board's 2 MiB \
+         flash first (rp2040/README.md)",
+        "cd ../rind-results && cargo xtask capture-nrf --port <the board's CDC-ACM port> --runs 3 \
+         --out results/rp2040/<pin>/raw/<bench>",
+        "cargo xtask report --board rp2040 --dir results/rp2040/<pin> --rind ../rind-hardware/rind \
+         --firmware ../rind-hardware/rp2040 --gaps results/rp2040/<pin>/gaps.toml \
+         --images results/rp2040/<pin>/images.json",
+        "cargo verify --dir results/rp2040/<pin>",
+    ],
+    legend: "rind runs its portable Rust backend here: ARMv6-M has no `umull` and no compare-and-swap, which \
+             rind-hardware's `patches/0003` and `0005` handle. ring 0.17.14 is left out: its Arm assembly needs \
+             NEON and does not assemble for ARMv6-M. There is no hardware baseline: the chip has no crypto \
+             accelerator. getrandom is a seeded SplitMix64 (the RP2040 has no TRNG), the same for every library.",
+};
+
+/// A board with no relinked run yet; `--layout` (meta `layout`) replaces it.
+const LAYOUT_NONE: &str = "No relinked build has run on this board yet; read short-input ratios with the README's layout caveat.";
+
+/// A board whose firmware records no boot-time clock check.
+const CLOCK_REF_NONE: &str = "";
+
+/// The board profile for a `--board` id; the default is the ESP32-S3.
+fn board_of(id: &str) -> &'static Board {
+    match id {
+        "nrf52840" => &NRF52840,
+        "efr32mg24" => &EFR32MG24,
+        "rp2040" => &RP2040,
+        _ => &ESP32S3,
+    }
+}
+
+/// The clock check in a start record, in Hz: the RP2040 firmware counts
+/// `check_cycles` over `check_us` of its 1 MHz TIMER at boot.
+fn start_clock_hz(start: &Value) -> Option<f64> {
+    let cycles = start.get("check_cycles")?.as_f64()?;
+    let us = start.get("check_us")?.as_f64()?;
+    (us > 0.0).then(|| cycles * 1e6 / us)
+}
 
 /// The nRF52840's layout note; `--layout` replaces it once a relinked build has run there.
 const LAYOUT_NRF: &str = "Relinked builds that move every library by about 1 KB and about 2 KB \
@@ -404,11 +471,7 @@ pub fn run(mut args: Args) -> Result<(), String> {
         .firmware
         .clone()
         .ok_or("report of a board needs --firmware")?;
-    let board = match args.board.as_str() {
-        "nrf52840" => &NRF52840,
-        "efr32mg24" => &EFR32MG24,
-        _ => &ESP32S3,
-    };
+    let board = board_of(&args.board);
     let t = Tables::load(&args.rind)?;
     let runs = read_runs(&args.raw)?;
     let ok_runs: Vec<&Run> = runs.iter().filter(|r| r.status() == "ok").collect();
@@ -450,7 +513,12 @@ pub fn run(mut args: Args) -> Result<(), String> {
                         rec.get("reason").cloned().unwrap_or(Value::Null),
                     );
                 }
-                "start" => start = Some(rec),
+                "start" => {
+                    if let Some(hz) = start_clock_hz(rec) {
+                        clocks.push(hz);
+                    }
+                    start = Some(rec);
+                }
                 _ => {}
             }
         }
@@ -938,6 +1006,15 @@ fn label(op: &str) -> String {
 }
 
 impl Ctx<'_> {
+    /// The page title: meta's `title` when set (a Pico W, say), else the board's.
+    fn title(&self) -> String {
+        self.meta
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or(self.board.title)
+            .to_string()
+    }
+
     /// The harness's own cost and its clock check, when the firmware recorded them.
     fn harness_lines(&self) -> Vec<String> {
         let mut out = vec![];
@@ -955,8 +1032,8 @@ impl Ctx<'_> {
         out.push(String::new());
         if let Some(cc) = cc.filter(|c| c.get("checks").is_some()) {
             out.push(format!(
-                "- Cycle counter against an independent wall clock (ESP-IDF's SYSTIMER, from the 40 MHz \
-                 crystal) over a busy second at each boot ({} boots): {} to {} MHz.",
+                "- Cycle counter against an independent wall clock {} at each boot ({} boots): {} to {} MHz.",
+                self.board.clock_ref,
                 py_str(&cc["checks"]),
                 py::fixed(f(&cc["min_hz"]) / 1e6, 4),
                 py::fixed(f(&cc["max_hz"]) / 1e6, 4)
@@ -1070,7 +1147,7 @@ impl Ctx<'_> {
         };
         let mut lines: Vec<String> = vec![];
         let mut w = |s: String| lines.push(s);
-        w(format!("# {}", board.title));
+        w(format!("# {}", self.title()));
         w(String::new());
         w(format!(
             "{} Every operation and ID is `admin/bench-report`'s.",
@@ -1179,8 +1256,10 @@ impl Ctx<'_> {
         for (_, ops) in &self.t.sections {
             for op in ops {
                 let Some(ours) = by(op, "rind") else { continue };
-                let others: Vec<(&str, &Value)> = libs[1..4]
+                // The other Rust libraries; a hardware baseline column is not a rival.
+                let others: Vec<(&str, &Value)> = libs[1..]
                     .iter()
+                    .filter(|lib| RIVALS.contains(lib))
                     .filter_map(|lib| by(op, lib).map(|r| (*lib, r)))
                     .collect();
                 if others.is_empty() {
@@ -1366,7 +1445,8 @@ impl Ctx<'_> {
         ));
         write(&out.join("RESULTS.md"), lines.join("\n") + "\n")?;
 
-        let title = board.title.strip_prefix("rind on ").unwrap_or(board.title);
+        let full = self.title();
+        let title = full.strip_prefix("rind on ").unwrap_or(&full);
         let n = n.max(0) as usize;
         let mut rl = vec![
             format!("# Every run, {title}"),
@@ -1410,6 +1490,64 @@ impl Ctx<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rp2040_is_a_board_id() {
+        use clap::Parser;
+        #[derive(clap::Parser)]
+        struct Cli {
+            #[command(flatten)]
+            a: Args,
+        }
+        let cli = Cli::try_parse_from(["report", "--board", "rp2040", "--rind", "r"]).unwrap();
+        assert_eq!(cli.a.board, "rp2040");
+        assert!(Cli::try_parse_from(["report", "--board", "rp2350", "--rind", "r"]).is_err());
+    }
+
+    #[test]
+    fn rp2040_profile_is_the_pico_at_125_mhz_without_ring() {
+        let b = board_of("rp2040");
+        assert_eq!(b.title, "rind on an RP2040 (Raspberry Pi Pico)");
+        assert!(b.model.contains("Cortex-M0+") && b.model.ends_with("125 MHz"));
+        assert_eq!(b.arch, "arm");
+        assert!(b.criterion.contains("SysTick"));
+        assert_eq!(b.libs, ["rind", "rustcrypto", "libcrux"]);
+        assert!(b.clock_ref.contains("1 MHz TIMER"));
+        assert!(b.repro.iter().any(|l| l.contains("--board rp2040")));
+        // Nothing board-specific to a machine: no serial ports or home paths.
+        for line in b.repro {
+            assert!(!line.contains("/dev/") && !line.contains("~/"), "{line}");
+        }
+    }
+
+    #[test]
+    fn other_board_ids_keep_their_profiles() {
+        assert_eq!(board_of("esp32s3").title, "rind on an ESP32-S3");
+        assert_eq!(board_of("nrf52840").title, NRF52840.title);
+        assert_eq!(board_of("efr32mg24").title, EFR32MG24.title);
+        assert_eq!(board_of("unknown").title, ESP32S3.title);
+        assert!(board_of("esp32s3").clock_ref.contains("SYSTIMER"));
+    }
+
+    #[test]
+    fn every_board_has_at_least_one_rival_column() {
+        for id in ["esp32s3", "nrf52840", "efr32mg24", "rp2040"] {
+            let libs = board_of(id).libs;
+            assert_eq!(libs[0], "rind");
+            assert!(libs[1..].iter().any(|l| RIVALS.contains(l)), "{id}");
+        }
+    }
+
+    #[test]
+    fn start_record_clock_check_is_cycles_over_timer_microseconds() {
+        let start = json!({"type": "start", "cpu_hz": 125_000_000u64,
+                           "check_cycles": 37_500_125u64, "check_us": 300_001u64});
+        let hz = start_clock_hz(&start).unwrap();
+        assert!((hz - 37_500_125.0 * 1e6 / 300_001.0).abs() < 1e-6);
+        assert!((hz / 125e6 - 1.0).abs() < 1e-5);
+        assert!(start_clock_hz(&json!({"type": "start", "cpu_hz": 240_000_000u64})).is_none());
+        assert!(start_clock_hz(&json!({"check_cycles": 1, "check_us": 0})).is_none());
+    }
 
     #[test]
     fn string_patches_label_as_filenames() {
