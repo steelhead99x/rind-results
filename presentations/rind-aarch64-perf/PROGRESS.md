@@ -2,6 +2,18 @@
 
 Each refresh reworks the whole deck into one story; this log records what changed in each refresh. Times are PST.
 
+## 2026-11-16 23:51
+
+- New Phase 6: ChaCha20 NEON on an Apple M1 Pro. Kept r2 (`core_x8`, `1e015593`) and r5
+  (`core_x9` plus a ≤128 B fast path, `f011025b`) on `quest/m2/aarch64-chacha20-neon`.
+  Headline, from the median of three session medians: 1.89× at 16 KB (13.07 → 6.93 µs),
+  1.81× at 1200 B, 1.69× at 1350 B, unchanged at 32 B. The run is an unpinned 3×5
+  interleaved A/B, not a published set. Neoverse is not measured.
+- Dropped rounds R1, R3, R4 and R6 are on their own slide, with the reason each lost.
+- Timeline is now six phases on three tracks. The status, next-steps, sources and
+  appendix slides cite kixel-ai/rind#823 (draft) and the DATA block in this file.
+- `asOf` is 2026-11-16 23:51 PST.
+
 ## 2026-11-12 20:15
 
 - Phase 2 now has eight branches. `perf/pi5-cpu-detect` (3d7dd094) moves from "held back" to "neutral, kept":

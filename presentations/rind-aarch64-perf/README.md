@@ -1,7 +1,7 @@
 # rind aarch64 performance work: slide deck
 
 `index.html` is a self-contained HTML deck (no network access, no external libraries). It walks through the
-rind aarch64 performance work from the starting point on 2026-11-11 to the state on 2026-11-12, one section per phase:
+rind aarch64 performance work from the starting point on 2026-11-11 to the ChaCha20 NEON A/B on 2026-11-16, one section per phase:
 
 1. PR #33: narrow vs wide multiplier dispatch on the Cortex-A76 (Raspberry Pi 5)
 2. The Pi 5 follow-up branches: narrow NIST, RSA bench sizes, cpu-detect, RSA-8n, mont-uninit, P-384 and P-521 w7,
@@ -9,9 +9,12 @@ rind aarch64 performance work from the starting point on 2026-11-11 to the state
 3. The Argon2id NEON fill (M1 Pro)
 4. Argon2id SHA3 `umlal`
 5. The Argon2id two-round interleave, with the PMU root cause, and the scalar rider rounds
+6. ChaCha20 NEON on an Apple M1 Pro: the kept r2 (`core_x8`) and r5 (`core_x9` plus a ≤128 B fast path),
+   the headline 1.89× at 16 KB (13.07 → 6.93 µs), and the dropped rounds R1, R3, R4 and R6
 
 It also covers verification status, what was dropped, the current state, next steps, a status slide that says which
-sources are on rind-results main and which are still on results branches (Orin results still pending),
+sources are on rind-results main and which are still on results branches (Orin results still pending;
+the ChaCha20 figures live in this deck's DATA block and are not a published set; Neoverse is not measured),
 and an appendix of branches and data files.
 
 ## Opening it
@@ -48,5 +51,10 @@ Only facts from these sources are used. Numbers with no source are left out or m
   `perf/argon2-sha3-umlal`, `perf/argon2-interleave`, `perf/pi5-narrow-nist`, `perf/pi5-rsa-bench-sizes`,
   `perf/pi5-cpu-detect`, `perf/pi5-rsa-8n`, `perf/pi5-mont-uninit`, `perf/pi5-p384-verify-w7`,
   `perf/pi5-p521-verify-w7`, `fix/p256-table-align`, `perf/argon2-neon-scalar-rider`
+- steelhead99x/rind `quest/m2/aarch64-chacha20-neon` (r2 `1e015593`, r5 `f011025b`, head `aa6670cf`);
+  baseline `6ecdfee9`. Upstream draft [kixel-ai/rind#823](https://github.com/kixel-ai/rind/pull/823).
+  ChaCha20 times are the median of three session medians from an unpinned 3×5 interleaved criterion A/B
+  on an Apple M1 Pro, macOS 14, rustc 1.98.1, on 2026-11-16. They are stored in this deck's DATA block.
+  This is not a published comparable set. Neoverse is not measured.
 
 A dated log of what each refresh changed is in `PROGRESS.md`.

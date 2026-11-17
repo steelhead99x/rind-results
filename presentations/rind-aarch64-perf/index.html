@@ -21,8 +21,8 @@
 const DATA = {
   meta: {
     title: "rind on aarch64: performance work, phase by phase",
-    subtitle: "Raspberry Pi 5 (Cortex-A76) and Apple M1 Pro · public-key dispatch and Argon2id",
-    asOf: "2026-11-12 20:15 PST",
+    subtitle: "Raspberry Pi 5 (Cortex-A76) and Apple M1 Pro · public-key dispatch, Argon2id, and ChaCha20 NEON",
+    asOf: "2026-11-16 23:51 PST",
     start: "2026-11-11",
     piNote: "Pi 5 figures: fixed 1.5 GHz clock on a passively cooled board (see “Why the Pi 5 runs at 1.5 GHz”). Both sides of every A/B ran at the same clock, so ratios hold."
   },
@@ -132,9 +132,61 @@ const DATA = {
     ["1 MiB", "neon", "799.14 µs", "726.69 µs", "0.909"],
     ["16 MiB", "neon", "4.436 ms", "4.078 ms", "0.919"],
     ["64 MiB", "neon", "26.711 ms", "23.700 ms", "0.887"]
-  ]
+  ],
+  /* Phase 6: ChaCha20 NEON on an Apple M1 Pro, 2026-11-16.
+     Each comparison is 3 sessions × 5 interleaved criterion rounds (A/B, unpinned).
+     Not a published set. Times are the median of the three session medians, in ns.
+     Headline vertical is from the r2 sessions (the direct A/B against r2).
+     r5 was timed against r2, not against vertical in the same sessions.
+     Direct vertical/r5 of those medians is 1.89× at 16 KB (13.07 → 6.93 µs).
+     Neoverse is not measured. */
+  chacha: {
+    host: "Apple M1 Pro, macOS 14, rustc 1.98.1",
+    measured: "2026-11-16",
+    baselineSha: "6ecdfee9",
+    branch: "quest/m2/aarch64-chacha20-neon",
+    r2Sha: "1e015593",
+    r5Sha: "f011025b",
+    head: "aa6670cf",
+    upstream: "https://github.com/kixel-ai/rind/pull/823",
+    method: "3 sessions × 5 interleaved rounds as an A/B, unpinned. criterion --noplot --warm-up-time 1 --measurement-time 3, filter ^chacha20/rind/ at 32 B, 1200 B, 1350 B and 16 KB. Not a published set.",
+    sizes: ["32B", "1200B", "1350B", "16KB"],
+    verticalNs: [146.1, 1152.6, 1258.2, 13072.5],
+    r2Ns: [147.2, 828.9, 924.4, 7832.9],
+    r5Ns: [146.5, 635.4, 740.9, 6929.9],
+    /* vertical / r5 from the medians above */
+    speedup: [1.00, 1.81, 1.69, 1.89],
+    labels: {
+      vertical: ["146.1 ns", "1153 ns", "1258 ns", "13.07 µs"],
+      r2: ["147.2 ns", "829 ns", "924 ns", "7.83 µs"],
+      r5: ["146.5 ns", "635 ns", "741 ns", "6.93 µs"]
+    },
+    headline: "1.89× faster at 16 KB (13.07 → 6.93 µs), 1.81× at 1200 B, 1.69× at 1350 B, unchanged at 32 B",
+    kept: [
+      { id: "r2", sha: "1e015593", vs: "vertical",
+        what: "core_x8: two independent 4-block column groups per pass, 512-byte chunks",
+        s32: "unchanged", s1200: "+38.8–40.1%", s1350: "+35.8–37.2%", s16k: "+65.8–67.7%" },
+      { id: "r5", sha: "f011025b", vs: "r2",
+        what: "core_x9 plus a ≤128 B fast path",
+        note: "scalar-block XOR later rewritten with as_chunks_mut for clippy, not re-timed",
+        s32: "unchanged", s1200: "+27.7–31.5%", s1350: "+23.3–26.1%", s16k: "+11.6–12.5%" }
+    ],
+    dropped: [
+      { id: "R1", vs: "vertical",
+        what: "NEON-register XOR of the output (vld1q / veorq / vst1q)",
+        reason: "Medians were faster in all three sessions at 1200 B and above (+1.6–6.2%), but session 1 failed the overlap test at 1200 B and 16 KB. Dropped as a standalone change. The same XOR helper is still inside r2." },
+      { id: "R3", vs: "r2",
+        what: "core_x9 plus a padded core_x4 tail",
+        reason: "Large wins at 1200 B, 1350 B and 16 KB in every session, but 2–3 ns slower at 32 B from extra length checks before the one-block path. Dropped by the 32 B rule. Retried as r5 with a ≤128 B fast path." },
+      { id: "R4", vs: "r2",
+        what: "core_x10, two scalar blocks",
+        reason: "32 B was slower in all three sessions and failed the overlap test (−2.7 to −3.9%). The 16 KB gain was only +1.5–2.0%." },
+      { id: "R6", vs: "r5",
+        what: "r4 plus the ≤128 B fast path (ten blocks)",
+        reason: "Slower than r5 at 1200 B, 1350 B and 16 KB in every session (−5.9 to −9.9%). 32 B was unchanged." }
+    ]
+  },
 };
-
 /* =================== END DATA ================================ */
 </script>
 <style>
@@ -206,11 +258,12 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 .slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
 .slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
 .slide.section-start .kicker::after{content:""}
-.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
-.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.timeline{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:10px 10px 12px;border-radius:0 0 8px 8px;font-size:12.5px;line-height:1.35}
 .tl.argon{border-top-color:var(--accent2)}
+.tl.chacha{border-top-color:var(--ref)}
 .tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
-.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl h4{margin:4px 0 6px;font-size:14px;color:var(--navy)}
 .tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
 #hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
 @media print{
@@ -231,7 +284,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="inner">
     <div class="kicker">rind · aarch64 performance</div>
     <h1>From trailing to leading on the Cortex-A76: the aarch64 work, phase by phase</h1>
-    <div class="sub">PR #33's narrow-multiplier dispatch, the Pi 5 follow-up series, and three rounds of Argon2id NEON work, measured on a Raspberry Pi 5 and an Apple M1 Pro</div>
+    <div class="sub">PR #33's narrow-multiplier dispatch, the Pi 5 follow-up series, three rounds of Argon2id NEON work, and ChaCha20 NEON on the M1 Pro, measured on a Raspberry Pi 5 and an Apple M1 Pro</div>
   </div>
   <div class="meta">steelhead99x/rind · steelhead99x/rind-results<br>Window: 2026-11-11 → <span data-k="meta.asOf"></span></div>
   <div class="foot"><span class="src">Every number in this deck comes from the rind-results branches, rind commit messages and status files listed in the appendix.</span><span class="num"></span></div>
@@ -250,6 +303,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     </ul>
     <ul class="b sm">
       <li><b>Argon2id:</b> the NEON fill (M1) beats RustCrypto. <code>umlal</code> is 13% faster on the M1 but 2.5% slower on the A76, so it is gated to SHA3. The two-round interleave plus scalar riders bring the Pi 5 fill to 0.55–0.68× its original time.</li>
+      <li><b>ChaCha20 NEON (M1 Pro):</b> 1.89× at 16 KB (13.07 → 6.93 µs), 1.81× at 1200 B, 1.69× at 1350 B, unchanged at 32 B. An unpinned A/B, not a published set. Neoverse is not measured.</li>
       <li><b>Correctness:</b> lib and crosscheck tests pass on both machines, and ct-vartime passes. The ct-qemu, ctgrind and BINSEC aarch64 checks are green, and each remaining failure is a tool or test issue with a patch ready.</li>
     </ul>
   </div>
@@ -337,17 +391,18 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ 5. TIMELINE ============ -->
 <section class="slide" data-section="Phases">
   <div class="kicker">The phases</div>
-  <h2>Five phases on two tracks</h2>
-  <p class="lede">Green is the public-key track and blue is the Argon2id track. Each phase has its own section, in this order.</p>
+  <h2>Six phases on three tracks</h2>
+  <p class="lede">Green is the public-key track, blue is the Argon2id track, and purple is ChaCha20. Each phase has its own section, in this order.</p>
   <div class="timeline">
     <div class="tl argon"><div class="ph">Phase 3</div><h4>Argon2 NEON fill</h4><div class="when">2026-11-11 · M1 Pro</div>Fused loads/stores, SHA3 <code>xar</code>. <span class="tag win">kept</span></div>
     <div class="tl argon"><div class="ph">Phase 4</div><h4>SHA3 <code>umlal</code></h4><div class="when">2026-11-12 10:06–12:24</div>BlaMka via <code>umlal</code>, gated to SHA3. <span class="tag win">kept</span></div>
     <div class="tl"><div class="ph">Phase 1</div><h4>PR #33 on Pi 5</h4><div class="when">2026-11-12 11:39–11:58</div>Narrow vs wide multiplier A/B. <span class="tag win">measured</span></div>
     <div class="tl"><div class="ph">Phase 2</div><h4>Pi 5 follow-ups</h4><div class="when">2026-11-12 ≈12:00–18:35</div>NIST, RSA sizes, 8n, uninit, P-384/P-521 w7, detect, table alignment. <span class="tag win">all kept</span></div>
     <div class="tl argon"><div class="ph">Phase 5</div><h4>Interleave + scalar riders</h4><div class="when">2026-11-12 13:20–14:14</div>PMU root cause, two fixes. <span class="tag win">kept</span></div>
+    <div class="tl chacha"><div class="ph">Phase 6</div><h4>ChaCha20 NEON</h4><div class="when">2026-11-16 · M1 Pro</div>core_x8, then core_x9 plus a ≤128 B path. <span class="tag win">kept</span></div>
     <div class="tl" style="border-top-color:var(--mute)"><div class="ph">Now</div><h4>Verify and next steps</h4><div class="when">as of <span data-k="meta.asOf"></span></div>Reviews and PRs, Argon2 rider splits, clean M1 rerun. <span class="tag pending">open</span></div>
   </div>
-  <p style="font-size:14px;color:var(--ink2);margin-top:22px">The cards are in time order. The phase numbers follow the presentation order: public key (1–2), then Argon2id (3–5).</p>
+  <p style="font-size:14px;color:var(--ink2);margin-top:22px">The cards are in time order. The phase numbers follow the presentation order: public key (1–2), Argon2id (3–5), then ChaCha20 (6).</p>
   <div class="foot"><span class="src">Run times from the results files' method sections and the lane status notes</span><span class="num"></span></div>
 </section>
 
@@ -514,6 +569,52 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="foot"><span class="src">results/argon2-scalar-rider/RESULTS.md, raw/pi5-criterion-r6.md, raw/pi5-pmu-h2.tsv, raw/m1pro-sha3-wall-h1-20alt.tsv (results/argon2-a76-interleave @ cad6be3)</span><span class="num"></span></div>
 </section>
 
+
+<!-- ============ PHASE 6 · CHACHA20 NEON ============ -->
+<section class="slide" data-section="Phase 6 · ChaCha20 NEON">
+  <div class="kicker">Phase 6 · ChaCha20 NEON on the M1 Pro · 2026-11-16</div>
+  <h2>1.89× faster at 16 KB (13.07 → 6.93 µs); unchanged at 32 B</h2>
+  <p class="lede">1.81× at 1200 B and 1.69× at 1350 B. Kept r2 (<code>core_x8</code>, <code>1e015593</code>) and r5 (<code>core_x9</code> plus a ≤128 B fast path, <code>f011025b</code>) on <code>quest/m2/aarch64-chacha20-neon</code>. Upstream draft: <a href="https://github.com/kixel-ai/rind/pull/823">kixel-ai/rind#823</a>.</p>
+  <div class="cols c64">
+    <div>
+      <div class="chart-title">Time relative to the vertical baseline (lower is better). Median of 3 session medians.</div>
+      <div class="legend" id="lg-chacha"></div>
+      <div id="ch-chacha"></div>
+    </div>
+    <div>
+      <table class="t" id="tb-chacha-hl" style="font-size:13px"></table>
+      <div class="callout warn" style="margin-top:14px"><b>Not a published set.</b> Unpinned A/B: 3 sessions × 5 interleaved rounds, order alternating each round. criterion <code>--noplot --warm-up-time 1 --measurement-time 3</code>, filter <code>^chacha20/rind/</code>, rustc 1.98.1, Apple M1 Pro, macOS 14. r5 was timed against r2, not against vertical in the same sessions; headline vertical is from the r2 sessions. <b>Neoverse is not measured yet.</b></div>
+    </div>
+  </div>
+  <div class="foot"><span class="src">DATA block in this file · steelhead99x/rind <code>quest/m2/aarch64-chacha20-neon</code> (<code>1e015593</code>, <code>f011025b</code>) · <a href="https://github.com/kixel-ai/rind/pull/823">kixel-ai/rind#823</a> · baseline <code>6ecdfee9</code></span><span class="num"></span></div>
+</section>
+
+<section class="slide" data-section="Phase 6 · ChaCha20 NEON">
+  <div class="kicker">Phase 6 · what was kept</div>
+  <h2>The kept stack is r2's core_x8, then r5's core_x9 plus a ≤128 B fast path</h2>
+  <p class="lede">The baseline, <code>6ecdfee9</code>, is the current vertical layout (Graviola <code>bdad1050</code> <code>core_x4</code>). A horizontal <code>core_x4</code> from Graviola <code>a060b65b</code> was slower in 11 of 12 session-size cells, so the layout stayed vertical.</p>
+  <table class="t" id="tb-chacha-kept"></table>
+  <div class="cols" style="margin-top:16px">
+    <ul class="b sm">
+      <li><b>r2</b> runs two independent 4-block column groups per pass (512-byte chunks). That is the large 16 KB gain vs vertical.</li>
+      <li><b>r5</b> adds a ninth block on the integer pipes and a fast path for lengths ≤128 B, so the 32 B cost that dropped r3 does not return.</li>
+    </ul>
+    <ul class="b sm">
+      <li>All variants passed rind's chacha20 lib tests, crosschecks and wycheproof on this host, and a reference-vs-variant test over every length 0–2199, 4096, 16384 and 16461 with counter wrap (aarch64 under qemu).</li>
+      <li><code>f011025b</code> also rewrote the scalar-block XOR with <code>as_chunks_mut</code> for clippy. That rewrite was not re-timed.</li>
+    </ul>
+  </div>
+  <div class="foot"><span class="src">DATA block in this file · steelhead99x/rind <code>1e015593</code>, <code>f011025b</code> on <code>quest/m2/aarch64-chacha20-neon</code> · baseline <code>6ecdfee9</code></span><span class="num"></span></div>
+</section>
+
+<section class="slide" data-section="Phase 6 · ChaCha20 NEON">
+  <div class="kicker">Phase 6 · what was tried and dropped</div>
+  <h2>Four rounds were measured and dropped, for the reason given</h2>
+  <p class="lede">Negative results are recorded so they are not retried blind. Each comparison is the same 3 × 5 interleaved A/B protocol.</p>
+  <table class="t" id="tb-chacha-drop" style="font-size:13px"></table>
+  <div class="foot"><span class="src">DATA block in this file · the same M1 Pro A/B sessions as the kept rounds, 2026-11-16</span><span class="num"></span></div>
+</section>
+
 <!-- ============ VERIFICATION ============ -->
 <section class="slide" data-section="Verification">
   <div class="kicker">Verification and correctness</div>
@@ -570,7 +671,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="kicker">Where things stand · <span data-k="meta.asOf"></span></div>
   <h2>On the Pi 5, every measured public-key and Argon2 gap is closed on a pushed branch</h2>
   <p class="lede">Before and after for each item, with its branch status.</p>
-  <table class="t">
+  <table class="t" style="font-size:13px">
     <tr><th>Area (Pi 5 unless noted)</th><th>Start</th><th>Now</th><th>Branch</th><th>State</th></tr>
     <tr><td>X25519 vs aws-lc-rs</td><td>2.32×</td><td>0.99×</td><td><code>cursor/aarch64-narrow-mul-132a</code></td><td><span class="tag win">PR #33 open</span></td></tr>
     <tr><td>RSA-2048 sign vs aws-lc-rs</td><td>1.66×</td><td>0.98×</td><td>PR #33</td><td><span class="tag win">PR #33 open</span></td></tr>
@@ -579,9 +680,10 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <tr><td>cpu-detect overhead (P-256 sign)</td><td>–</td><td>1.002× with the 64-byte table fix (was 1.025×)</td><td><code>perf/pi5-cpu-detect</code>, <code>fix/p256-table-align</code></td><td><span class="tag win">pushed</span></td></tr>
     <tr><td>Argon2id 1 MiB vs RustCrypto</td><td>4.729 vs 4.201 ms</td><td>2.578 vs 4.218 ms (0.611×)</td><td><code>perf/argon2-neon-scalar-rider</code></td><td><span class="tag win">pushed</span></td></tr>
     <tr><td>Argon2id M1 Pro SHA3, 1 MiB</td><td>1.106 ms (branch start)</td><td>562.30 µs (noisy host)</td><td>sha3-umlal → interleave</td><td><span class="tag win">pushed</span></td></tr>
+    <tr><td>ChaCha20 on the M1 Pro, 16 KB / 32 B</td><td>13.07 µs / 146.1 ns (vertical)</td><td>6.93 µs (1.89×) / 146.5 ns (unchanged)</td><td><code>quest/m2/aarch64-chacha20-neon</code></td><td><span class="tag win">draft #823</span></td></tr>
   </table>
-  <p style="font-size:13px;color:var(--ink2);margin-top:10px">The Pi 5 "start" columns come from the wide/<code>_alt</code> runs (main's code) in the same sessions. The Argon2 rows are from different sessions; compare them by ratio.</p>
-  <div class="pi-note" data-k="meta.piNote"></div>
+  <p style="font-size:12.5px;color:var(--ink2);margin-top:6px">The Pi 5 "start" columns come from the wide/<code>_alt</code> runs (main's code) in the same sessions. The Argon2 rows are from different sessions; compare them by ratio.</p>
+  <div class="pi-note" style="bottom:58px" data-k="meta.piNote"></div>
   <div class="foot"><span class="src">results/pr33-pi5/README.md · hosts/pi5/ab-narrow-mul/*.md, series2-layout/, table-align/ · results/argon2/RESULTS.md · results/argon2-interleave/RESULTS.md · results/argon2-scalar-rider/RESULTS.md · rind 4ad61ae3</span><span class="num"></span></div>
 </section>
 
@@ -598,11 +700,13 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <div class="card"><h3>Measurement</h3><ul class="b sm">
       <li><b>Pi 5 rerun at 2.4 GHz with active cooling</b>, for stock-clock absolute times. Needs the board owner to lift the deliberate 1.5 GHz cap and add a fan. <span class="tag pending">not started</span></li>
       <li><b>Clean M1 Pro rerun</b> under the lock with nothing else running. Current M1 medians are noisy.</li>
+      <li><b>ChaCha20 on Neoverse / the Cortex-A76</b> has not been measured. <span class="tag pending">not started</span></li>
       <li>Native ct-qemu and ctgrind on the Argon2 commits</li>
     </ul></div>
     <div class="card"><h3>Review and landing</h3><ul class="b sm">
       <li>PR #33: cherry-pick the p521 seed fix (b5eb9ec2), the Lean <code>wide_mux</code> declaration patch and the P-256 table fix (8e6f1670 applies cleanly to 603b7120). Leave narrow X25519 to ct-qemu in the BINSEC CI row.</li>
       <li>Open PRs for the pushed perf branches, and get <b>CodeRabbit reviews</b>.</li>
+      <li>Review the ChaCha20 NEON draft <a href="https://github.com/kixel-ai/rind/pull/823">kixel-ai/rind#823</a>.</li>
       <li>Land the tooling patches: Argon2 ctgrind test taint, ct-qemu reserved VA, prove SIGPIPE</li>
     </ul></div>
   </div>
@@ -620,6 +724,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <tr><td><code>results/pr33-pi5/</code>, <code>results/argon2/</code>, <code>results/m1pro-8feee30e/</code></td><td>branches <code>results/m1pro-pi5-argon2-2026-11-12</code>, <code>results/argon2-a76-interleave</code></td><td><span class="tag pending">not merged</span></td></tr>
     <tr><td><code>results/argon2-interleave/</code>, <code>results/argon2-scalar-rider/</code></td><td>branch <code>results/argon2-a76-interleave</code></td><td><span class="tag pending">not merged</span></td></tr>
     <tr><td><code>hosts/pi5/ab-narrow-mul/series2-layout/</code>, <code>table-align/</code></td><td>branch <code>results/pi5-lane-2026-11-12</code></td><td><span class="tag pending">not merged</span></td></tr>
+    <tr><td>ChaCha20 NEON A/B (M1 Pro, 2026-11-16)</td><td>the DATA block in this file; no <code>results/</code> tree. Unpinned A/B, not a published set</td><td><span class="tag pending">not a published set</span></td></tr>
     <tr><td>NVIDIA Jetson Orin Nano</td><td>bench scripts on main (edcd461); no results yet</td><td><span class="tag pending">pending</span></td></tr>
   </table>
   <div class="callout warn" style="margin-top:18px">Until these branches are merged, treat this deck's phase results as branch results. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy.</div>
@@ -651,6 +756,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <tr><td><code>perf/argon2-interleave</code></td><td class="mono">d7b1f399</td><td>origin</td></tr>
       <tr><td><code>perf/argon2-neon-prefetch</code> (dropped)</td><td class="mono">78d88485</td><td>local</td></tr>
       <tr><td><code>perf/argon2-neon-scalar-rider</code></td><td class="mono">3025440d</td><td>origin</td></tr>
+      <tr><td><code>quest/m2/aarch64-chacha20-neon</code></td><td class="mono">aa6670cf</td><td>origin (r2 <code>1e015593</code>, r5 <code>f011025b</code>; draft #823)</td></tr>
       <tr><th>rind-results branch</th><th>head</th><th></th></tr>
       <tr><td><code>results/m1pro-pi5-argon2-2026-11-12</code></td><td class="mono">94b8b1a</td><td>origin</td></tr>
       <tr><td><code>results/argon2-a76-interleave</code></td><td class="mono">3a481c4</td><td>origin</td></tr>
@@ -672,6 +778,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <tr><td>3 · Argon2 NEON</td><td>rind <code>perf/argon2-neon</code> commit messages (705167ac, bd907631, 4ad61ae3)</td></tr>
     <tr><td>4 · SHA3 umlal</td><td><code>results/argon2/RESULTS.md</code>, <code>raw/m1pro-round{1,2,3}.md</code>, <code>raw/pi5-round{1,2,3}*.md</code>, <code>pi5-final-run.log</code> · <code>scripts/argon2-build-variants.sh</code>, <code>argon2-run-ab.sh</code></td></tr>
     <tr><td>5 · Interleave</td><td><code>results/argon2-interleave/RESULTS.md</code>, <code>raw/pi5-criterion-r5.md</code>, <code>raw/pi5-pmu-r{1..5}*.tsv</code>, <code>raw/pi5-disasm-summary.txt</code>, <code>raw/m1pro-criterion-r6.md</code>, <code>raw/m1pro-*-wall-r*.tsv</code> · <code>scripts/argon2-pmu/</code>, <code>argon2-pmu-*.sh</code>, <code>argon2-pmu-sum.py</code> · <code>results/argon2-scalar-rider/RESULTS.md</code>, <code>raw/pi5-criterion-r6.md</code>, <code>r7.md</code>, <code>raw/pi5-pmu-h2.tsv</code>, <code>raw/m1pro-*</code></td></tr>
+    <tr><td>6 · ChaCha20 NEON</td><td>DATA block in this file (median of 3 session medians from the 2026-11-16 M1 Pro A/B). steelhead99x/rind <code>quest/m2/aarch64-chacha20-neon</code> commits <code>1e015593</code>, <code>f011025b</code>, head <code>aa6670cf</code>. Upstream draft <a href="https://github.com/kixel-ai/rind/pull/823">kixel-ai/rind#823</a>. Baseline <code>6ecdfee9</code>. Not a published results tree. Neoverse not measured.</td></tr>
     <tr><td>Verification</td><td>test tables in both RESULTS.md files · <code>results/argon2-interleave/raw/pi5-ct-vartime.log</code> · the verification status notes</td></tr>
     <tr><td>Status</td><td>Argon2, Pi-lane and verification status notes kept beside the checkouts (not in this repo)</td></tr>
   </table>
@@ -795,6 +902,23 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     D.riderPmu.map(r=>`<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td></tr>`).join('');
   $('#tb-im1').innerHTML = `<tr><th>size</th><th>fill</th><th class="n">e1 before</th><th class="n">g1 after</th><th class="n">ratio</th></tr>` +
     D.interleaveM1.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td><td class="n"><b>${r[4]}</b></td></tr>`).join('');
+
+
+  // Phase 6 · ChaCha20 NEON
+  const ch=D.chacha;
+  const chS=[
+    {n:'vertical (6ecdfee9)',color:C.before,norm:ch.verticalNs.map((v,i)=>v/ch.verticalNs[i]),label:ch.labels.vertical.map((l,i)=>i===0?'':l)},
+    {n:'r2 core_x8',color:C.accent2,norm:ch.r2Ns.map((v,i)=>v/ch.verticalNs[i]),label:ch.labels.r2.map((l,i)=>i===0?'':l)},
+    {n:'r5 kept',color:C.after,norm:ch.r5Ns.map((v,i)=>v/ch.verticalNs[i]),label:ch.labels.r5.map((l,i)=>i===0?'':l)}
+  ];
+  legend('#lg-chacha', chS);
+  grouped('#ch-chacha', ch.sizes, chS, {w:640,h:280,max:1.15,yfmt:v=>fmt(v,1)});
+  $('#tb-chacha-hl').innerHTML = `<tr><th>size</th><th class="n">vertical</th><th class="n">r5</th><th class="n">faster</th></tr>` +
+    ch.sizes.map((s,i)=>`<tr class="${i===3?'hl':''}"><td>${s}</td><td class="n">${ch.labels.vertical[i]}</td><td class="n">${ch.labels.r5[i]}</td><td class="n"><b>${i===0?'unchanged':fmt(ch.speedup[i])+'×'}</b></td></tr>`).join('');
+  $('#tb-chacha-kept').innerHTML = `<tr><th>kept</th><th>commit</th><th>vs</th><th class="n">32 B</th><th class="n">1200 B</th><th class="n">1350 B</th><th class="n">16 KB</th><th></th></tr>` +
+    ch.kept.map(r=>`<tr class="hl"><td><b>${r.id}</b><br><span style="font-weight:400;color:#465467">${r.what}</span></td><td class="mono">${r.sha}</td><td>${r.vs}</td><td class="n">${r.s32}</td><td class="n">${r.s1200}</td><td class="n">${r.s1350}</td><td class="n">${r.s16k}</td><td><span class="tag win">kept</span></td></tr>`).join('');
+  $('#tb-chacha-drop').innerHTML = `<tr><th style="width:10%">Round</th><th style="width:24%">What was tried</th><th>Why it was dropped</th><th style="width:10%">vs</th></tr>` +
+    ch.dropped.map(r=>`<tr><td><b>${r.id}</b></td><td>${r.what}</td><td>${r.reason}</td><td>${r.vs}<br><span class="tag drop">dropped</span></td></tr>`).join('');
 
   // Navigation
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
