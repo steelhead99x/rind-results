@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keeping rind's proven code proven, November 2026</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  STYLE: the CSS and navigation of presentations/rind-hardware-today (itself from rind-rp2040).
+  SLIDES: one <section class="slide"> per slide. Every claim names its PR, comment or CI job in the footer.
+-->
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+table.t.compact th,table.t.compact td{padding:4px 8px}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions (reused) */
+.flow text{font-family:var(--sans)}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .t1{font-size:15px;fill:var(--ink)}
+.flow .t2{font-size:12.5px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:12px;fill:var(--navy)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board.b2{grid-template-columns:1fr 1fr}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+/* RP2040 deck additions */
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+.err{background:var(--bad-bg);border-left:4px solid var(--bad);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px;color:var(--bad)}
+.cons{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.con{position:relative;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--bad);border-radius:0 0 10px 10px;padding:16px 14px 64px;min-height:330px}
+.con .ix{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.con .ck{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:12px}
+.con .cv{font-size:26px;font-weight:700;color:var(--navy);margin:4px 0 10px;white-space:nowrap}
+.con .cw{font-size:13.5px;line-height:1.45;color:var(--ink)}
+.con .cf{position:absolute;left:14px;right:14px;bottom:14px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--good-bg);border-radius:6px;padding:6px 8px;line-height:1.3}
+.card.fix{border-top:4px solid var(--accent)}
+.card.fix.warnc{border-top-color:#c9a227}
+.card .pn{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.card.warnc .pn{color:#8a6d0b}
+table.grid th.c,table.grid td.c{text-align:center}
+table.grid th span{font-size:10px;color:var(--mute);text-transform:none;letter-spacing:0}
+table.grid td{padding:5px 8px}
+table.grid td.r{font-size:12.5px;color:var(--ink2)}
+i.dot{display:inline-block;font-style:normal;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+i.dot.y{background:var(--good-bg);color:var(--accent)}
+i.dot.n{background:var(--bad-bg);color:var(--bad)}
+table.sv{font-size:12.5px}
+table.sv td.bad{color:var(--bad);font-weight:700}
+.timeline.t6{grid-template-columns:repeat(6,1fr)}
+.tl.done{border-top-color:var(--mute);background:#eef0f3}
+.pendbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:9px 14px;border-radius:0 8px 8px 0;font-size:14.5px;color:#5c4a08}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.sub2{font-size:11px;color:var(--mute)}
+.mut{color:var(--mute);font-style:italic}
+a{color:var(--accent2);text-decoration:none}
+table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
+/* new-deck spacing (2026-11-17): larger type so tables and cards fill the slide */
+.slide table.t{font-size:16px !important}
+.slide table.t td{padding:9px 10px}
+.slide table.t th{font-size:12.5px;padding:7px 10px}
+.slide ul.b.sm{font-size:16.5px}
+.slide ul.b.sm li{margin-bottom:11px}
+.slide .card{padding:18px 20px}
+.slide p.small{font-size:15px}
+.slide .chart-title{font-size:15px;margin-bottom:8px}
+.slide .callout{font-size:16.5px}
+</style>
+</head>
+<body>
+<div id="deck">
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · proofs</div>
+    <h1>Keeping rind's proven code proven: P-256 on x86_64, table alignment, and two honest gaps</h1>
+    <div class="sub">What the proof jobs check, the P-256 change that moved more of x86_64 onto proven code, the Lean fix that made it build, and where a speed fix gave up a proof.</div>
+  </div>
+  <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Checked 17 November 2026 · times are America/Los_Angeles (PST)</div>
+  <div class="foot"><span class="src">Sources are PR bodies, PR comments and CI job results, named on each slide. None of this is a rind-results set except the Pi 5 Lean log under hosts/pi5/ab-narrow-mul/table-align/.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 2. WHAT IS CHECKED ============ -->
+<section class="slide" data-section="Background">
+  <div class="kicker">What "proven" means here</div>
+  <h2>rind has two kinds of proofs, and CI rebuilds both on every change that touches them</h2>
+  <div class="cols" style="margin-top:16px">
+    <div class="card tall"><h3>Lean, over rind's own Rust</h3><ul class="b sm">
+      <li>Tools translate rind's Rust into Lean, and Lean proofs say what the code computes.</li>
+      <li><code>admin/prove lean</code> rebuilds every proof. CI runs it as the <code>lean</code> job.</li>
+      <li>When the Rust changes, a proof can stop matching and the build fails. That is the point.</li>
+    </ul></div>
+    <div class="card tall"><h3>HOL Light, over imported assembly</h3><ul class="b sm">
+      <li>Assembly from s2n-bignum and aws-lc comes with HOL Light proofs of what each routine does.</li>
+      <li>CI runs them per CPU family: <code>hol-light-x86_64</code>, <code>hol-light-aarch64</code>, <code>hol-light-armv7</code>.</li>
+      <li>Lean then uses those results as named assumptions (axioms), so the two connect.</li>
+    </ul></div>
+  </div>
+  <div class="callout" style="margin-top:18px">A proof covers code that runs. If a speed change swaps in new code, the proof has to move with it, or the claim goes away.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#79 body (Approach, Validation: Lean, Axioms.lean, HOL Light proofs) and its CI job list on head c2b8f5ca · kixel-ai/rind#793 body (Impact)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 3. P-256 SWAP ============ -->
+<section class="slide" data-section="P-256">
+  <div class="kicker">P-256 on x86_64 · steelhead99x/rind#79</div>
+  <h2>x86_64 P-256 key generation and signing now add points with a routine proven on every x86_64 OS, not Linux only</h2>
+  <div class="cols c64" style="margin-top:14px">
+    <div>
+      <table class="t">
+        <tr><th style="width:26%"></th><th>Before</th><th>After</th></tr>
+        <tr><td>Point addition</td><td>aws-lc's <code>ecp_nistz256_point_add_affinex</code></td><td>s2n-bignum's <code>p256_montjmixadd</code></td></tr>
+        <tr><td>Proof</td><td>aws-lc's proofs, Linux only</td><td>HOL Light <code>P256_MONTJMIXADD_SUBROUTINE_CORRECT</code>, every x86_64 OS</td></tr>
+        <tr><td>Lean axiom</td><td><code>p256_point_add_affine_spec</code></td><td><code>p256_montjmixadd_spec</code> and <code>_alt_spec</code>, in seven P-256 axiom lists</td></tr>
+        <tr><td>Old code</td><td>4 <code>.s</code> files, 2 HOL Light proofs</td><td>removed</td></tr>
+      </table>
+    </div>
+    <div class="card"><h3>Why the new addition is safe here</h3><ul class="b sm">
+      <li>The routine needs the two points to be different. A Lean lemma, <code>Rind.P256Booth.booth_ne</code>, already proves no window adds a point equal to the running total.</li>
+      <li>A zero digit picks the all-zero point, which the routine does not handle, so its result is thrown away by a constant-time select.</li>
+      <li>It is also faster; see the rind-host-speed deck.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind#79 body (Approach items 2 and 3, correctness argument, Impact; benchmarks/verified.toml entries as described there)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 4. LEAN FIX ============ -->
+<section class="slide" data-section="P-256">
+  <div class="kicker">The Lean fix · steelhead99x/rind#79</div>
+  <h2>The new addition broke one Lean proof; after the fix all 3,705 proof jobs build and CI's lean job passes</h2>
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
+    <div class="kpi"><div class="v">3,705</div><div class="l">Lean jobs built locally</div><div class="d"><code>admin/prove lean</code>, after <code>a7fa0414</code> fixed <code>loop_spec</code></div></div>
+    <div class="kpi"><div class="v">pass</div><div class="l">CI <code>lean</code> job on <code>c2b8f5ca</code></div><div class="d">21 min 21 s; the check of record</div></div>
+    <div class="kpi"><div class="v">pass</div><div class="l">HOL Light on all three</div><div class="d">x86_64, aarch64 and armv7 jobs, same head; <code>cosim</code> also passes</div></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>What broke, in plain words</h3><ul class="b sm">
+      <li>The translator lifts one point, <code>sum0</code>, out of the loop. The new routine overwrites it, so the loop's proof had to take that point as an input.</li>
+      <li><code>loop_spec</code> and <code>jac_base_multiply_spec</code> in <code>P256Base.lean</code> were rewritten, with helpers ported from <code>P384Keygen.lean</code>.</li>
+    </ul></div>
+    <div class="card"><h3>Earlier rounds, same PR</h3><ul class="b sm">
+      <li>15 Nov, an earlier round: <code>admin/prove lean</code> passed 3,646 library jobs at <code>35ccb42a</code>.</li>
+      <li><code>nix develop -c just ci</code> exits 0 on <code>c2b8f5ca</code>. The PR is still open.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind#79 body (Validation: Lean; Waiting) · comment 6964936428 (17 Nov 16:15 PST) · comment 6900182949 (3,646 jobs) · CI on c2b8f5ca: lean, hol-light-x86_64, hol-light-aarch64, hol-light-armv7, cosim (checked 17 Nov evening PST)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 5. ALIGNMENT PROOFS ============ -->
+<section class="slide" data-section="Alignment">
+  <div class="kicker">Table alignment and its proofs · kixel-ai/rind#790</div>
+  <h2>Putting the curve tables on a 64-byte line changed no math, but the proofs still had to follow the new wrapper</h2>
+  <table class="t" style="margin-top:14px">
+    <tr><th style="width:26%">Where</th><th>What was checked</th><th style="width:20%">Result</th></tr>
+    <tr><td>Raspberry Pi 5, 12 Nov</td><td>The P-256 alignment fix alone (<code>8e6f1670</code>), <code>lake build</code> on the Pi</td><td><span class="tag ok">3,612 jobs built</span></td></tr>
+    <tr><td>Fork PR, 13 Nov</td><td>The <code>lean</code> job on <code>c1b2e883</code> accepted the wrapper and the renamed step names</td><td><span class="tag ok">passed</span></td></tr>
+    <tr><td>Upstream port #790</td><td>One wrapper for P-256, P-384 and P-521. The aarch64 P-256 proof names its hypotheses by x and y. Lean not run in the port's environment</td><td><span class="tag pending">ready for review</span></td></tr>
+    <tr class="hl"><td>Left open</td><td>The x86_64 P-256 proof now names <code>generator_table</code>; that was not rechecked in the port. A review also noted the proofs rely on how the translator flattens the wrapper, which UPSTREAM.md does not record</td><td><span class="tag pending">follow-up</span></td></tr>
+  </table>
+  <div class="foot"><span class="src">hosts/pi5/ab-narrow-mul/table-align/README.md, Lean section (rind-results main 88cbf85) · steelhead99x/rind#79 comment 6859469361 (CI job 131976848524) · kixel-ai/rind#790 body (Approach, Checks, Follow-ups) · #79 review finding on proofs/Rind/X86_64/P384Table.lean:83 (low)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 6. GAINED AND LOST ============ -->
+<section class="slide" data-section="Trade-offs">
+  <div class="kicker">Two other changes that touch proofs</div>
+  <h2>One change moves Intel's newest CPUs onto proven SHA-512 code; another gives up a proof on the ESP32 for speed</h2>
+  <div class="cols" style="margin-top:16px">
+    <div class="card tall" style="border-top:4px solid var(--accent)"><h3>Gained: SHA-512 on Arrow Lake and later · kixel-ai/rind#821</h3><ul class="b sm">
+      <li>These CPUs used OpenSSL's SHA512-extension routine, which had no proof and uses instructions missing from Intel's fixed-timing list.</li>
+      <li>They now run OpenSSL's AVX2 routine, "which already has a proof".</li>
+      <li>The quest to prove the old routine is retired, since rind no longer runs it.</li>
+      <li>Cost: on a Core Ultra 9 275HX, SHA-512 takes 2.0–2.2× its old time at 32 and 64 B, and stays at 0.81–0.86× aws-lc-rs's time.</li>
+    </ul></div>
+    <div class="card tall" style="border-top:4px solid var(--bad)"><h3>Lost: SHA-256 on ESP-IDF Xtensa · kixel-ai/rind#793</h3><ul class="b sm">
+      <li>The fast ESP32-S3 SHA-256 is rind's own code placed in internal RAM, not the proven HACL* code.</li>
+      <li>So SHA-256 on ESP-IDF Xtensa "no longer runs formally verified code". Every other portable target keeps HACL*.</li>
+      <li>A proof plan for the new code is listed as a follow-up in the PR.</li>
+      <li>The win it buys is in the rind-hardware-today deck (slide 16).</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">kixel-ai/rind#821 commits 628fdb69, 067bdc17, a674bc6e and quest/m2/confidence/intel-vsha512.md · kixel-ai/rind#793 body (Impact, Follow-ups) and steelhead99x/rind#69 body · all checked 17 Nov 2026</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. STATUS ============ -->
+<section class="slide" data-section="Status">
+  <div class="kicker">Where each one stands</div>
+  <h2>None of these proof changes is merged upstream yet</h2>
+  <table class="t" style="margin-top:14px">
+    <tr><th style="width:24%">PR</th><th>Proof state</th><th style="width:20%">PR state</th></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/79">steelhead99x/rind#79</a></td><td>Lean 3,705 jobs local; CI lean, HOL Light and cosim pass on <code>c2b8f5ca</code></td><td><span class="tag pending">open on fork</span></td></tr>
+    <tr><td><a href="https://github.com/kixel-ai/rind/pull/790">kixel-ai/rind#790</a></td><td>Proofs follow the wrapper; x86_64 P-256 recheck pending</td><td><span class="tag pending">ready for review</span></td></tr>
+    <tr><td><a href="https://github.com/kixel-ai/rind/pull/821">kixel-ai/rind#821</a></td><td>Moves SHA-512 onto a proven routine on newer Intel</td><td><span class="tag pending">ready for review</span></td></tr>
+    <tr class="hl"><td><a href="https://github.com/kixel-ai/rind/pull/793">kixel-ai/rind#793</a></td><td>SHA-256 on ESP-IDF Xtensa leaves proven code; proof plan needed</td><td><span class="tag pending">ready for review</span></td></tr>
+  </table>
+  <div class="foot"><span class="src">GitHub PR state for steelhead99x/rind#79 and kixel-ai/rind#790, #793, #821, checked 17 Nov 2026 evening PST</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 8. SOURCES ============ -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Sources</div>
+  <h2>Every claim in this deck, and where it comes from</h2>
+  <table class="t" style="margin-top:14px">
+    <tr><th style="width:24%">Topic</th><th>Source</th></tr>
+    <tr><td>P-256 swap and axioms</td><td>steelhead99x/rind#79 body: Approach, correctness argument, Validation (Lean), Waiting</td></tr>
+    <tr><td>Lean job counts</td><td>#79 body (3,705, after a7fa0414) · comment 6964936428 · comment 6900182949 (3,646 at 35ccb42a)</td></tr>
+    <tr><td>CI results</td><td>steelhead99x/rind#79 checks on head c2b8f5ca: lean, hol-light-*, cosim</td></tr>
+    <tr><td>Pi 5 Lean build</td><td>rind-results <code>hosts/pi5/ab-narrow-mul/table-align/README.md</code> and <code>lean-build.log</code></td></tr>
+    <tr><td>Alignment port</td><td>kixel-ai/rind#790 body</td></tr>
+    <tr><td>SHA-512 on Intel</td><td>kixel-ai/rind#821 commits; quest/m2/confidence/intel-vsha512.md on kixel-ai/rind main</td></tr>
+    <tr><td>SHA-256 on ESP32</td><td>kixel-ai/rind#793 body; steelhead99x/rind#69 body</td></tr>
+  </table>
+  <div class="foot"><span class="src">github.com/steelhead99x/rind · github.com/kixel-ai/rind · github.com/steelhead99x/rind-results</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>

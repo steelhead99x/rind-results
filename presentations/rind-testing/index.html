@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rind tests and checks, November 2026</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  STYLE: the CSS and navigation of presentations/rind-hardware-today (itself from rind-rp2040).
+  SLIDES: one <section class="slide"> per slide. Every count names its PR or file in the footer.
+-->
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+table.t.compact th,table.t.compact td{padding:4px 8px}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions (reused) */
+.flow text{font-family:var(--sans)}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .t1{font-size:15px;fill:var(--ink)}
+.flow .t2{font-size:12.5px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:12px;fill:var(--navy)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board.b2{grid-template-columns:1fr 1fr}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+/* RP2040 deck additions */
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+.err{background:var(--bad-bg);border-left:4px solid var(--bad);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px;color:var(--bad)}
+.cons{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.con{position:relative;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--bad);border-radius:0 0 10px 10px;padding:16px 14px 64px;min-height:330px}
+.con .ix{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.con .ck{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:12px}
+.con .cv{font-size:26px;font-weight:700;color:var(--navy);margin:4px 0 10px;white-space:nowrap}
+.con .cw{font-size:13.5px;line-height:1.45;color:var(--ink)}
+.con .cf{position:absolute;left:14px;right:14px;bottom:14px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--good-bg);border-radius:6px;padding:6px 8px;line-height:1.3}
+.card.fix{border-top:4px solid var(--accent)}
+.card.fix.warnc{border-top-color:#c9a227}
+.card .pn{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.card.warnc .pn{color:#8a6d0b}
+table.grid th.c,table.grid td.c{text-align:center}
+table.grid th span{font-size:10px;color:var(--mute);text-transform:none;letter-spacing:0}
+table.grid td{padding:5px 8px}
+table.grid td.r{font-size:12.5px;color:var(--ink2)}
+i.dot{display:inline-block;font-style:normal;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+i.dot.y{background:var(--good-bg);color:var(--accent)}
+i.dot.n{background:var(--bad-bg);color:var(--bad)}
+table.sv{font-size:12.5px}
+table.sv td.bad{color:var(--bad);font-weight:700}
+.timeline.t6{grid-template-columns:repeat(6,1fr)}
+.tl.done{border-top-color:var(--mute);background:#eef0f3}
+.pendbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:9px 14px;border-radius:0 8px 8px 0;font-size:14.5px;color:#5c4a08}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.sub2{font-size:11px;color:var(--mute)}
+.mut{color:var(--mute);font-style:italic}
+a{color:var(--accent2);text-decoration:none}
+table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
+/* new-deck spacing (2026-11-17): larger type so tables and cards fill the slide */
+.slide table.t{font-size:16px !important}
+.slide table.t td{padding:9px 10px}
+.slide table.t th{font-size:12.5px;padding:7px 10px}
+.slide ul.b.sm{font-size:16.5px}
+.slide ul.b.sm li{margin-bottom:11px}
+.slide .card{padding:18px 20px}
+.slide p.small{font-size:15px}
+.slide .chart-title{font-size:15px;margin-bottom:8px}
+.slide .callout{font-size:16.5px}
+</style>
+</head>
+<body>
+<div id="deck">
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · tests and checks</div>
+    <h1>Tests that catch more: wasm, Ed25519 edge cases, adapters, HPKE, hash-to-curve, and CI alerts</h1>
+    <div class="sub">Five test and CI changes sent upstream from the fork, one fork sync, and one correctness run on a cloud VM. What each one checks, and the test counts each PR reports.</div>
+  </div>
+  <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Checked 17 November 2026 · times are America/Los_Angeles (PST)</div>
+  <div class="foot"><span class="src">Counts come from each PR's own Checks or Validation section, or from rind-results notes/checks-2026-11-15-xeon-box.md. Named on each slide.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 2. SUMMARY ============ -->
+<section class="slide" data-section="Summary">
+  <div class="kicker">In one table</div>
+  <h2>Five upstream PRs are ready for review, one fork sync merged, and one VM check run is on rind-results main</h2>
+  <table class="t" style="margin-top:12px">
+    <tr><th style="width:23%">Change</th><th>What it now catches</th><th style="width:21%">Status</th></tr>
+    <tr class="hl"><td>wasm and Ed25519 (#797)</td><td>Ed25519 edge cases and memory-wipe checks now run on wasm, where aws-lc cannot build</td><td>kixel-ai/rind#797, ready for review</td></tr>
+    <tr><td>Adapter mutants (#792)</td><td>Tests that stayed green after the code they checked was removed</td><td>kixel-ai/rind#792, ready for review</td></tr>
+    <tr><td>Hash-to-curve (#791)</td><td>A sum that could hide the identity point by changing one coordinate</td><td>kixel-ai/rind#791, ready for review</td></tr>
+    <tr><td>HPKE edge vectors (#798)</td><td>The IETF revision's edge-case vectors, including a rare key-derivation retry</td><td>kixel-ai/rind#798, ready for review</td></tr>
+    <tr><td>CI alerts (#796)</td><td>A hung release that GitHub ends as "cancelled", which used to stay silent</td><td>kixel-ai/rind#796, ready for review</td></tr>
+    <tr><td>Fork sync (#134)</td><td>29 upstream commits merged into the fork, with a cargo-deny waiver and a TESTING.md fix</td><td>steelhead99x/rind#134, merged 17 Nov</td></tr>
+    <tr><td>Xeon VM checks</td><td>Known-answer, library and gate runs on a shared cloud VM</td><td>rind-results #36, merged 15 Nov</td></tr>
+  </table>
+  <div class="foot"><span class="src">kixel-ai/rind#791, #792, #796, #797, #798 · steelhead99x/rind#134 (merged 17 Nov 15:35 PST) · steelhead99x/rind-results#36 (merged 15 Nov 10:31 PST) · checked 17 Nov 2026</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 3. WASM ============ -->
+<section class="slide" data-section="wasm">
+  <div class="kicker">wasm and Ed25519 · kixel-ai/rind#797</div>
+  <h2>Ed25519's 914 edge-case vectors and the memory-wipe checks now run on wasm, and in every CI run</h2>
+  <div class="cols c46" style="margin-top:12px">
+    <div><ul class="b">
+      <li><b>No reference on wasm.</b> aws-lc does not build there, so Ed25519 edge cases had nothing to compare with. Now a file records aws-lc's accept or reject for each of the 914 CCTV vectors, and every target checks rind against it.</li>
+      <li><b>Checks that could not run.</b> The wipe checks panicked on purpose, and wasm aborts on a panic. They now return a result instead.</li>
+      <li><b>Not in the gate.</b> These wasm tests ran only nightly. The cross lane of <code>just ci</code> now runs them under wasmtime.</li>
+    </ul></div>
+    <div>
+      <div class="chart-title"><code>just ci</code> on <code>1a798d6a</code>, exit 0, rustc 1.98.1</div>
+      <table class="t">
+        <tr><th>Part</th><th class="n">Passed</th></tr>
+        <tr><td>Workspace tests (nextest)</td><td class="n">1,753 (56 skipped)</td></tr>
+        <tr class="hl"><td>wasm <code>cctv</code> (Ed25519 edge cases)</td><td class="n">1</td></tr>
+        <tr class="hl"><td>wasm <code>heap_scratch</code> (wipe checks)</td><td class="n">14</td></tr>
+        <tr><td>32-bit-limb RSA key generation</td><td class="n">1</td></tr>
+        <tr><td><code>rind-fips</code> break tests</td><td class="n">96</td></tr>
+      </table>
+      <p class="small">Whole run: 1,006 s wall, 3,166 s CPU.</p>
+    </div>
+  </div>
+  <div class="foot"><span class="src">kixel-ai/rind#797 body (Problem, Approach, Checks), ported from steelhead99x/rind#64</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 4. ADAPTERS ============ -->
+<section class="slide" data-section="Adapters">
+  <div class="kicker">Adapter mutants · kixel-ai/rind#792</div>
+  <h2>Some adapter tests stayed green after the code they checked was deleted; new tests compare against ring and aws-lc-rs</h2>
+  <div class="cols c64" style="margin-top:12px">
+    <div>
+      <div class="chart-title">Tests that passed, per adapter crate</div>
+      <table class="t">
+        <tr><th>Crate</th><th>Tests run</th><th class="n">Passed</th></tr>
+        <tr><td><code>rind-ring</code></td><td>lib + surfaces</td><td class="n">5 + 8</td></tr>
+        <tr class="hl"><td><code>rind-rustls</code></td><td>lib + surfaces + handshake</td><td class="n">38 + 9 + 2</td></tr>
+        <tr><td><code>rind-str0m</code></td><td>lib + rtc</td><td class="n">2 + 9</td></tr>
+        <tr><td><code>rind-dimpl</code></td><td>lib + provider</td><td class="n">3 + 12</td></tr>
+        <tr><td><code>rind-rcgen</code></td><td>rustls + zeroing</td><td class="n">9 + 4</td></tr>
+      </table>
+    </div>
+    <div class="card"><h3>Plain words</h3><ul class="b sm">
+      <li>A mutation test deletes or changes a line and checks that some test fails. Some lines were excluded, so nobody noticed when tests did not cover them.</li>
+      <li>The new tests drive the adapters through their real users: TLS, DTLS, certificates.</li>
+      <li>Not run: <code>admin/mutants --pins</code> (cargo-mutants not installed) and <code>just ci</code>.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">kixel-ai/rind#792 body (Problem, Approach, Checks), ported from steelhead99x/rind#23</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 5. H2C AND HPKE ============ -->
+<section class="slide" data-section="Edge cases">
+  <div class="kicker">Edge cases · kixel-ai/rind#791 and #798</div>
+  <h2>Two edge cases that no test reached before: a hidden identity point, and an HPKE key that needs a second try</h2>
+  <div class="cols" style="margin-top:16px">
+    <div class="card tall"><h3>Hash-to-curve sums (#791)</h3><ul class="b sm">
+      <li>During review, a test change showed that hiding an infinity sum by changing only one coordinate let an invalid point through.</li>
+      <li>Now the original infinity sum is refused, as before, and only the yes or no verdict is public.</li>
+      <li>Tests feed opposite points through all three curves and through OPRF and VOPRF.</li>
+      <li>9 tests passed. No real message is known to reach this sum.</li>
+    </ul></div>
+    <div class="card tall"><h3>HPKE edge vectors (#798)</h3><ul class="b sm">
+      <li>The IETF revision of RFC 9180 added edge-case vectors, in Markdown only, so the vector sync tool could not fetch them.</li>
+      <li>They are copied by hand into rind's HPKE tests: a P-256 key whose first candidate is too big, so it comes from the second; and empty or zero-byte inputs.</li>
+      <li>Only suites rind offers; the PSK vector's key half only.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">kixel-ai/rind#791 body (Problem, Approach, Checks) · kixel-ai/rind#798 commits d21a82c3, 4aad0a63 and quest/m2/confidence/hpke-edge-vectors.md (hpkewg/hpke e298f94)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 6. CONSTANT TIME ============ -->
+<section class="slide" data-section="Constant time">
+  <div class="kicker">Constant-time checks</div>
+  <h2>The constant-time tools ran clean on the speed changes, and one tool now refuses SHA-512 instructions on Intel</h2>
+  <table class="t" style="margin-top:14px">
+    <tr><th style="width:24%">Where</th><th>Check</th><th style="width:28%">Result</th></tr>
+    <tr><td>ML-DSA reorder (fork #126)</td><td><code>admin/ctgrind unit --release -- mldsa</code>, plus a planted bug to prove the tool notices</td><td>27 passed, 0 errors; the planted bug fails as it should</td></tr>
+    <tr><td>P-256 swap (fork #79)</td><td>ctgrind on ECDH and ECDSA, x86_64 and portable backends</td><td>27 passed, 0 errors, both backends</td></tr>
+    <tr class="hl"><td>SHA-512 on Intel (#821)</td><td><code>admin/ct-vartime</code> now rejects <code>vsha512*</code> instructions on x86</td><td>ready for review</td></tr>
+  </table>
+  <div class="callout" style="margin-top:18px">ctgrind runs the code under Valgrind with secrets marked, and fails if a branch or memory address depends on a secret. The planted bug in #126 shows it is really watching those checks.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#126 body (Validation: ctgrind and negative control) · steelhead99x/rind#79 body (Validation: ctgrind at f5419ff5) · kixel-ai/rind#821 commit 4342478f</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. CI AND FORK ============ -->
+<section class="slide" data-section="CI">
+  <div class="kicker">CI alerts and the fork sync</div>
+  <h2>A hung release now raises an alert, and the fork caught up with 29 upstream commits with Dart green on every OS</h2>
+  <div class="cols" style="margin-top:16px">
+    <div class="card tall"><h3>CI alerts (kixel-ai/rind#796)</h3><ul class="b sm">
+      <li>GitHub ends a job that runs past its time limit as "cancelled", not "timed out". Release jobs had no limit, so a hung publish died silently after 360 minutes.</li>
+      <li>Now a release or scheduled run that is cancelled after it started posts an alert; one that cannot be sorted says so.</li>
+      <li>Checked: shellcheck, actionlint, <code>sh/alert.sh check</code> over 18 workflows.</li>
+    </ul></div>
+    <div class="card tall"><h3>Fork sync (steelhead99x/rind#134, merged)</h3><ul class="b sm">
+      <li>Brings 29 upstream commits to the fork, including one CI job per Intel CPU model and the cargo-deny waiver for two unmaintained-crate notices (#840).</li>
+      <li>A follow-up commit fixes the HPKE row in TESTING.md that broke <code>admin/testing</code>.</li>
+      <li>Dart CI passed on all 8 jobs; <code>dart-ios</code> ran 25 of 25 integration tests.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">kixel-ai/rind#796 body (Problem, Approach, Validation) · steelhead99x/rind#134 body, commits 3d5520b9 and f1c59f5e, and Dart verification comment 6964107098 (17 Nov 15:30 PST)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 8. XEON VM ============ -->
+<section class="slide" data-section="Xeon VM">
+  <div class="kicker">Correctness run · rind-results notes, 15 November</div>
+  <h2>On a shared Xeon cloud VM, every correctness check passed: 91 known-answer checks and 912 library tests</h2>
+  <div class="kpis" style="margin-top:14px">
+    <div class="kpi"><div class="v">91 / 91</div><div class="l">known-answer checks</div><div class="d">20 vectors, 9 libraries, 0 failed</div></div>
+    <div class="kpi"><div class="v">912</div><div class="l">rind library tests passed</div><div class="d">0 failed, 40 ignored, fork main 3fc24bd1</div></div>
+    <div class="kpi"><div class="v">18 + 12</div><div class="l">wipe tests passed</div><div class="d">zeroing and heap-scratch</div></div>
+    <div class="kpi"><div class="v">115</div><div class="l">rind-results gate tests</div><div class="d"><code>cargo xtask ci</code>, cargo-deny ok</div></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>What it is</h3><ul class="b sm">
+      <li>Correctness only. No timing was measured and no board was touched.</li>
+      <li>Intel Xeon, 8 vCPUs, Debian 13, rustc 1.100.0, shared with other agents.</li>
+    </ul></div>
+    <div class="card"><h3>Not run there</h3><ul class="b sm">
+      <li>SLOW_TESTS, ctgrind and the other constant-time tools, fuzzing, <code>just</code> recipes.</li>
+      <li>Firmware lints: the ESP toolchain is not installed on that VM.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">notes/checks-2026-11-15-xeon-box.md and notes/raw/host-kat-2026-11-15-xeon-box.ndjson (rind-results main, PR #36)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 9. GAPS AND SOURCES ============ -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Left out, and sources</div>
+  <h2>What this deck leaves out, and where every count comes from</h2>
+  <div class="cols c46" style="margin-top:14px">
+    <div class="card fix warnc"><div class="pn">left out</div><ul class="b sm">
+      <li>Speed: none of these PRs is meant to change it, except #821, whose cost is on the constant-time slide.</li>
+      <li>Several upstream ports (#791, #792, #793) were checked without <code>just ci</code>, because their build host had no Nix. Each PR body lists the checks that did run.</li>
+    </ul></div>
+    <table class="t">
+      <tr><th style="width:30%">Slide</th><th>Source</th></tr>
+      <tr><td>wasm and Ed25519</td><td>kixel-ai/rind#797 body; steelhead99x/rind#64</td></tr>
+      <tr><td>Adapters</td><td>kixel-ai/rind#792 body; steelhead99x/rind#23</td></tr>
+      <tr><td>Edge cases</td><td>kixel-ai/rind#791 body; #798 commits and quest file</td></tr>
+      <tr><td>Constant time</td><td>steelhead99x/rind#126, #79 bodies; kixel-ai/rind#821</td></tr>
+      <tr><td>CI and sync</td><td>kixel-ai/rind#796; steelhead99x/rind#134</td></tr>
+      <tr><td>Xeon VM</td><td>rind-results notes/checks-2026-11-15-xeon-box.md</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span class="src">github.com/steelhead99x/rind · github.com/kixel-ai/rind · github.com/steelhead99x/rind-results · checked 17 Nov 2026 evening PST</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>
