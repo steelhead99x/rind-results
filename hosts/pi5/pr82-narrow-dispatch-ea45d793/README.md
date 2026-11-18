@@ -25,7 +25,7 @@ fails (`left: false, right: true`), and that second run is a deliberate negative
 | 3 | `RIND_CPU_DISABLE_wide_mul=1 RIND_TEST_ARM_WIDE_MUL=0` … `low::aarch64::` | pass | 172 passed, 11 ignored | 5 s |
 | detect | native `detects_the_expected_cpu` + `detected_value_matches_midr` with `RIND_TEST_ARM_WIDE_MUL=0`, then `=1` as a negative control | narrow confirmed | 2 passed; control failed as expected | <2 s |
 | 4 | `admin/ctgrind --release --locked --no-fail-fast` (`RIND_TEST_ARM_CRYPTO_EXT=1 RIND_TEST_ARM_SHA3=0 RIND_TEST_ARM_SVE2=0`, as CI sets them) | **pass** (EXIT 0) | pass 1: 921 passed (unit 801, wycheproof 21, adapters 99), 43 ignored; narrow pass (`RIND_CPU_DISABLE_wide_mul=1`): 926 passed (unit 806, wycheproof 21, adapters 99), 43 ignored; 52 memcheck summaries, all 0 errors | 9182 s |
-| 4b | `admin/ctgrind fips --release --locked --no-fail-fast` | _pending_ | | |
+| 4b | `admin/ctgrind fips --release --locked --no-fail-fast` | **pass** (EXIT 0) | pass 1: 6 + 1 (ACVP) passed; narrow pass: 6 + 1 passed; 0 memcheck errors | 468 s |
 | 4c | extra: `rind` unit suite under memcheck with `RIND_CPU_FORCE_wide_mul=1` (`--cfg rind_cpu_disable`) | _pending_ | | |
 | 5 | `admin/prove bytes` | **pass** (EXIT 0) | 189 aarch64 + 155 x86_64 routines compared, none absent | 98 s |
 | ct2-native | extra: `low::aarch64::` under memcheck, `--cfg rind_cpu_disable`, `RIND_TEST_ARM_WIDE_MUL=0`, no toggle | 1 failure (see below) | 171 passed, 1 failed, 11 ignored; 0 memcheck errors | 547 s (incl. build) |
