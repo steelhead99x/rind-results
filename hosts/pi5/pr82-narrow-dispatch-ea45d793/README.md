@@ -26,7 +26,7 @@ fails (`left: false, right: true`), and that second run is a deliberate negative
 | detect | native `detects_the_expected_cpu` + `detected_value_matches_midr` with `RIND_TEST_ARM_WIDE_MUL=0`, then `=1` as a negative control | narrow confirmed | 2 passed; control failed as expected | <2 s |
 | 4 | `admin/ctgrind --release --locked --no-fail-fast` (`RIND_TEST_ARM_CRYPTO_EXT=1 RIND_TEST_ARM_SHA3=0 RIND_TEST_ARM_SVE2=0`, as CI sets them) | **pass** (EXIT 0) | pass 1: 921 passed (unit 801, wycheproof 21, adapters 99), 43 ignored; narrow pass (`RIND_CPU_DISABLE_wide_mul=1`): 926 passed (unit 806, wycheproof 21, adapters 99), 43 ignored; 52 memcheck summaries, all 0 errors | 9182 s |
 | 4b | `admin/ctgrind fips --release --locked --no-fail-fast` | **pass** (EXIT 0) | pass 1: 6 + 1 (ACVP) passed; narrow pass: 6 + 1 passed; 0 memcheck errors | 468 s |
-| 4c | extra: `rind` unit suite under memcheck with `RIND_CPU_FORCE_wide_mul=1` (`--cfg rind_cpu_disable`) | _pending_ | | |
+| 4c | extra: `rind` unit suite under memcheck with `RIND_CPU_FORCE_wide_mul=1` (`--cfg rind_cpu_disable`) | **pass** (EXIT 0) | 806 passed, 43 ignored; 0 memcheck errors | 2865 s |
 | 5 | `admin/prove bytes` | **pass** (EXIT 0) | 189 aarch64 + 155 x86_64 routines compared, none absent | 98 s |
 | ct2-native | extra: `low::aarch64::` under memcheck, `--cfg rind_cpu_disable`, `RIND_TEST_ARM_WIDE_MUL=0`, no toggle | 1 failure (see below) | 171 passed, 1 failed, 11 ignored; 0 memcheck errors | 547 s (incl. build) |
 | ct2-forcewide | extra: same with `RIND_CPU_FORCE_wide_mul=1 RIND_TEST_ARM_WIDE_MUL=1` | pass | 172 passed, 11 ignored; 0 memcheck errors | 71 s |
@@ -56,8 +56,8 @@ What this means:
 - The failure comes from this report's own ct2 harness. It set `RIND_TEST_ARM_WIDE_MUL=0` without
   `RIND_CPU_DISABLE_wide_mul`, which asserts native detection under valgrind. `admin/ctgrind` never does that: its first
   pass leaves `RIND_TEST_ARM_WIDE_MUL` unset, and its narrow pass sets the variable together with the denial. This is the
-  likely explanation for the handoff [steelhead99x/rind#150](https://github.com/steelhead99x/rind/pull/150). The 4c
-  pending row is also redundant here, since on this host pass 1 already ran `_alt`.
+  likely explanation for the handoff [steelhead99x/rind#150](https://github.com/steelhead99x/rind/pull/150). Row 4c
+  repeats what pass 1 already covers on this host, which is `_alt` under memcheck.
 - A possible hardening: document that the variable is meaningless under valgrind without a toggle, like
   `RIND_TEST_ARM_SHA3=0`, which CI sets because valgrind hides SHA3. Alternatively, have `detects_the_expected_cpu` skip
   the `WIDE_MUL` assertion when `HWCAP_CPUID` is absent and no toggle is set.
