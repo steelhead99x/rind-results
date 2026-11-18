@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap on the x86-host-b-zen5 host: each report
+# operation where another library (OpenSSL included) beats rind by more than
+# 10% on the medians of the three runs, in rind's benchmarks/gaps.toml format.
+# These are measured gaps recorded as found. No cause was diagnosed on this host.
+
+[[gap]]
+operations = ["chacha20poly1305/{lib}/16KB", "rustls-bulk/chacha20poly1305/{lib}"]
+on = ["x86-host-b-zen5"]
+reason = "Measured on this host only: OpenSSL is 1.33x faster than rind on chacha20poly1305 16KB and 1.19x on rustls-bulk chacha20poly1305. This Zen 5 host reports AVX-512 (rind-cpuid) and no diagnosis of the gap was run here."
+
+[[gap]]
+operations = ["mlkem768-encaps/{lib}", "mlkem768-keygen/{lib}"]
+on = ["x86-host-b-zen5"]
+reason = "Measured on this host only: graviola is 1.11x faster than rind on ML-KEM-768 encaps and 1.14x on keygen. No diagnosis was run here."
