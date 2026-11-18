@@ -159,7 +159,7 @@ table.sv td:first-child{white-space:nowrap}
   <div class="inner">
     <div class="kicker">rind · microcontroller benchmarks</div>
     <h1>rind on the boards: what changed on 12 November 2026, and when</h1>
-    <div class="sub">The Poly1305 patch A/B on the ESP32-S3 and nRF52840, three-alignment relinks, the 32 KB cache check, the flash-clock and watchdog fixes, the RP2040 port, and the move to rind-hardware; and, late on the 12th, an unpublished ESP32-S3 run that closed the I-cache gaps in SHA-512, HMAC/HKDF, ChaCha20-Poly1305 and XChaCha.</div>
+    <div class="sub">The Poly1305 patch A/B on the ESP32-S3 and nRF52840, three-alignment relinks, the 32 KB cache check, the flash-clock and watchdog fixes, the RP2040 port, and the move to rind-hardware; and, late on the 12th, an unpublished ESP32-S3 run that closed the I-cache gaps in SHA-512, HMAC/HKDF, ChaCha20-Poly1305 and XChaCha. Updated 17 November: the fix that merged, its board run, and where the Pi 5 lane went.</div>
   </div>
   <div class="meta">steelhead99x/rind-results · steelhead99x/rind-hardware<br>Times are America/Los_Angeles (PST)</div>
   <div class="foot"><span class="src">Published figures are from rind-results main (95300f2) or rind-hardware main (7a14b38). The evening I-cache figures are an unpublished ESP32-S3 run at steelhead99x/rind 6aba8055 plus five patches, labelled on those slides. The file is named on each slide; the full list is on the last slide.</span><span class="num"></span></div>
@@ -168,7 +168,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 2. SUMMARY ============ -->
 <section class="slide" data-section="Summary">
   <div class="kicker">Today in one table</div>
-  <h2>The 12 November board work and the Jetson Orin Nano results are on main; today's Pi 5 lane is not yet</h2>
+  <h2>The 12 November board work, the Jetson Orin Nano results and the Pi 5 lane are all on main now</h2>
   <table class="t compact" style="margin-top:8px;font-size:12.5px">
     <tr><th style="width:22%">Change</th><th>What it showed</th><th style="width:12%">Status</th><th style="width:27%">File on main</th></tr>
     <tr><td>Poly1305 32-bit patch A/B</td><td>rind's ChaCha20-Poly1305 16 KB seal takes 0.735× the cycles on the ESP32-S3 and 0.698× on the nRF52840; faster at every size on both boards</td><td><span class="tag ok">published</span></td><td><code>results/{esp32s3,nrf52840}/diag/poly1305-32/</code></td></tr>
@@ -179,10 +179,10 @@ table.sv td:first-child{white-space:nowrap}
     <tr><td>Firmware repo move</td><td>rind-bench is archived; the firmware is public as rind-hardware</td><td><span class="tag ok">done</span></td><td>rind-hardware <code>README.md</code></td></tr>
     <tr><td>RP2040 port</td><td>All 12 images build; known-answer checks passed on a Pico. Published timing results are not on main yet</td><td><span class="tag pending">partial</span></td><td><code>hosts/rp2040/NOTES.md</code></td></tr>
     <tr><td>Jetson Orin Nano</td><td>rind 98568332 against six libraries, three pinned runs; rind fastest on 65 of 68 shared operations, no gap over 10%</td><td><span class="tag ok">on main</span></td><td><a href="https://github.com/steelhead99x/rind-results/tree/main/results/jetson-orin-nano">results/jetson-orin-nano</a></td></tr>
-    <tr><td>Today's Pi 5 lane</td><td>Still on <code>results/pi5-lane-2026-11-12</code> and related branches; not merged</td><td><span class="tag pending">in progress</span></td><td>none on main</td></tr>
-      <tr class="hl"><td>I-cache gap closes, ESP32-S3</td><td>SHA-512 16 KB 32.95× → 1.08× ring; HMAC-SHA256 64B 3.24× → 1.19×; HKDF expand 5.64× → 1.16×; ChaCha 16 KB 1.26× → 0.92× ring; XChaCha 32B 6.43× → 1.02× RustCrypto; SHA-256 64B spread 25.7% → 0.0%</td><td><span class="tag pending">unpublished</span></td><td>steelhead99x/rind <code>6aba8055</code> plus five patches; not on rind-results main</td></tr>
+    <tr><td>The 12 Nov Pi 5 lane</td><td>Merged since: the A/B runs, plus a full 1.5 GHz Pi 5 set at rind a6577cb4 (rind fastest on 45 of 68 shared operations)</td><td><span class="tag ok">on main</span></td><td><code>hosts/pi5/ab-narrow-mul/</code> · <code>results/pi5-nofan-1p5ghz/</code></td></tr>
+      <tr class="hl"><td>I-cache gap closes, ESP32-S3</td><td>SHA-512 16 KB 32.95× → 1.08× ring; HMAC-SHA256 64B 3.24× → 1.19×; HKDF expand 5.64× → 1.16×; ChaCha 16 KB 1.26× → 0.92× ring; XChaCha 32B 6.43× → 1.02× RustCrypto; SHA-256 64B spread 25.7% → 0.0%</td><td><span class="tag pending">unpublished</span></td><td>steelhead99x/rind <code>6aba8055</code> plus five patches; not on rind-results main. The fix merged on the fork on 16 Nov (slide 16)</td></tr>
   </table>
-  <div class="foot"><span class="src">rind-results main 95300f2: the files in the right column · rind-hardware main 7a14b38: README.md (board status table)</span><span class="num"></span></div>
+  <div class="foot"><span class="src">rind-results main 95300f2: the files in the right column; the Pi 5 row is checked at main 88cbf85 (17 Nov) · rind-hardware main 7a14b38: README.md (board status table)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 3. POLY1305 ============ -->
@@ -313,19 +313,20 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 8. HOSTS ============ -->
 <section class="slide" data-section="Hosts">
   <div class="kicker">Application processors</div>
-  <h2>The Jetson Orin Nano results are on main; today's Pi 5 lane is not, so the only Pi 5 figures on main are still the earlier b6651423 run</h2>
+  <h2>Both are on main now: the Jetson Orin Nano set, and the Pi 5 lane plus a full Pi 5 set at rind a6577cb4</h2>
   <div class="cols" style="margin-top:22px">
     <div class="card tall"><h3>Raspberry Pi 5</h3><ul class="b sm">
       <li>On main: the host run of rind's own suite at rind b6651423 (<code>hosts/pi5/</code>, README host table), committed 12 Nov at 01:22 PST.</li>
-      <li>Today's Pi 5 work is on branches <code>results/pi5-lane-2026-11-12</code> and <code>results/m1pro-pi5-argon2-2026-11-12</code>. Neither is merged, so its numbers are not shown here.</li>
+      <li>Since merged: the 12 Nov A/B runs are in <code>hosts/pi5/ab-narrow-mul/</code>, and the Argon2 work in <code>results/argon2*/</code>.</li>
+      <li>New set: rind <code>a6577cb4</code>, 5 rounds on 13 Nov, no fan, held at 1.5 GHz. rind is fastest on 45 of 68 shared operations (<code>results/pi5-nofan-1p5ghz/</code>, PR #28).</li>
     </ul></div>
     <div class="card tall"><h3>NVIDIA Jetson Orin</h3><ul class="b sm">
       <li>Published on main: rind <code>98568332</code> against all six other libraries, three pinned runs (2026-11-13 UTC) on a live service box at MAXN_SUPER.</li>
       <li>rind was fastest on 65 of 68 shared operations, and no gap was over 10%. See <a href="https://github.com/steelhead99x/rind-results/tree/main/results/jetson-orin-nano">results/jetson-orin-nano</a>.</li>
     </ul></div>
   </div>
-  <div class="pendbar" style="margin-top:22px">In progress: today's Pi 5 lane, still on results branches. The Orin set is on main.</div>
-  <div class="foot"><span class="src">README.md host table and hosts/pi5/ (rind-results main 95300f2) · branch list of steelhead99x/rind-results, checked 12 Nov 2026 evening PST</span><span class="num"></span></div>
+  <div class="pendbar" style="margin-top:22px">Updated 17 Nov: nothing on this slide is still on a branch. Pi 5 times are at 1.5 GHz, so compare ratios, not times.</div>
+  <div class="foot"><span class="src">README.md host table and hosts/pi5/ (rind-results main 95300f2) · results/pi5-nofan-1p5ghz/a6577cb4…/RESULTS.md and results/jetson-orin-nano/RESULTS.md (rind-results main 88cbf85, checked 17 Nov 2026)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 9. TIMELINE A ============ -->
@@ -499,6 +500,52 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src">git log --format committer dates of steelhead99x/rind perf/esp32s3-rolled-sha512 (fa0ab77c); mtimes of the compare-*.txt files under <home> on x86-host-c. Not on rind-results main. Flash only /dev/ttyACM1, 80 MHz, no erase.</span><span class="num"></span></div>
 </section>
 
+<!-- ============ 17 NOV UPDATE 1 (added 2026-11-17) ============ -->
+<section class="slide" data-section="17 Nov update">
+  <div class="kicker">Update · 17 November 2026 · ESP32-S3</div>
+  <h2>The cache fix merged on the fork after one more board run: SHA-512 now takes 0.033× its old time, and no HMAC or HKDF row got slower</h2>
+  <div class="lede">What merged is not the 12 Nov evening try. SHA-256 now runs rind's own code from the chip's fast internal RAM (IRAM); SHA-512 and HChaCha are rolled loops as before. The maintainer ran #69 (<code>504049d4</code>) against upstream main (<code>19f94a07</code>): 3 runs per image, 0 known-answer failures.</div>
+  <div class="cols c64" style="margin-top:4px">
+    <div>
+      <div class="chart-title">rind with #69 over rind before it, on-device time (below 1 is faster)</div>
+      <table class="t compact" style="font-size:13.5px">
+        <tr><th>Rows</th><th class="n">#69 vs before</th></tr>
+        <tr class="hl"><td>SHA-512 and SHA-512/256, every size</td><td class="n">0.033×</td></tr>
+        <tr><td>SHA-256, 32 B to 16 KB</td><td class="n">0.129× to 0.804×</td></tr>
+        <tr><td>SHA-256 updates, 1 B and 16 B</td><td class="n">0.503×, 0.326×</td></tr>
+        <tr><td>HMAC-SHA256 (12 rows)</td><td class="n">0.199× to 0.807×</td></tr>
+        <tr class="hl"><td>HMAC-SHA384 (12 rows)</td><td class="n">0.033× to 0.034×</td></tr>
+        <tr><td>HKDF-SHA256 (3 rows)</td><td class="n">0.091× to 0.150×</td></tr>
+        <tr><td>HKDF-SHA384 and SHA-512 (6 rows)</td><td class="n">0.033× to 0.050×</td></tr>
+        <tr><td>HMAC-SHA1 (12 rows, code not touched)</td><td class="n">1.000×</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="kpis" style="grid-template-columns:1fr;gap:12px">
+        <div class="kpi"><div class="v">34 of 48</div><div class="l">HMAC and HKDF rows faster</div><div class="d">The other 14 are unchanged: code this PR does not touch. None is slower.</div></div>
+        <div class="kpi" style="border-left-color:var(--bad)"><div class="v">+4,808 B</div><div class="l">more IRAM per image</div><div class="d">And 4,864 to 5,120 B less free heap.</div></div>
+        <div class="kpi" style="border-left-color:var(--bad)"><div class="v">Not proven</div><div class="l">SHA-256 on ESP-IDF Xtensa</div><div class="d">The IRAM body is not HACL*, so it needs its own proof plan.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind#69 board-run comment 6936378505 (16 Nov 18:43 PST; ESP32-S3 rev v0.2, 80 MHz flash, 16 KB icache, 3 runs per image) and PR body (Impact, Follow-ups). Merged 16 Nov 19:01 PST. In a PR comment, not on rind-results main.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 17 NOV UPDATE 2 (added 2026-11-17) ============ -->
+<section class="slide" data-section="17 Nov update">
+  <div class="kicker">Update · 17 November 2026 · ESP32 and Xtensa</div>
+  <h2>Where the ESP32 work stands: merged on the fork, waiting for review upstream, and one claim left out</h2>
+  <table class="t" style="margin-top:14px;font-size:14px">
+    <tr><th style="width:24%">Change</th><th>What it does</th><th style="width:15%">Status</th><th style="width:22%">Check</th></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/69">steelhead99x/rind#69</a></td><td>IRAM SHA-256, rolled SHA-512 and HChaCha on 32-bit targets</td><td><span class="tag ok">merged on fork</span></td><td>Board run above; layout check <code>admin/esp32s3-sha256-layout</code> passed at <code>8060d5d9</code></td></tr>
+    <tr><td><a href="https://github.com/kixel-ai/rind/pull/793">kixel-ai/rind#793</a></td><td>The same change, ported upstream</td><td><span class="tag pending">ready for review</span></td><td>Board numbers come from the fork; not flashed again</td></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/85">steelhead99x/rind#85</a></td><td>CI lint for rind on the ESP32 Xtensa targets: three bare-metal targets plus ESP32-S3 ESP-IDF</td><td><span class="tag pending">open</span></td><td>At <code>a94155f4</code>, the <code>xtensa</code> and <code>layout</code> CI jobs pass</td></tr>
+    <tr class="hl"><td><a href="https://github.com/steelhead99x/rind/pull/94">steelhead99x/rind#94</a></td><td>Moves the rolled SHA-512 into IRAM too</td><td><span class="tag drop">not verified</span></td><td>Its 0.911× to 0.918× figures have no raw logs, so this deck does not use them</td></tr>
+  </table>
+  <div class="callout" style="margin-top:26px;font-size:17px">Why it matters: SHA-512 and everything built on it (HMAC-SHA384, HKDF-SHA384/512) were about 30× slower than they needed to be on this board, because the code did not fit in the 16 KB cache. That gap is closed on the fork.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#69 body (Validation, merged 16 Nov 19:01 PST) · kixel-ai/rind#793 body (Benchmarks, Checks) · steelhead99x/rind#85 comment 6964935963 · steelhead99x/rind#94 body · all checked 17 Nov 2026</span><span class="num"></span></div>
+</section>
+
 <!-- ============ 11. CAVEATS ============ -->
 <section class="slide" data-section="Caveats">
   <div class="kicker">Honesty check</div>
@@ -512,9 +559,9 @@ table.sv td:first-child{white-space:nowrap}
     </ul></div>
     <div class="card tall"><h3>Not shown, or pending</h3><ul class="b sm">
       <li>RP2040 on-device numbers: on rind-hardware branches only.</li>
-      <li>Today's Pi 5 lane: still on results branches, not on main.</li>
+      <li>The 12 Nov Pi 5 lane: merged to main since (updated 17 Nov).</li>
       <li>The late-evening I-cache figures (slides after the published Poly1305 A/B) are an unpublished perf-branch run on ESP32-S3 at fork <code>6aba8055</code> plus five patches, not on rind-results main. 64-bit portable paths were not changed.</li>
-      <li>poly1305-32 is in <a href="https://github.com/steelhead99x/rind/pull/69">steelhead99x/rind#69</a> (<code>perf/esp32s3-rolled-sha512</code>), a PR into steelhead99x/rind main. It is not a moq-dev/rind PR.</li>
+      <li>steelhead99x/rind#69 merged on 16 Nov with a different SHA-256 fix than this evening run (slide 16). Its board numbers are in a PR comment, not on rind-results main.</li>
       <li>Older provenance SHAs point into the private rind-bench history.</li>
       <li>The RP2040 has no hardware RNG; its images use a seeded placeholder.</li>
     </ul></div>
@@ -536,6 +583,8 @@ table.sv td:first-child{white-space:nowrap}
     <tr><td>RP2040</td><td><code>hosts/rp2040/NOTES.md</code>, <code>images.json</code> · rind-hardware <code>README.md</code>, <code>rp2040/README.md</code></td></tr>
     <tr><td>Repo move</td><td>rind-results commits 0df7c03, 876586c · rind-hardware 8d9c1bb</td></tr>
     <tr><td>Hosts</td><td><code>README.md</code> host table · <code>hosts/pi5/</code></td></tr>
+    <tr><td>Pi 5 lane, now on main</td><td><code>hosts/pi5/ab-narrow-mul/</code> · <code>results/pi5-nofan-1p5ghz/a6577cb4…/RESULTS.md</code> (rind-results main 88cbf85)</td></tr>
+    <tr class="hl"><td>17 Nov update</td><td>steelhead99x/rind#69 body and board-run comment 6936378505 (504049d4 against 19f94a07) · kixel-ai/rind#793 · steelhead99x/rind#85 comment 6964935963 · steelhead99x/rind#94 body</td></tr>
     <tr><td>Timeline, slides 9–10</td><td><code>git log</code> of both main branches, committer dates in America/Los_Angeles</td></tr>
     <tr class="hl"><td>Evening I-cache gaps</td><td>Unpublished ESP32-S3 raw jsonl, 3 runs at 80 MHz, on x86-host-c under <code><home></code> (compare-sha512-rolled.txt, compare-sha256-hybrid.txt, compare-poly1305-32.txt, compare-hchacha-rolled.txt). steelhead99x/rind <code>6aba8055</code> plus <code>61570282</code>, <code>9dbb1ed2</code>, <code>e54b7894</code>, <code>a60ee4b8</code>, <code>fa0ab77c</code>. Not on this repo's main.</td></tr>
   </table>
