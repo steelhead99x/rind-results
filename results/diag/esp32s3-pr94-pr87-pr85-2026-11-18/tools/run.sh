@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Interleaved A/B on the MSI's ESP32-S3: each round flashes every variant once, in a rotating order.
-# usage: run.sh <rounds> <bench> <variant:dir>...    (log dir: ~/tmp/tt/a-brief/board/<variant>/<bench>/run-N.log)
+# Interleaved A/B on an ESP32-S3 board: each round flashes every variant once, in a rotating order.
+# usage: PORT=<serial device> run.sh <rounds> <bench> <variant:dir>...    (log dir: ~/tmp/tt/a-brief/board/<variant>/<bench>/run-N.log)
 cd ~/tmp/tt/a-brief
 rounds=$1; bench=$2; shift 2
 variants=("$@")
-P=/dev/ttyACM0
+P=${PORT:?set PORT to the board's serial device}
 n=${#variants[@]}
 for r in $(seq 1 $rounds); do
   for k in $(seq 0 $((n-1))); do
