@@ -7,7 +7,7 @@ Raw serial logs and cycle counts from one ESP32-S3 board for three steelhead99x/
 
 | | |
 |---|---|
-| Board | ESP32-S3 rev v0.2 (`chip revision: v0.2` in every log), 8 MB flash, USB-Serial/JTAG on `/dev/ttyACM0` of the host msi-001 |
+| Board | ESP32-S3 rev v0.2 (`chip revision: v0.2` in every log), 8 MB flash, USB-Serial/JTAG on a Linux x86_64 host |
 | Clock | CPU 240 MHz (`cpu_hz` 240000000 in all 50 start records). The `clock` record counted 240,000,234 to 240,001,069 CCOUNT cycles per second of the 40 MHz timer. Flash DIO at 80 MHz (`Boot SPI Speed : 80MHz` in all 50 logs) |
 | Run window | 2026-11-18 23:34 to 2026-11-19 00:25 PST, one board, nothing else on the serial port (`run.log` is the flash and capture timeline) |
 | Firmware | rind-hardware `esp32` bench harness at `7a14b38` plus [tools/harness-brief-a.patch](tools/harness-brief-a.patch), ESP-IDF v5.5.1 (`idf` in every start record), esp rustc 1.97.0-nightly (8ea53bcd7 2026-07-08, 1.97.0.0), release profile, `-Zbuild-std`, espflash 4.7.0 `--flash-freq 80mhz` |
