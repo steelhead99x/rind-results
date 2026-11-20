@@ -1,0 +1,61 @@
+##### run-1.txt
+== set ed: base main e97dc453; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.000 1.008 1.000 1.001 1.001 1.002 1.000; clean rounds 7
+  ed25519-verify/rind          #128 g824:    15994.5ns (0.799x, sp 0.3%)  main main:    20006.0ns (1.000x, sp 0.3%)
+  ed25519-sign/rind            #128 g824:     4913.9ns (1.001x, sp 0.3%)  main main:     4910.5ns (1.000x, sp 0.3%)
+  sha512/4096                  #128 g824:     5366.6ns (1.001x, sp 0.3%)  main main:     5360.6ns (1.000x, sp 0.5%)
+== set cc: base x4 6ecdfee9; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.001 1.001 1.000 1.000 1.004 1.001 1.008; clean rounds 7
+  chacha20/32                  x9 cx9:      113.1ns (1.006x, sp 2.3%)  x8 cx8:      112.6ns (1.002x, sp 0.4%)  x4 cx4:      112.4ns (1.000x, sp 0.2%)
+  chacha20/200                 x9 cx9:      219.6ns (0.692x, sp 1.2%)  x8 cx8:      317.0ns (0.999x, sp 0.2%)  x4 cx4:      317.2ns (1.000x, sp 0.2%)
+  chacha20/576                 x9 cx9:      243.4ns (0.554x, sp 0.1%)  x8 cx8:      307.7ns (0.700x, sp 0.3%)  x4 cx4:      439.5ns (1.000x, sp 0.2%)
+  chacha20/1200                x9 cx9:      512.0ns (0.562x, sp 0.3%)  x8 cx8:      643.0ns (0.706x, sp 0.2%)  x4 cx4:      910.9ns (1.000x, sp 0.3%)
+  chacha20/1350                x9 cx9:      614.7ns (0.613x, sp 2.3%)  x8 cx8:      735.8ns (0.733x, sp 0.2%)  x4 cx4:     1003.1ns (1.000x, sp 0.2%)
+  chacha20/16384               x9 cx9:     5749.4ns (0.540x, sp 0.1%)  x8 cx8:     6353.9ns (0.597x, sp 0.1%)  x4 cx4:    10640.6ns (1.000x, sp 0.3%)
+  sha512/4096                  x9 cx9:     5360.5ns (1.000x, sp 0.3%)  x8 cx8:     5356.8ns (0.999x, sp 0.9%)  x4 cx4:     5362.6ns (1.000x, sp 0.2%)
+== set kk: base pre-#884 51808a98; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.001 1.001 1.027 1.000 1.002 1.010 1.003; clean rounds 6
+  mlkem768-keygen              #884 k1:     9763.1ns (0.762x, sp 4.1%)  pre-#884 k0:    12814.6ns (1.000x, sp 0.5%)
+  mlkem768-encaps              #884 k1:     3133.4ns (0.879x, sp 1.6%)  pre-#884 k0:     3564.9ns (1.000x, sp 0.4%)
+  mldsa65-sign                 #884 k1:    50154.9ns (0.827x, sp 3.2%)  pre-#884 k0:    60612.6ns (1.000x, sp 4.1%)
+  sha3-256/4096                #884 k1:     7204.5ns (1.003x, sp 0.4%)  pre-#884 k0:     7185.4ns (1.000x, sp 0.3%)
+  sha512/4096                  #884 k1:     5361.2ns (1.000x, sp 0.3%)  pre-#884 k0:     5360.8ns (1.000x, sp 0.3%)
+
+##### run-2.txt
+== set ed: base main e97dc453; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.000 1.001 1.001 1.001 1.000 1.000 1.001; clean rounds 7
+  ed25519-verify/rind          #128 g824:    16006.7ns (0.801x, sp 0.3%)  main main:    19978.9ns (1.000x, sp 0.1%)
+  ed25519-sign/rind            #128 g824:     4909.3ns (1.001x, sp 0.2%)  main main:     4904.4ns (1.000x, sp 0.7%)
+  sha512/4096                  #128 g824:     5362.7ns (1.000x, sp 0.1%)  main main:     5361.0ns (1.000x, sp 0.4%)
+== set cc: base x4 6ecdfee9; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.003 1.001 1.002 1.001 1.013 1.000 1.000; clean rounds 7
+  chacha20/32                  x9 cx9:      113.1ns (1.006x, sp 0.5%)  x8 cx8:      112.5ns (1.001x, sp 0.7%)  x4 cx4:      112.4ns (1.000x, sp 0.4%)
+  chacha20/200                 x9 cx9:      220.9ns (0.696x, sp 0.7%)  x8 cx8:      317.0ns (0.999x, sp 0.1%)  x4 cx4:      317.3ns (1.000x, sp 0.1%)
+  chacha20/576                 x9 cx9:      243.4ns (0.554x, sp 0.2%)  x8 cx8:      308.6ns (0.702x, sp 0.3%)  x4 cx4:      439.4ns (1.000x, sp 0.2%)
+  chacha20/1200                x9 cx9:      512.1ns (0.562x, sp 0.2%)  x8 cx8:      643.7ns (0.707x, sp 0.2%)  x4 cx4:      910.8ns (1.000x, sp 0.1%)
+  chacha20/1350                x9 cx9:      614.3ns (0.613x, sp 0.2%)  x8 cx8:      736.0ns (0.734x, sp 0.2%)  x4 cx4:     1002.6ns (1.000x, sp 0.1%)
+  chacha20/16384               x9 cx9:     5752.6ns (0.541x, sp 0.2%)  x8 cx8:     6361.4ns (0.598x, sp 0.3%)  x4 cx4:    10638.5ns (1.000x, sp 0.0%)
+  sha512/4096                  x9 cx9:     5360.5ns (1.000x, sp 0.4%)  x8 cx8:     5362.4ns (1.000x, sp 1.7%)  x4 cx4:     5362.2ns (1.000x, sp 0.8%)
+== set kk: base pre-#884 51808a98; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.017 1.012 1.002 1.004 1.005 1.004 1.002; clean rounds 7
+  mlkem768-keygen              #884 k1:    10033.2ns (0.781x, sp 2.1%)  pre-#884 k0:    12840.9ns (1.000x, sp 0.6%)
+  mlkem768-encaps              #884 k1:     3185.0ns (0.891x, sp 2.3%)  pre-#884 k0:     3574.5ns (1.000x, sp 0.3%)
+  mldsa65-sign                 #884 k1:    51756.5ns (0.845x, sp 3.4%)  pre-#884 k0:    61266.1ns (1.000x, sp 4.5%)
+  sha3-256/4096                #884 k1:     7211.1ns (1.003x, sp 0.3%)  pre-#884 k0:     7191.0ns (1.000x, sp 0.4%)
+  sha512/4096                  #884 k1:     5366.6ns (1.001x, sp 0.6%)  pre-#884 k0:     5363.6ns (1.000x, sp 0.4%)
+
+##### run-3.txt
+== set ed: base main e97dc453; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.001 1.001 1.000 1.000 1.002 1.002 1.000; clean rounds 7
+  ed25519-verify/rind          #128 g824:    15998.6ns (0.800x, sp 0.1%)  main main:    19991.6ns (1.000x, sp 0.5%)
+  ed25519-sign/rind            #128 g824:     4903.9ns (1.001x, sp 0.2%)  main main:     4897.9ns (1.000x, sp 0.5%)
+  sha512/4096                  #128 g824:     5362.4ns (1.000x, sp 0.1%)  main main:     5363.2ns (1.000x, sp 0.1%)
+== set cc: base x4 6ecdfee9; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.001 1.000 1.000 1.025 1.028 1.038 1.023; clean rounds 3
+   WARNING only 3 rounds within 1.02; using all 7
+  chacha20/32                  x9 cx9:      112.9ns (1.004x, sp 0.7%)  x8 cx8:      112.5ns (1.001x, sp 1.1%)  x4 cx4:      112.4ns (1.000x, sp 0.3%)
+  chacha20/200                 x9 cx9:      220.6ns (0.695x, sp 0.5%)  x8 cx8:      317.1ns (1.000x, sp 0.6%)  x4 cx4:      317.2ns (1.000x, sp 0.1%)
+  chacha20/576                 x9 cx9:      243.3ns (0.554x, sp 0.1%)  x8 cx8:      308.2ns (0.702x, sp 0.2%)  x4 cx4:      439.3ns (1.000x, sp 0.2%)
+  chacha20/1200                x9 cx9:      512.2ns (0.563x, sp 0.3%)  x8 cx8:      643.6ns (0.707x, sp 0.1%)  x4 cx4:      909.8ns (1.000x, sp 0.2%)
+  chacha20/1350                x9 cx9:      614.6ns (0.613x, sp 0.8%)  x8 cx8:      736.0ns (0.734x, sp 0.2%)  x4 cx4:     1003.0ns (1.000x, sp 1.0%)
+  chacha20/16384               x9 cx9:     5822.1ns (0.547x, sp 4.0%)  x8 cx8:     6363.6ns (0.598x, sp 0.2%)  x4 cx4:    10648.0ns (1.000x, sp 0.4%)
+  sha512/4096                  x9 cx9:     5360.1ns (1.000x, sp 0.7%)  x8 cx8:     5367.5ns (1.001x, sp 0.6%)  x4 cx4:     5360.0ns (1.000x, sp 0.3%)
+== set kk: base pre-#884 51808a98; rounds 7; control (aws-lc-rs ed25519 verify, max/min across variants) per round: 1.016 1.001 1.014 1.028 1.002 1.019 1.004; clean rounds 6
+  mlkem768-keygen              #884 k1:    10084.6ns (0.784x, sp 2.0%)  pre-#884 k0:    12863.4ns (1.000x, sp 1.3%)
+  mlkem768-encaps              #884 k1:     3194.4ns (0.885x, sp 2.4%)  pre-#884 k0:     3610.1ns (1.000x, sp 2.5%)
+  mldsa65-sign                 #884 k1:    52053.7ns (0.840x, sp 4.3%)  pre-#884 k0:    62000.7ns (1.000x, sp 5.8%)
+  sha3-256/4096                #884 k1:     7211.6ns (1.002x, sp 2.4%)  pre-#884 k0:     7200.0ns (1.000x, sp 1.0%)
+  sha512/4096                  #884 k1:     5365.2ns (0.992x, sp 2.1%)  pre-#884 k0:     5408.8ns (1.000x, sp 2.1%)
+
