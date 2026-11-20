@@ -172,8 +172,8 @@ table.sv td:first-child{white-space:nowrap}
   <div class="bar"></div>
   <div class="inner">
     <div class="kicker">rind · speed versus guarantees · merged upstream 19 Nov 2026</div>
-    <h1>Fast is not the only goal: two merged PRs that name the price of their choice</h1>
-    <div class="sub">kixel-ai/rind#821 gives up speed on Intel's newest CPUs to keep a timing guarantee and a proof. kixel-ai/rind#793 goes the other way on small chips: speed, at the cost of a proof. Both say so in plain numbers.</div>
+    <h1>#821 trades speed for a timing guarantee; #793 trades a proof for speed</h1>
+    <div class="sub">kixel-ai/rind#821: SHA-512 on x86_64 stops using VSHA512 and takes 2.0× to 4.6× its old time on CPUs that have it. kixel-ai/rind#793: SHA-2 on 32-bit microcontrollers leaves formally verified code; SHA-512 takes 0.033× its old time in the fork's board run.</div>
   </div>
   <div class="meta">kixel-ai/rind#821 (fork mirror #131) · kixel-ai/rind#793 (port of fork #69)<br>Both merged 19 November 2026 · times are America/Los_Angeles (PST)</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/131">fork #131</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>Speed numbers are as stated in the merged PR bodies. The #821 table is the maintainer's run on one CPU.</span><span class="num"></span></div>
@@ -182,7 +182,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 2. INTEL LIST ============ -->
 <section class="slide" data-section="The rule">
   <div class="kicker">What constant time needs from the CPU · kixel-ai/rind#821</div>
-  <h2>Intel's list of fixed-timing instructions has the SHA-1 and SHA-256 ones, and none of the SHA-512 ones</h2>
+  <h2>Intel's fixed-timing list has the SHA-1 and SHA-256 instructions, and no VSHA512 instruction</h2>
   <div class="cols" style="margin-top:14px">
     <div>
       <div class="chart-title">Intel "Data Operand Independent Timing Instructions", page updated 2026-02-23</div>
@@ -193,10 +193,10 @@ table.sv td:first-child{white-space:nowrap}
         <tr class="hl"><td><code>VSHA512RNDS2</code>, <code>VSHA512MSG1</code>, <code>VSHA512MSG2</code></td><td><span class="tag drop">no</span></td></tr>
       </table>
     </div>
-    <div class="card"><h3>Why it matters</h3><ul class="b sm">
+    <div class="card"><h3>Effect on rind</h3><ul class="b sm">
       <li>rind ran the VSHA512 instructions on every x86_64 CPU with the SHA512 extension, from Arrow Lake and Lunar Lake on.</li>
-      <li>So HMAC keys and Ed25519 nonces went through instructions with no timing guarantee.</li>
-      <li><code>admin/ct-vartime</code>, the tool meant to catch that, accepted them.</li>
+      <li>HMAC keys and Ed25519 nonces went through instructions with no timing guarantee.</li>
+      <li><code>admin/ct-vartime</code> accepted them.</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/353">rind #353</a></span>kixel-ai/rind#821 merged body (Problem, Validation: Intel's list read live on 2026-11-18). Caused by kixel-ai/rind#353.</span><span class="num"></span></div>
@@ -205,7 +205,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 3. WHAT RIND DID ============ -->
 <section class="slide" data-section="The change">
   <div class="kicker">What rind did · kixel-ai/rind#821 · merged 19 Nov, 2:48 PM</div>
-  <h2>No VSHA512 on x86_64: those CPUs take OpenSSL's AVX2 routine, which already has rind's proof</h2>
+  <h2>x86_64 drops VSHA512 and uses OpenSSL's AVX2 routine, which has rind's HOL Light proof</h2>
   <div class="cols3" style="margin-top:14px">
     <div class="card fix"><div class="pn">code</div><ul class="b sm">
       <li>SHA-384, SHA-512 and SHA-512/256 use the AVX2 routine, as aws-lc does.</li>
@@ -247,7 +247,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 5. KYLE'S CPU ============ -->
 <section class="slide" data-section="275HX">
   <div class="kicker">On Kyle's Core Ultra 9 275HX · rind-results main</div>
-  <h2>Kyle's own CPU has a published "before" only; the "after" is pending a rerun at the merged commit</h2>
+  <h2>Core Ultra 9 275HX: "before" published, "after" pending a rerun at the merged commit</h2>
   <div class="cols" style="margin-top:12px">
     <div>
       <div class="chart-title">Before: rind <code>d6ca9a75</code>, 13 Nov, 3 runs</div>
@@ -259,19 +259,47 @@ table.sv td:first-child{white-space:nowrap}
         <tr class="hl"><td>After, merged #821</td><td class="n"><span class="tag pending">pending</span></td><td>rerun needed</td></tr>
       </table>
     </div>
-    <div class="card fix warnc"><div class="pn">which path ran here: not settled</div><ul class="b sm">
-      <li>Kyle's notes say this chip has no SHA512 extension, which would mean the guarantee path is the one measured here.</li>
-      <li>But that run's RESULTS.md lists <code>sha512</code> among the CPU features rind read, and #821 commit <code>a674bc6e</code> timed this CPU at 2.0× to 2.2× and 4.4× to 4.7× slower after the change. No raw log of that is in rind-results.</li>
-      <li>The rerun should save <code>/proc/cpuinfo</code> flags to settle it.</li>
+    <div class="card fix"><div class="pn">path measured: VSHA512</div><ul class="b sm">
+      <li>The chip has the SHA512 instructions (Kyle, 19 Nov). Oracle Linux does not list the flag.</li>
+      <li>The 13 Nov run used VSHA512. After #821 this chip runs the AVX2 routine.</li>
+      <li>Rerun at the merged commit: pending. CPU flags: next slide.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a></span>rind-results main: results/intel-core-ultra-9-275hx/d6ca9a75.../RESULTS.md (CPU features, sha512 rows) · kixel-ai/rind#821 commit a674bc6e message</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/commit/a674bc6e0cd1948c583f8283324802d1af7695f6">commit a674bc6e</a></span>rind-results main: results/intel-core-ultra-9-275hx/d6ca9a75.../RESULTS.md (sha512 rows) · Kyle's confirmation, 19 Nov 2026 11:20 PM PST</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 6. OTHER DIRECTION ============ -->
+<!-- ============ 6. THE OS CAN HIDE A CPU FEATURE ============ -->
+<section class="slide" data-section="275HX">
+  <div class="kicker">On Kyle's Alienware · Oracle Linux · read-only check, 19 Nov 2026</div>
+  <h2>Oracle Linux's /proc/cpuinfo does not list sha512 on this chip; CPUID detection finds it</h2>
+  <div class="cols" style="margin-top:12px">
+    <div>
+      <table class="t">
+        <tr><th style="width:42%">Check</th><th>What it shows</th></tr>
+        <tr><td>OS</td><td>Oracle Linux Server 10.2</td></tr>
+        <tr><td>Kernel</td><td><code>7.2.13-1.el10.elrepo.x86_64</code></td></tr>
+        <tr><td>CPU</td><td>Intel Core Ultra 9 275HX</td></tr>
+        <tr class="hl"><td><code>/proc/cpuinfo</code> flags</td><td><code>sha_ni</code> listed; <code>sha512</code> <b>not listed</b></td></tr>
+        <tr class="hl"><td>rind's runtime CPUID detection, 13 Nov run</td><td><code>sha512</code> found</td></tr>
+        <tr><td>#821 commit <code>a674bc6e</code> on this chip</td><td>2.0× to 2.2× (32 and 64 B) and 4.4× to 4.7× (from 1200 B) slower after the change</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="card"><h3>Evidence</h3><ul class="b sm">
+        <li>#821 changes only CPUs on the SHA512 path. Without it, both builds run AVX2 and nothing slows down.</li>
+        <li>This chip slowed by 2.0× to 4.7×, so it was on the SHA512 path.</li>
+        <li>Why the kernel omits the flag: not checked.</li>
+      </ul></div>
+      <div class="callout" style="margin-top:14px">Record both in every results run. Trust CPUID detection over <code>/proc/cpuinfo</code>.</div>
+    </div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/commit/a674bc6e0cd1948c583f8283324802d1af7695f6">commit a674bc6e</a></span>Read-only check on the Alienware, 19 Nov 2026 evening PST · rind-results main: results/intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md (CPU features rind reads) · kixel-ai/rind#821 commit a674bc6e message. The "after" rerun is still pending.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. OTHER DIRECTION ============ -->
 <section class="slide" data-section="Both ways">
   <div class="kicker">The same choice in the other direction · kixel-ai/rind#793</div>
-  <h2>Each PR gives something up, says what, and puts a number on it</h2>
+  <h2>What each PR gives up and gains</h2>
   <table class="t" style="margin-top:14px">
     <tr><th style="width:16%"></th><th style="width:42%">#821, SHA-512 on newer Intel</th><th>#793, SHA-2 on 32-bit microcontrollers</th></tr>
     <tr><td>Gives up</td><td>Speed: 2.0× to 4.6× the old time on CPUs with the SHA512 extension</td><td>The formal proof: SHA-256 on ESP-IDF Xtensa and SHA-512 on 32-bit microcontrollers</td></tr>
@@ -282,10 +310,10 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>kixel-ai/rind#821 and #793 merged bodies (Impact, Decisions, Follow-ups). #793's board numbers are from the fork's run, cited in its body.</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 7. TRIED AND DROPPED ============ -->
+<!-- ============ 8. TRIED AND DROPPED ============ -->
 <section class="slide" data-section="Tried">
-  <div class="kicker">What the fork tried, and one more guarantee</div>
-  <h2>Keeping VSHA512 for public inputs only was measured and dropped; a fork-safe self-test costs one run</h2>
+  <div class="kicker">Fork PRs, and #723</div>
+  <h2>Fork #136 kept VSHA512 for Ed25519 verify only; the gain was within noise and it was closed</h2>
   <div class="cols3" style="margin-top:14px">
     <div class="card"><h3>fork #131, merged on the fork</h3><ul class="b sm">
       <li>The fork's mirror of #821, with review fixes. Merged into fork main 19 Nov, 7:47 AM.</li>
@@ -303,13 +331,13 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/131">fork #131</a> · <a href="https://github.com/steelhead99x/rind/pull/136">fork #136</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a></span>kixel-ai/rind#821 merged body (Fork PRs) · kixel-ai/rind#723 merged body (Decisions)</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 8. GAPS AND SOURCES ============ -->
+<!-- ============ 9. GAPS AND SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Gaps, and sources</div>
-  <h2>What is missing before this can be a chart on Kyle's own hardware</h2>
+  <h2>Missing data</h2>
   <div class="cols c46" style="margin-top:12px">
     <div class="card fix warnc"><div class="pn">gaps</div><ul class="b sm">
-      <li>No "after" for #821 on the Core Ultra 9 275HX in rind-results; rerun at the merged commit with CPU flags saved.</li>
+      <li>No "after" for #821 on the Core Ultra 9 275HX in rind-results; rerun at the merged commit, saving both CPUID detection and <code>/proc/cpuinfo</code> flags.</li>
       <li>No data for CPUs without the extension beyond fork #136's percentages.</li>
       <li>No board run of the merged #793 head.</li>
     </ul></div>
@@ -318,6 +346,7 @@ table.sv td:first-child{white-space:nowrap}
       <tr><td>Intel list, change, price</td><td>kixel-ai/rind#821 merged body</td></tr>
       <tr><td>275HX before</td><td>rind-results results/intel-core-ultra-9-275hx/d6ca9a75.../RESULTS.md</td></tr>
       <tr><td>275HX after (ratios only)</td><td>#821 commit a674bc6e</td></tr>
+      <tr><td>275HX OS and flags</td><td>read-only check on the Alienware, 19 Nov</td></tr>
       <tr><td>Small chips</td><td>kixel-ai/rind#793 merged body</td></tr>
       <tr><td>Fork PRs</td><td>fork #131, #136, as described in #821</td></tr>
       <tr><td>DRBG self-test</td><td>kixel-ai/rind#723 merged body</td></tr>
