@@ -234,7 +234,7 @@ s=base("Microcontrollers",kicker="rind's time over the fastest other Rust librar
 for i,(name,sub,rows,gap) in enumerate([
  ("ESP32-S3","Xtensa LX7, 240 MHz, flash at 80 MHz, ESP-IDF",
   [["AES-128-GCM seal, 1350 B","1.71 ms","0.82× ring"],["P-256 ECDH","49.34 ms","0.59× RustCrypto"],["ML-KEM-768 decaps","5.20 ms","0.28× RustCrypto"],["QUIC header prot., AES-128","24.20 µs","0.65× ring"]],
-  "Gaps: SHA-512 about 33× ring and XChaCha 32 B 7.50×, both cache misses. 16 Nov: a fork fix cuts rind's SHA-512 time to 0.033× of before (not published yet)."),
+  "Gaps: SHA-512 about 33× ring and XChaCha 32 B 7.50×, both instruction-cache misses"),
  ("nRF52840 (Seeed T1000-E)","Cortex-M4F, 64 MHz, bare metal, no_std",
   [["AES-128-GCM seal, 1350 B","5.28 ms","1.03× RustCrypto"],["P-256 ECDH","73.81 ms","0.43× ring"],["ML-KEM-768 decaps","10.25 ms","0.46× libcrux"],["QUIC header prot., AES-128","74.63 µs","0.73× ring"]],
   "Gaps: SHA-256 16 KB 1.62× ring (assembly against portable Rust), ChaCha20-Poly1305 1350 B 1.78× ring")]):
@@ -245,7 +245,7 @@ for i,(name,sub,rows,gap) in enumerate([
     tb(s,x,4.75,5.7,0.8,gap,size=13,color=AMBER)
 rect(s,0.82,5.65,11.8,1.05,fill=PANEL)
 tb(s,1.05,5.72,11.4,0.95,[[("RP2040 (Cortex-M0+): ",{'bold':True,'color':TXT}),("every image now builds for thumbv6m-none-eabi (patches 0003 and 0005). Known-answer checks passed on a Pico on 2026-11-12. No timing results are published in this repo yet.",{})]],size=14,color=MUTED,anchor=MSO_ANCHOR.MIDDLE)
-notes(s,"Update 2026-11-17: the SHA-512 follow-up is steelhead99x/rind#69 (merged on the fork 2026-11-16 19:01 PST), board-run comment 6936378505: #69 head 504049d4 against upstream main 19f94a07, 3 runs per image, SHA-512 and SHA-512/256 0.0329x to 0.0333x of the old rind time at every size. That run is in a PR comment, not on rind-results main. Sources: results/RESULTS.md (ESP32-S3 headline table and Known gaps); results/nrf52840/RESULTS.md (headline and Known gaps); hosts/rp2040/NOTES.md and README intro (RP2040 status). ESP32-S3 SHA-512 is 32.56x to 32.96x ring; the xchacha 32 B gap is 1.10x RustCrypto with a 32 KB instruction cache.")
+notes(s,"Sources: results/RESULTS.md (ESP32-S3 headline table and Known gaps); results/nrf52840/RESULTS.md (headline and Known gaps); hosts/rp2040/NOTES.md and README intro (RP2040 status). ESP32-S3 SHA-512 is 32.56x to 32.96x ring; the xchacha 32 B gap is 1.10x RustCrypto with a 32 KB instruction cache.")
 
 # 10 Corrections
 s=base("Corrections along the way",num=10)
@@ -296,35 +296,5 @@ tb(s,7.3,2.15,5.5,4.6,[
  "Publish RP2040 timings.",
  "Add m1pro to bench-report's HOSTS so gaps.toml can list it."],size=16,color=MUTED,spacing=12)
 notes(s,"Sources: README.md 'Gaps on these hosts'; hosts/m1pro/NOTES.md; results/RESULTS.md and results/nrf52840/RESULTS.md Known gaps; README intro (32-bit-limb Poly1305); hosts/rp2040/NOTES.md.")
-
-# 13 Since this deck: Intel's timing list and SHA-512 (added 2026-11-17)
-s=base("Since this deck: SHA-512 and Intel's timing list",kicker="Intel's version of the DIT idea, and a change that trades speed for it",num=13)
-tb(s,0.82,1.75,6.4,4.9,[
- "Intel publishes a list of instructions whose timing does not depend on the data they process. It plays the same role as Arm's DIT list.",
- [("The gap: ",{'bold':True,'color':TXT}),("the SHA-512 instructions on Arrow Lake and later CPUs (VSHA512RNDS2, VSHA512MSG1, VSHA512MSG2) are not on that list. rind used them for SHA-384 and SHA-512, and so for HMAC keys, HKDF, and Ed25519 signing.",{})],
- [("The change: ",{'bold':True,'color':TXT}),("kixel-ai/rind#821 sends those CPUs to the AVX2 routine that already has a proof, and admin/ct-vartime now refuses vsha512 instructions on x86.",{})],
- [("Status: ",{'bold':True,'color':TXT}),("open upstream, ready for review.",{})]],size=16,color=MUTED,spacing=14)
-for i,(big,lab,col) in enumerate([("2.0–2.2×","SHA-512 time at 32 and 64 B, against the old path",AMBER),("4.4–4.7×","SHA-512 time from 1200 B up, against the old path",AMBER),("0.81–0.86×","of aws-lc-rs's time, still, at every size",GREEN)]):
-    y=1.7+i*1.62
-    rect(s,7.7,y,5.0,1.42,fill=PANEL)
-    tb(s,7.95,y+0.12,4.6,0.7,big,size=34,bold=True,color=col)
-    tb(s,7.95,y+0.85,4.6,0.5,lab,size=14,color=MUTED)
-tb(s,7.7,6.55,5.0,0.35,"Core Ultra 9 275HX, five alternating rounds, one P-core",size=11,color=MUTED)
-notes(s,"Sources: kixel-ai/rind#821 (head 1b277b04, opened by steelhead99x 2026-11-16 20:17 PST); its commits 628fdb69 (AVX2 routine where the CPU has SHA512), 4342478f (ct-vartime refuses VSHA512), and a674bc6e (the Arrow Lake measurement: five alternating rounds of upstream main and the branch on a Core Ultra 9 275HX pinned to one P-core; SHA-512 takes 2.0 to 2.2x its former time at 32 and 64 B and 4.4 to 4.7x from 1200 B, and stays 0.81 to 0.86x aws-lc-rs's at every size); quest/m2/confidence/intel-vsha512.md on kixel-ai/rind main (Intel's list updated 2026-02-23). Checked 2026-11-17.")
-
-# 14 Newer sets on main (added 2026-11-17)
-s=base("Newer sets on main since these four hosts",kicker="Each one is its own publish, at its own rind commit. Counts are from each set's RESULTS.md.",num=14)
-rows=[["Set on main","Hardware","rind commit","Runs","rind fastest"],
- ["jetson-orin-nano","NVIDIA Jetson Orin Nano, aarch64","98568332","3","65 of 68"],
- ["intel-core-ultra-9-275hx","Intel Core Ultra 9 275HX","d6ca9a75","3","55 of 68"],
- ["pi5-nofan-1p5ghz","Raspberry Pi 5, no fan, held at 1.5 GHz","a6577cb4","5","45 of 68"],
- ["pi-host-a-bench","Raspberry Pi 2, Cortex-A7 at 900 MHz","a6577cb4","5","38 of 68"],
- ["esp32s3 (d6ca9a75)","ESP32-S3 board, 12 images, comparable set","d6ca9a75","3 each","see RESULTS.md"],
- ["uno-r3","Arduino Uno R3, generic primitives only","c08c91ea","-","not the full crate"]]
-hl={(1,4):GREEN}
-table(s,0.82,1.75,11.7,rows,[2.9,4.0,1.6,0.9,2.3],rowh=0.5,size=14,hl=hl,right_from=3)
-tb(s,0.82,5.45,11.7,1.2,["\"rind fastest\" counts the operations rind shares with at least one other library. The commits and clocks differ, so these rows are not a ranking of hosts.",
- "The Pi 5 set runs at 1.5 GHz on purpose (no fan), so compare its ratios, not its times."],size=14,color=MUTED,spacing=8)
-notes(s,"Sources, all on rind-results main 88cbf85 (checked 2026-11-17): results/jetson-orin-nano/RESULTS.md (65 of 68, rind 98568332, 3 runs); results/intel-core-ultra-9-275hx/d6ca9a75.../RESULTS.md (55 of 68, 3 runs, PR #29); results/pi5-nofan-1p5ghz/a6577cb4.../RESULTS.md (45 of 68, five rounds at 1.5 GHz, PR #28); results/pi-host-a-bench/a6577cb4.../RESULTS.md (38 of 68, five rounds, PR #24); results/esp32s3/d6ca9a75.../RESULTS.md (36 of 36 runs: 12 images, 3 runs each; PR #17); results/uno-r3/RESULTS.md (generic primitives from c08c91ea, not the full rind crate, PR #25).")
 
 prs.save(str(ROOT / "rind-results-deck.pptx"))
