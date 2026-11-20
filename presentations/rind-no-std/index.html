@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building rind without std</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  STYLE: the CSS of presentations/rind-hardware-today (itself from rind-rp2040). SLIDES: one <section class="slide"> per slide.
+  Every number is typed into the slide with its source in the footer.
+-->
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+table.t.compact th,table.t.compact td{padding:4px 8px}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions (reused) */
+.flow text{font-family:var(--sans)}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .t1{font-size:15px;fill:var(--ink)}
+.flow .t2{font-size:12.5px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:12px;fill:var(--navy)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board.b2{grid-template-columns:1fr 1fr}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+/* RP2040 deck additions */
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+.err{background:var(--bad-bg);border-left:4px solid var(--bad);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px;color:var(--bad)}
+.cons{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.con{position:relative;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--bad);border-radius:0 0 10px 10px;padding:16px 14px 64px;min-height:330px}
+.con .ix{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.con .ck{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:12px}
+.con .cv{font-size:26px;font-weight:700;color:var(--navy);margin:4px 0 10px;white-space:nowrap}
+.con .cw{font-size:13.5px;line-height:1.45;color:var(--ink)}
+.con .cf{position:absolute;left:14px;right:14px;bottom:14px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--good-bg);border-radius:6px;padding:6px 8px;line-height:1.3}
+.card.fix{border-top:4px solid var(--accent)}
+.card.fix.warnc{border-top-color:#c9a227}
+.card .pn{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.card.warnc .pn{color:#8a6d0b}
+table.grid th.c,table.grid td.c{text-align:center}
+table.grid th span{font-size:10px;color:var(--mute);text-transform:none;letter-spacing:0}
+table.grid td{padding:5px 8px}
+table.grid td.r{font-size:12.5px;color:var(--ink2)}
+i.dot{display:inline-block;font-style:normal;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+i.dot.y{background:var(--good-bg);color:var(--accent)}
+i.dot.n{background:var(--bad-bg);color:var(--bad)}
+table.sv{font-size:12.5px}
+table.sv td.bad{color:var(--bad);font-weight:700}
+.timeline.t6{grid-template-columns:repeat(6,1fr)}
+.tl.done{border-top-color:var(--mute);background:#eef0f3}
+.pendbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:9px 14px;border-radius:0 8px 8px 0;font-size:14.5px;color:#5c4a08}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.sub2{font-size:11px;color:var(--mute)}
+.mut{color:var(--mute);font-style:italic}
+a{color:var(--accent2);text-decoration:none}
+table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
+/* no_std deck additions */
+.slide h2 code{font-size:.82em}
+.slide.title h1 code{font-size:.85em}
+table.t.nw td{white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · ecosystem bet · no_std</div>
+    <h1>Building rind without std: the quest, fork PR #84, and the boards behind it</h1>
+    <div class="sub">Why a <code>no_std</code> build is one of the four ecosystem bets, what uses <code>std</code> today, how steelhead99x/rind#84 builds the crate on <code>target_os = "none"</code>, which targets CI lints, what the microcontroller runs already show, and the check that hosted speed does not regress.</div>
+  </div>
+  <div class="meta">kixel-ai/rind · steelhead99x/rind · steelhead99x/rind-results · steelhead99x/rind-hardware<br>Status as of 16 November 2026, America/Los_Angeles (PST)</div>
+  <div class="foot"><span class="src">Upstream quest <code>quest/m2/adoption/no-std.md</code> (kixel-ai/rind main) · steelhead99x/rind#84, head <code>5821c3c5</code> · board material on rind-results main <code>88cbf85</code> and rind-hardware main <code>8dc9811</code>. Each slide names its files; the full list is on the last slide.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 2. WHY ============ -->
+<section class="slide" data-section="Why no_std">
+  <div class="kicker">Why no_std</div>
+  <h2>A crate that promises its users <code>no_std</code> cannot offer rind as a backend today</h2>
+  <p class="lede">Decided 2026-11-12 by the maintainer in a quest audit: a <code>no_std</code> build is one of the four ecosystem bets.</p>
+  <div class="cols">
+    <div class="card tall"><h3>The goal, from the quest</h3><ul class="b sm">
+      <li>The <code>rind</code> crate is <code>#![no_std]</code> with <code>alloc</code>.</li>
+      <li>CI builds it for a target that has no <code>std</code>.</li>
+      <li>Then an embedded or kernel project, and any crate that is itself <code>no_std</code>, can depend on it.</li>
+      <li>Nothing changes for a caller on a hosted target.</li>
+    </ul></div>
+    <div class="card tall"><h3>Who it is for, and what stays on std</h3><ul class="b sm">
+      <li>RustCrypto's crates and ring are <code>no_std</code>. A crate that promises <code>no_std</code> can pick them as a backend, but not rind, however the rest fits.</li>
+      <li>The adapters stay on <code>std</code>, because their upstreams' providers are.</li>
+      <li>Once CI builds a <code>no_std</code> target, the README's "Maturity and reach" bullet drops its <code>std</code> sentence.</li>
+      <li>Microcontrollers: the board runs on slide 8 already need <code>no_std</code>, and get it today from out-of-tree patches.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">kixel-ai/rind main: <code>quest/m2/adoption/no-std.md</code> (Goal, Plan) · board patches: rind-hardware <code>README.md</code>, <code>patches/</code></span><span class="num"></span></div>
+</section>
+
+<!-- ============ 3. BLOCKERS ============ -->
+<section class="slide" data-section="Blockers">
+  <div class="kicker">What blocks it today</div>
+  <h2>Five kinds of <code>std</code> use in the library, plus three build problems the PR found</h2>
+  <div class="cols c64" style="margin-top:14px">
+    <div>
+      <div class="chart-title">Where <code>rind</code> used <code>std</code> on main, 2026-11-12, outside tests (the quest's grep)</div>
+      <table class="t compact" style="font-size:13px">
+        <tr><th style="width:30%">Use</th><th>Where</th><th style="width:30%">Quest's recommendation</th></tr>
+        <tr><td>Run-time CPU feature detection</td><td><code>is_x86_feature_detected!</code> (<code>x86_64/cpu.rs:437</code>), <code>is_aarch64_feature_detected!</code> (<code>aarch64/cpu.rs:173</code>); <code>libc::getauxval</code> on arm needs no std</td><td>x86_64 reads CPUID via <code>core::arch</code>; aarch64/arm pick a tier from compile-time features</td></tr>
+        <tr><td><code>std::env::var</code></td><td>each backend's <code>test_toggle</code> (<code>RIND_CPU_DISABLE_&lt;id&gt;</code>)</td><td>keep under <code>cfg</code> for OS targets</td></tr>
+        <tr><td><code>OnceLock</code> ×3</td><td>which SHA routine a CPU runs (<code>x86_64/sha256_mux.rs:57</code> and siblings)</td><td>an atomic</td></tr>
+        <tr><td><code>thread_local!</code> ×3</td><td>constant-time guard count (<code>low/cpu.rs:94</code>), debug check (<code>low/entry.rs:7</code>), FIPS generator (<code>fips_rng.rs:33</code>)</td><td>one count without threads, or refuse to build the guard</td></tr>
+        <tr><td><code>Vec</code>, <code>Box</code>, <code>low/abi.rs</code></td><td>need only <code>alloc</code></td><td>import from <code>alloc</code></td></tr>
+      </table>
+    </div>
+    <div class="card"><h3>Also found by #84 (its Problem section)</h3><ul class="b sm">
+      <li>An M-profile ARM triple was treated as the armv7 assembly target.</li>
+      <li>A core without compare-and-swap cannot share the reuse cache: two uses could both write it.</li>
+      <li>aws-lc has no Xtensa target and does not build for <code>target_os = "none"</code>, so the bench crate cannot build there while aws-lc-rs is an unconditional dev-dependency.</li>
+      <li>The quest also says: no <code>std</code> feature. A feature a dependent must remember to turn off is how <code>no_std</code> support rots.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><code>quest/m2/adoption/no-std.md</code> (Plan; paths are under <code>rind/src/low/</code> except <code>fips_rng.rs</code>) · steelhead99x/rind#84 description, Problem</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 4. APPROACH ============ -->
+<section class="slide" data-section="Approach">
+  <div class="kicker">The approach in #84</div>
+  <h2>On <code>target_os = "none"</code> the crate is <code>no_std</code> on <code>alloc</code>; every hosted target is unchanged</h2>
+  <div class="cols3" style="margin-top:16px">
+    <div class="card fix"><div class="pn">rind/src/lib.rs</div><h3>One cfg, no feature</h3><ul class="b sm">
+      <li><code>#![cfg_attr(target_os = "none", no_std)]</code> and <code>extern crate alloc</code> there.</li>
+      <li>No <code>std</code> feature, as the quest recommends. UEFI and other <code>target_os</code> values are out of scope.</li>
+      <li>The program supplies a global allocator and a getrandom backend.</li>
+      <li><code>--cfg rind_fips</code> stops at a <code>compile_error</code>: the FIPS module needs std.</li>
+    </ul></div>
+    <div class="card fix"><div class="pn">rind/build.rs</div><h3>Backend choice</h3><ul class="b sm">
+      <li>Bare-metal aarch64 and 32-bit ARM, and every M-profile triple, get the portable backend.</li>
+      <li>Reason: that assembly does unaligned loads and stores (AES-GCM's <code>ldp</code>), and <code>aarch64-unknown-none</code> and <code>armv7a-none-eabi</code> are strict-align targets.</li>
+      <li>x86_64 keeps its backend only when the target enables SSE2 (slide 5).</li>
+    </ul></div>
+    <div class="card fix"><div class="pn">low/cpu.rs · low/entry.rs · reuse cache</div><h3>Shared state</h3><ul class="b sm">
+      <li>The DIT guard and the debug <code>Entry</code> count stay thread-local when hosted, and do nothing on bare metal.</li>
+      <li>Sound there because the only bare-metal backends, portable and x86_64, set no CPU state.</li>
+      <li>Without <code>target_has_atomic = "8"</code> the reuse cache keeps nothing; each use builds the value.</li>
+      <li>SHA-1/256/512 pick their path per call instead of via <code>OnceLock</code>.</li>
+    </ul></div>
+  </div>
+  <div class="callout" style="margin-top:16px">No public API or wire change. MD5's empty <code>asm!</code> barrier is allow-listed to architectures whose <code>reg</code> operand is stable; Xtensa, wasm, Miri and the rest use <code>black_box</code>.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#84 description, Approach and Impact · diff of <code>rind/src/lib.rs</code>, <code>rind/build.rs</code>, <code>rind/src/low/generic/reuse_cache_without_cas.rs</code> at <code>5821c3c5</code></span><span class="num"></span></div>
+</section>
+
+<!-- ============ 5. X86_64 ============ -->
+<section class="slide" data-section="x86_64 bare metal">
+  <div class="kicker">x86_64-unknown-none</div>
+  <h2>Bare-metal x86_64 is the one target that keeps assembly, and only when the caller opts in</h2>
+  <div class="cols" style="margin-top:16px">
+    <div class="card tall"><h3>Default build: portable</h3><ul class="b sm">
+      <li><code>x86_64-unknown-none</code> is soft-float and does not enable SSE2, so it stays on the portable backend.</li>
+      <li>It must set <code>--cfg curve25519_dalek_backend="serial"</code> or <code>"fiat"</code>: dalek's default <code>simd</code> backend does not compile there. A <code>compile_error</code> says so.</li>
+      <li>The portable backend leaves out <code>stmxcsr</code>, which raises <code>#UD</code> when <code>CR4.OSFXSR</code> is clear. The lint disassembles the rlib and fails on <code>stmxcsr</code>.</li>
+    </ul></div>
+    <div class="card tall"><h3>Opt-in: <code>-C target-feature=+sse,+sse2,-soft-float</code></h3><ul class="b sm">
+      <li>Selects the x86_64 backend, which reads CPUID.</li>
+      <li>AVX, AVX2, SHA512, VAES, VPCLMULQDQ and AVX-512 run only when those target features are enabled. XCR0 is not treated as proof that an interrupt saves YMM or ZMM.</li>
+      <li>SSE2 alone leaves soft-float set and LLVM aborts. Clearing soft-float this way is slated to become an error (<a href="https://github.com/rust-lang/rust/issues/116344">rust-lang/rust#116344</a>); the workaround is in <code>UPSTREAM.md</code>.</li>
+    </ul></div>
+  </div>
+  <div class="callout warn" style="margin-top:16px"><b>Differs from the quest.</b> The quest says bare-metal x86_64 checks OSXSAVE and XCR0 before it picks an AVX tier. #84 uses compile-time target features instead, and lists this as an open decision for the maintainer.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#84 description, Approach, Alternatives and Follow-ups · <code>PLATFORMS.md</code> and <code>UPSTREAM.md</code> in the #84 diff · <code>quest/m2/adoption/no-std.md</code></span><span class="num"></span></div>
+</section>
+
+<!-- ============ 6. SPLIT ============ -->
+<section class="slide" data-section="How #84 is split">
+  <div class="kicker">What changes, and how it is split</div>
+  <h2>59 files, +1,450 / −172 lines against the merge base; most of the size is x86_64 CPUID and the lint script</h2>
+  <div class="cols c46" style="margin-top:14px">
+    <div>
+      <div class="chart-title">Diff of head <code>5821c3c5</code> against merge base <code>19f94a07</code></div>
+      <table class="t compact" style="font-size:13px">
+        <tr><th>Area</th><th class="n">Files</th><th class="n">+</th><th class="n">−</th></tr>
+        <tr><td>Library: x86_64 backend (<code>cpu.rs</code> +534)</td><td class="n">4</td><td class="n">540</td><td class="n">18</td></tr>
+        <tr><td>Library: everything else</td><td class="n">19</td><td class="n">370</td><td class="n">55</td></tr>
+        <tr><td>Bench crate: aws-lc-rs rows gated</td><td class="n">26</td><td class="n">242</td><td class="n">64</td></tr>
+        <tr><td>Lint and CI (<code>sh/bare-metal.sh</code> +165)</td><td class="n">5</td><td class="n">225</td><td class="n">34</td></tr>
+        <tr><td>Docs and quests</td><td class="n">5</td><td class="n">73</td><td class="n">1</td></tr>
+      </table>
+      <p class="small">GitHub lists 131 files because the branch carries merges and is marked conflicting with fork main; the merge-base diff above is the PR's own change.</p>
+    </div>
+    <div>
+      <div class="chart-title">The PR's own commits (merges left out)</div>
+      <table class="t compact" style="font-size:12.5px">
+        <tr><th style="width:17%">Commit</th><th>Subject</th></tr>
+        <tr><td><code>397231ad</code></td><td>fix(md5): keep the reassociation barrier where reg asm is unstable</td></tr>
+        <tr><td><code>ce6f1462</code></td><td>fix(build): portable backend for bare-metal x86_64, aarch64, M-profile</td></tr>
+        <tr><td><code>f82b4b42</code></td><td>fix: build the library without std on bare metal</td></tr>
+        <tr><td><code>ead35b83</code></td><td>fix(reuse_cache): keep nothing where compare-and-swap is missing</td></tr>
+        <tr><td><code>54df92b7</code></td><td>ci: lint rind without std on bare metal</td></tr>
+        <tr><td><code>c0bb1464</code> <code>4b4476e4</code></td><td>fix(bench): leave aws-lc-rs rows out on Xtensa and bare metal</td></tr>
+        <tr><td><code>42eaa9d8</code> … <code>29539100</code></td><td>review fixes: arm assembly, backend selection, AVX gated on target features, no-SSE2 build, dalek opt-in</td></tr>
+        <tr><td><code>90277a58</code> <code>40bf6b9e</code></td><td>fix(no_std): import <code>Box</code> in ML-KEM, <code>Vec</code> in FROST</td></tr>
+        <tr><td><code>975a1b82</code></td><td>fix(no_std): keep bare-metal aarch64 and arm on the portable backend</td></tr>
+        <tr><td><code>5821c3c5</code></td><td>docs(quest): follow-up for the reuse cache without compare-and-swap</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span class="src"><code>gh pr view 84 -R steelhead99x/rind</code> (commits, files, mergeable state, checked 16 Nov 2026 evening PST) · <code>git diff --numstat 19f94a07 5821c3c5</code> in steelhead99x/rind</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. CI ============ -->
+<section class="slide" data-section="CI targets">
+  <div class="kicker">The CI targets</div>
+  <h2>The quest asks for one bare-metal target per assembly architecture; #84 lints eight, in debug and release</h2>
+  <div class="cols c64" style="margin-top:12px">
+    <table class="t compact" style="font-size:13px">
+      <tr><th>Target</th><th>Backend on bare metal</th><th>Reuse cache</th><th>Board or note</th></tr>
+      <tr class="hl"><td><code>x86_64-unknown-none</code></td><td>portable; x86_64 with SSE2 opt-in (also built, so its <code>global_asm</code> assembles)</td><td>kept</td><td>named in the quest</td></tr>
+      <tr class="hl"><td><code>aarch64-unknown-none</code></td><td>portable (strict-align)</td><td>kept</td><td>named in the quest</td></tr>
+      <tr class="hl"><td><code>armv7a-none-eabi</code></td><td>portable (strict-align)</td><td>kept</td><td>named in the quest</td></tr>
+      <tr><td><code>aarch64-unknown-none-softfloat</code></td><td>portable (no NEON)</td><td>kept</td><td></td></tr>
+      <tr><td><code>armv7r-none-eabihf</code></td><td>portable</td><td>kept</td><td></td></tr>
+      <tr><td><code>thumbv7em-none-eabihf</code></td><td>portable</td><td>kept</td><td>nRF52840</td></tr>
+      <tr><td><code>thumbv6m-none-eabi</code></td><td>portable; no CAS</td><td><b>keeps nothing</b></td><td>RP2040</td></tr>
+      <tr><td><code>riscv32imc-unknown-none-elf</code></td><td>portable; no CAS</td><td><b>keeps nothing</b></td><td>ESP32-C3</td></tr>
+    </table>
+    <div class="card"><h3>What <code>sh/bare-metal.sh</code> checks</h3><ul class="b sm">
+      <li><code>cargo clippy -p rind --lib -D warnings</code> per target, dev and release; getrandom's custom backend stands in.</li>
+      <li>A build of <code>x86_64-unknown-none</code> with SSE2.</li>
+      <li>The same target without SSE2 and with dalek <code>serial</code>; its rlib is disassembled and rejected if it emits <code>stmxcsr</code>.</li>
+      <li>The bench crate has no aws-lc dependency for <code>thumbv7em-none-eabihf</code>.</li>
+      <li>Runs as <code>just bare-metal</code> and in <code>just check</code>'s cross module when a change reaches x86_64, aarch64, arm or portable.</li>
+    </ul></div>
+  </div>
+  <div class="pendbar" style="margin-top:14px">Lint and build only: nothing links a program, runs a test, or checks constant time on these targets.</div>
+  <div class="foot"><span class="src"><code>sh/bare-metal.sh</code>, <code>sh/dispatch.sh</code>, <code>justfile</code>, <code>flake.nix</code>, <code>PLATFORMS.md</code> at #84 head <code>5821c3c5</code> · <code>quest/m2/adoption/no-std.md</code></span><span class="num"></span></div>
+</section>
+
+<!-- ============ 8. BOARDS ============ -->
+<section class="slide" data-section="Boards">
+  <div class="kicker">The boards that prove it</div>
+  <h2>rind's own benches already run on bare-metal boards, built with out-of-tree no_std patches</h2>
+  <table class="t compact" style="margin-top:12px;font-size:12.5px">
+    <tr><th style="width:17%">Board</th><th style="width:15%">Core</th><th style="width:20%">Target · OS</th><th style="width:20%">rind and patches</th><th>Status on main</th></tr>
+    <tr><td>ESP32-S3 (XIAO)</td><td>Xtensa LX7, 240 MHz</td><td><code>xtensa-esp32s3-espidf</code> · ESP-IDF v5.5.1 (has std)</td><td>upstream <code>d6ca9a75</code> + 0001–0005</td><td><span class="tag ok">published</span> 36 of 36 runs. Needs only the MD5 barrier from the library</td></tr>
+    <tr><td>nRF52840 (T1000-E)</td><td>Cortex-M4F, 64 MHz</td><td><code>thumbv7em-none-eabihf</code> · none</td><td><code>98568332</code> + 0001–0004</td><td><span class="tag ok">published</span> 36 of 36 runs, bare metal, no_std</td></tr>
+    <tr><td>EFR32MG24 (XIAO MG24)</td><td>Cortex-M33, 78 MHz</td><td><code>thumbv8m.main-none-eabihf</code> · none</td><td><code>98568332</code> + 0001–0005</td><td><span class="tag ok">published</span> 60 of 60 runs, bare metal, no_std</td></tr>
+    <tr><td>RP2040 (Pico)</td><td>Cortex-M0+, 125 MHz, no CAS</td><td><code>thumbv6m-none-eabi</code> · none</td><td><code>98568332</code> + 0001–0005</td><td><span class="tag pending">partial</span> all 12 images build; known-answer checks passed on a Pico 2026-11-12; no <code>results/rp2040/</code> timing tree yet</td></tr>
+    <tr><td>Arduino Uno R3</td><td>ATmega328P, 16 MHz</td><td><code>avr-none</code> · none</td><td>portable primitives from <code>c08c91ea</code>, not the crate</td><td><span class="tag split">side bench</span> AVR is out of scope in the target survey (8-bit, 2 KB SRAM)</td></tr>
+    <tr><td>Raspberry Pi 2B</td><td>Cortex-A7, 900 MHz</td><td><code>armv7-unknown-linux-gnueabihf</code> · Linux</td><td>kixel-ai/rind <code>a6577cb4</code></td><td><span class="tag ok">published</span> hosted; rind's NEON path. Its bare-metal sibling <code>armv7a-none-eabi</code> stays portable under #84</td></tr>
+  </table>
+  <div class="callout" style="margin-top:14px">Why it matters: every bare-metal set above exists only because base patches 0003 (no_std on <code>target_os = "none"</code>) and, on the RP2040, 0005 (reuse cache without CAS) are applied on top of upstream. #84 is the in-tree version of that work.</div>
+  <div class="foot"><span class="src">rind-results main: <code>results/esp32s3/d6ca9a75…/RESULTS.md</code>, <code>results/nrf52840/RESULTS.md</code>, <code>results/efr32mg24/RESULTS.md</code>, <code>hosts/rp2040/NOTES.md</code>, <code>results/uno-r3/README.md</code>, <code>results/pi-host-a-bench/a6577cb4…/RESULTS.md</code>, <code>baremetal/mg24/README.md</code>, <code>baremetal/rp2040/TARGET-SURVEY.md</code> · rind-hardware <code>README.md</code></span><span class="num"></span></div>
+</section>
+
+<!-- ============ 9. PATCHES VS 84 ============ -->
+<section class="slide" data-section="Patches and #84">
+  <div class="kicker">From board patches to #84</div>
+  <h2>#84 covers the same ground as the board patches, but drops their single-context assumption</h2>
+  <table class="t compact" style="margin-top:12px;font-size:13px">
+    <tr><th style="width:20%">Topic</th><th style="width:40%">rind-hardware base patches</th><th>#84</th></tr>
+    <tr><td>MD5 barrier</td><td>0001: <code>black_box</code> on Xtensa</td><td>same, as an allow-list of architectures with a stable <code>reg</code> operand</td></tr>
+    <tr><td>Bench rows</td><td>0002, 0004: aws-lc-rs rows gated on Xtensa and <code>target_os = "none"</code></td><td>same gate; aws-lc deps also moved out of the bench crate's manifest there</td></tr>
+    <tr><td>no_std, backend</td><td>0003: <code>no_std</code> on <code>target_os = "none"</code>; M-profile gets portable</td><td>same, plus portable for bare-metal aarch64 and A/R-profile arm, and x86_64 rules</td></tr>
+    <tr><td>DIT guard</td><td>0003: one static count; "a bare-metal program calls rind from one context"</td><td>does nothing on bare metal; "nothing in rind assumes one execution context"</td></tr>
+    <tr class="hl"><td>Reuse cache, no CAS</td><td>0005: same state machine in a <code>Cell</code>; the value is kept</td><td>keeps nothing: two cores, or a core and an interrupt, could race; speed only</td></tr>
+  </table>
+  <div class="cols" style="margin-top:14px">
+    <div class="callout">An earlier RP2040 lane tried a <code>std</code> / <code>alloc</code> feature split and took upstream's thumbv6m build from 1,739 errors to 0. #84 follows the quest instead: no feature, <code>cfg</code> on <code>target_os</code>.</div>
+    <div class="callout warn">The RP2040 images were built with 0005, which keeps the cache. Under #84, each ECDSA and ML-DSA verify on thumbv6m rebuilds its tables, so those images do not measure #84's code path for repeated verifies.</div>
+  </div>
+  <div class="foot"><span class="src">rind-hardware <code>patches/0001</code>–<code>0005</code> commit messages · #84 diff (<code>lib.rs</code>, <code>reuse_cache_without_cas.rs</code>) · <code>presentations/rind-rp2040/</code> slide 15 · #84's <code>quest/m2/no-cas-reuse-cache.md</code></span><span class="num"></span></div>
+</section>
+
+<!-- ============ 10. SPEED ============ -->
+<section class="slide" data-section="Hosted speed">
+  <div class="kicker">The guard on hosted speed</div>
+  <h2>The quest's speed bar: removing a <code>std</code> path must not slow a hosted target; #84 measured rind within about 1.5%</h2>
+  <div class="cols" style="margin-top:14px;grid-template-columns:1.45fr 1fr;gap:28px">
+    <div>
+      <div class="chart-title">Median of five rounds, ns per call (range); fork main <code>f6d54b18</code> vs branch <code>ea548396</code></div>
+      <table class="t nw" style="font-size:13px">
+        <tr><th>Row</th><th class="n">main</th><th class="n">#84</th><th class="n">change</th></tr>
+        <tr class="hl"><td>sha256 / rind / 64 B</td><td class="n">87.9 (87.6–96.4)</td><td class="n">88.9 (87.9–92.2)</td><td class="n">+1.1%</td></tr>
+        <tr><td>sha256 / aws-lc-rs / 64 B</td><td class="n">149.9 (147.7–155.9)</td><td class="n">152.4 (151.2–172.2)</td><td class="n">+1.7%</td></tr>
+        <tr class="hl"><td>aes128-gcm / rind / quic-128B</td><td class="n">79.4 (78.5–84.3)</td><td class="n">80.6 (78.3–83.1)</td><td class="n">+1.5%</td></tr>
+        <tr><td>aes128-gcm / aws-lc-rs / quic-128B</td><td class="n">150.7 (147.6–226.4)</td><td class="n">144.3 (142.2–152.6)</td><td class="n">−4.2%</td></tr>
+      </table>
+      <p class="small">Change column computed here from the medians. rind ÷ aws-lc-rs: SHA-256 64 B 0.586 → 0.583; AES-GCM 128 B 0.527 → 0.559, mostly from aws-lc-rs's row moving. In both rind rows the ranges before and after overlap.</p>
+    </div>
+    <div class="card"><h3>How it was run, and its limits</h3><ul class="b sm">
+      <li>Ryzen 5 7535HS host, which the PR calls not quiet; criterion, 3 s measurement, pinned to core 2, five alternating rounds.</li>
+      <li>The table ran at <code>ea548396</code>. The per-call SHA path pick (no <code>OnceLock</code>) came after <code>e93a3c1a</code> and was measured on its own: a 2-core cloud VM (SHA-NI, AVX2), six rows, −3.3% to +3.1%, inside each run's spread. That test has no aws-lc-rs rows.</li>
+      <li>The PR asks for a quiet rerun on a dedicated host.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><code>quest/m2/adoption/no-std.md</code> (last recommendation) · steelhead99x/rind#84 description, Benchmark and Follow-ups · commit list from <code>gh pr view 84</code></span><span class="num"></span></div>
+</section>
+
+<!-- ============ 11. NEXT ============ -->
+<section class="slide" data-section="Open questions">
+  <div class="kicker">Open questions and next steps</div>
+  <h2>One decision for the maintainer, a no-CAS cache to design, and the upstream port</h2>
+  <div class="cols" style="margin-top:16px">
+    <div class="card tall"><h3>Open</h3><ul class="b sm">
+      <li><b>AVX tier on bare-metal x86_64:</b> OSXSAVE/XCR0 as the quest says, or compile-time target features as #84 does.</li>
+      <li><b>Reuse cache without CAS</b> (<code>quest/m2/no-cas-reuse-cache.md</code>): atomic words plus a ready flag, returned by copy; whether by-copy <code>get_or_build</code> applies on every target; whether ML-DSA's boxed matrix may leak one build per race.</li>
+      <li><b>No assembly on bare-metal aarch64 and arm:</b> keeping it would need every kernel's loads audited for strict alignment.</li>
+      <li><b><code>-soft-float</code></b> is slated to become a hard error (rust-lang/rust#116344).</li>
+    </ul></div>
+    <div class="card tall"><h3>Next</h3><ul class="b sm">
+      <li>Resolve the conflicts with fork main; GitHub marks #84 conflicting.</li>
+      <li>Quiet rerun of the SHA-256 64 B and AES-GCM 128 B rows against aws-lc-rs on a dedicated host, at the current head: the per-call path pick has no aws-lc-rs comparison yet.</li>
+      <li>On port: delete the upstream quest and the README's <code>std</code> sentence; reconcile with kixel-ai/rind#696, which also removes the runtime CPU check.</li>
+      <li>#85 (ESP32 Xtensa lint) is stacked on #84.</li>
+      <li>Board timing on #84's code path; the RP2040 still has no published timing tree. <code>thumbv8m.main</code> (MG24) is not in the lint list.</li>
+    </ul></div>
+  </div>
+  <div class="pendbar" style="margin-top:16px">Not run for #84: <code>just ci</code> (needs the nix toolchain) and anything on bare-metal hardware.</div>
+  <div class="foot"><span class="src">steelhead99x/rind#84 description, Alternatives, Follow-ups and Validation · #84's <code>quest/m2/no-cas-reuse-cache.md</code> · <code>sh/bare-metal.sh</code> · <code>hosts/rp2040/NOTES.md</code> · steelhead99x/rind#85</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 12. SOURCES ============ -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Sources</div>
+  <h2>Every figure comes from the upstream quest, fork PR #84, or a file on rind-results or rind-hardware main</h2>
+  <table class="t" style="margin-top:14px;font-size:13px">
+    <tr><th style="width:22%">Topic</th><th>Where</th></tr>
+    <tr><td>Goal, plan, speed bar</td><td><a href="https://github.com/kixel-ai/rind/blob/main/quest/m2/adoption/no-std.md">kixel-ai/rind <code>quest/m2/adoption/no-std.md</code></a> (main)</td></tr>
+    <tr><td>The change</td><td><a href="https://github.com/steelhead99x/rind/pull/84">steelhead99x/rind#84</a>, branch <code>cursor/no-std-bare-metal-336d</code>, head <code>5821c3c5</code>, merge base <code>19f94a07</code>: description, commits, diff</td></tr>
+    <tr><td>Lint targets</td><td>#84: <code>sh/bare-metal.sh</code>, <code>sh/dispatch.sh</code>, <code>justfile</code>, <code>flake.nix</code>, <code>PLATFORMS.md</code>, <code>UPSTREAM.md</code></td></tr>
+    <tr><td>Follow-up quests</td><td>#84: <code>quest/m2/no-cas-reuse-cache.md</code>, <code>quest/m2/84-bare-metal-no-std.md</code> · <a href="https://github.com/steelhead99x/rind/pull/85">steelhead99x/rind#85</a></td></tr>
+    <tr><td>Board results</td><td>rind-results main <code>88cbf85</code>: <code>results/esp32s3/d6ca9a75…/</code>, <code>results/nrf52840/</code>, <code>results/efr32mg24/</code>, <code>results/uno-r3/</code>, <code>results/pi-host-a-bench/a6577cb4…/</code></td></tr>
+    <tr><td>RP2040, other chips</td><td><code>hosts/rp2040/NOTES.md</code>, <code>baremetal/rp2040/TARGET-SURVEY.md</code>, <code>baremetal/mg24/README.md</code>, <a href="../rind-rp2040/">presentations/rind-rp2040</a> slide 15</td></tr>
+    <tr><td>Board patches</td><td><a href="https://github.com/steelhead99x/rind-hardware">steelhead99x/rind-hardware</a> main <code>8dc9811</code>: <code>README.md</code>, <code>patches/0001</code>–<code>0005</code>, <code>patches/README.md</code></td></tr>
+  </table>
+  <div class="foot"><span class="src">github.com/kixel-ai/rind · github.com/steelhead99x/rind · github.com/steelhead99x/rind-results · github.com/steelhead99x/rind-hardware</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>
