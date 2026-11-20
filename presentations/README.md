@@ -13,12 +13,16 @@ and board results.
 | [rind-rp2040](rind-rp2040/) | RP2040 port, SysTick fix, SHA-512/GHASH findings, no_std split | `docs/rp2040-deck-r3` |
 | [rind-systick](rind-systick/) | SysTick and timing across the benched hardware, including the 12 November harness fixes | `docs/systick-deck` |
 | [rind-aarch64-perf](rind-aarch64-perf/) | rind aarch64 work, phase by phase. Updated 17 Nov: every source it uses is now on main, and a new slide has the ML-DSA signing A/B on the Jetson Orin Nano | `docs/perf-phases-deck` |
-| [rind-spake2plus](rind-spake2plus/) | SPAKE2+ in rind (RFC 9383, Matter PASE) | `docs/spake2plus-deck` |
-| [rind-host-speed](rind-host-speed/) | Four speed changes in review: ML-DSA signing (x86_64 and Orin Nano), P-256 on x86_64, the portable big-number multiply, and generator-table alignment | `decks/refresh-2026-11-17` |
-| [rind-proofs](rind-proofs/) | Proofs: P-256 on x86_64 moves to a routine proven on every OS, the Lean fix (3,705 jobs), table-alignment proofs, and the SHA-512 and ESP32 SHA-256 trade-offs | `decks/refresh-2026-11-17` |
-| [rind-testing](rind-testing/) | Tests and checks: wasm and Ed25519 CCTV verdicts, adapter mutants, hash-to-curve and HPKE edge cases, constant-time checks, CI alerts, the fork sync, and the Xeon VM run | `decks/refresh-2026-11-17` |
+| [rind-spake2plus](rind-spake2plus/) | SPAKE2+ in rind (RFC 9383, Matter PASE). Updated 19 Nov: kixel-ai/rind#689 merged 13 Nov, and the four fixes split out of it (#722 to #725) | `docs/spake2plus-deck` |
+| [rind-host-speed](rind-host-speed/) | Four speed changes and where they stand (status refreshed 19 Nov): ML-DSA signing (x86_64 and Orin Nano), P-256 on x86_64, the portable big-number multiply, and generator-table alignment | `decks/refresh-2026-11-17` |
+| [rind-proofs](rind-proofs/) | Proofs (status refreshed 19 Nov: #821 and #793 merged, #790 closed): P-256 on x86_64 moves to a routine proven on every OS, the Lean fix (3,705 jobs), table-alignment proofs, and the SHA-512 and ESP32 SHA-256 trade-offs | `decks/refresh-2026-11-17` |
+| [rind-testing](rind-testing/) | Tests that catch more: seven test and CI PRs merged upstream 14 to 19 Nov (#797, #792, #791, #798, #796, #876, #725), with numbers refreshed from the merged bodies, plus constant-time checks, the fork sync and the Xeon VM run | `decks/refresh-2026-11-17` |
+| [rind-esp32-sha2-cache](rind-esp32-sha2-cache/) | kixel-ai/rind#793, merged 19 Nov: why SHA-512 was 33× slower than ring on the ESP32-S3, the rolled loops and IRAM SHA-256, the i686 check, and the IRAM, heap and proof costs. Board numbers are fork runs and labelled so | `decks/refresh-2026-11-17` |
+| [rind-speed-vs-guarantees](rind-speed-vs-guarantees/) | kixel-ai/rind#821 and #793, merged 19 Nov: SHA-512 on Intel gives up speed for a timing guarantee and a proof, small chips give up a proof for speed; the 275HX "after" is pending a rerun | `decks/refresh-2026-11-17` |
 
-Each deck's README lists its sources and anything left out for lack of data. Figures that live only in a
+Each deck's README lists its sources and anything left out for lack of data. Slides tied to a PR carry a
+muted `PRs:` footer line: `rind #N` is kixel-ai/rind, `fork #N` is steelhead99x/rind, and `rind-results #N` is
+this repository. Figures that live only in a
 PR body or PR comment are labelled that way on the slide.
 
 Older copies of the same decks on `docs/rp2040-deck`, `docs/rp2040-deck-r2`,

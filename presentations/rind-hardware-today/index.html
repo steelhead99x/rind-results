@@ -15,7 +15,7 @@
   --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
   --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
   --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
-  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --mono: "JetBrains Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
@@ -148,6 +148,11 @@ table.sv td:first-child{white-space:nowrap}
 .card.tall ul.b li{margin-bottom:12px}
 .cols3.fixes .card{min-height:330px}
 .cols3.fixes ul.b.sm{font-size:16px}
+/* PR links (2026-11-19): one muted "PRs:" line at the top of each footer */
+.slide .foot .src .prs{display:block;margin-bottom:3px;color:var(--ink2);font-weight:600}
+.slide .foot .src .prs a{color:var(--ink2);border-bottom:1px solid #c3ccd7;font-weight:600}
+.slide .foot .src .prs a:hover{color:var(--accent2)}
+.slide.title .foot .src .prs,.slide.title .foot .src .prs a{color:#c8d3e0;border-color:#3d5573}
 </style>
 </head>
 <body>
@@ -528,22 +533,22 @@ table.sv td:first-child{white-space:nowrap}
       </div>
     </div>
   </div>
-  <div class="foot"><span class="src">steelhead99x/rind#69 board-run comment 6936378505 (16 Nov 18:43 PST; ESP32-S3 rev v0.2, 80 MHz flash, 16 KB icache, 3 runs per image) and PR body (Impact, Follow-ups). Merged 16 Nov 19:01 PST. In a PR comment, not on rind-results main.</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>steelhead99x/rind#69 board-run comment 6936378505 (16 Nov 18:43 PST; ESP32-S3 rev v0.2, 80 MHz flash, 16 KB icache, 3 runs per image) and PR body (Impact, Follow-ups). Merged 16 Nov 19:01 PST. In a PR comment, not on rind-results main.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 17 NOV UPDATE 2 (added 2026-11-17) ============ -->
 <section class="slide" data-section="17 Nov update">
-  <div class="kicker">Update · 17 November 2026 · ESP32 and Xtensa</div>
-  <h2>Where the ESP32 work stands: merged on the fork, waiting for review upstream, and one claim left out</h2>
+  <div class="kicker">Update · 17 November 2026, status refreshed 19 November · ESP32 and Xtensa</div>
+  <h2>Where the ESP32 work stands: merged on the fork and upstream, and #94 now has raw board logs</h2>
   <table class="t" style="margin-top:14px;font-size:14px">
     <tr><th style="width:24%">Change</th><th>What it does</th><th style="width:15%">Status</th><th style="width:22%">Check</th></tr>
     <tr><td><a href="https://github.com/steelhead99x/rind/pull/69">steelhead99x/rind#69</a></td><td>IRAM SHA-256, rolled SHA-512 and HChaCha on 32-bit targets</td><td><span class="tag ok">merged on fork</span></td><td>Board run above; layout check <code>admin/esp32s3-sha256-layout</code> passed at <code>8060d5d9</code></td></tr>
-    <tr><td><a href="https://github.com/kixel-ai/rind/pull/793">kixel-ai/rind#793</a></td><td>The same change, ported upstream</td><td><span class="tag pending">ready for review</span></td><td>Board numbers come from the fork; not flashed again</td></tr>
-    <tr><td><a href="https://github.com/steelhead99x/rind/pull/85">steelhead99x/rind#85</a></td><td>CI lint for rind on the ESP32 Xtensa targets: three bare-metal targets plus ESP32-S3 ESP-IDF</td><td><span class="tag pending">open</span></td><td>At <code>a94155f4</code>, the <code>xtensa</code> and <code>layout</code> CI jobs pass</td></tr>
-    <tr class="hl"><td><a href="https://github.com/steelhead99x/rind/pull/94">steelhead99x/rind#94</a></td><td>Moves the rolled SHA-512 into IRAM too</td><td><span class="tag drop">not verified</span></td><td>Its 0.911× to 0.918× figures have no raw logs, so this deck does not use them</td></tr>
+    <tr><td><a href="https://github.com/kixel-ai/rind/pull/793">kixel-ai/rind#793</a></td><td>The same change, ported upstream</td><td><span class="tag ok">merged 19 Nov</span></td><td>Board numbers come from the fork; the merged head was not flashed. See the rind-esp32-sha2-cache deck</td></tr>
+    <tr><td><a href="https://github.com/steelhead99x/rind/pull/85">steelhead99x/rind#85</a></td><td>CI lint for rind on the ESP32 Xtensa targets: three bare-metal targets plus ESP32-S3 ESP-IDF</td><td><span class="tag drop">closed</span></td><td>At <code>a94155f4</code>, the <code>xtensa</code> and <code>layout</code> CI jobs passed</td></tr>
+    <tr class="hl"><td><a href="https://github.com/steelhead99x/rind/pull/94">steelhead99x/rind#94</a></td><td>Moves the rolled SHA-512 into IRAM too</td><td><span class="tag pending">open on fork</span></td><td>Raw logs landed on rind-results main on 19 Nov (rind-results #79): 0.911× to 0.918× of fork main</td></tr>
   </table>
-  <div class="callout" style="margin-top:26px;font-size:17px">Why it matters: SHA-512 and everything built on it (HMAC-SHA384, HKDF-SHA384/512) were about 30× slower than they needed to be on this board, because the code did not fit in the 16 KB cache. That gap is closed on the fork.</div>
-  <div class="foot"><span class="src">steelhead99x/rind#69 body (Validation, merged 16 Nov 19:01 PST) · kixel-ai/rind#793 body (Benchmarks, Checks) · steelhead99x/rind#85 comment 6964935963 · steelhead99x/rind#94 body · all checked 17 Nov 2026</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:26px;font-size:17px">Why it matters: SHA-512 and everything built on it (HMAC-SHA384, HKDF-SHA384/512) were about 30× slower than they needed to be on this board, because the code did not fit in the 16 KB cache. That gap is closed on the fork, and upstream merged the same change as kixel-ai/rind#793 on 19 Nov.</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/85">fork #85</a> · <a href="https://github.com/steelhead99x/rind/pull/94">fork #94</a> · <a href="https://github.com/steelhead99x/rind-results/pull/79">rind-results #79</a></span>steelhead99x/rind#69 body (Validation, merged 16 Nov 19:01 PST) · kixel-ai/rind#793 body (Benchmarks, Checks) · steelhead99x/rind#85 comment 6964935963 · steelhead99x/rind#94 body · results/diag/esp32s3-pr94-pr87-pr85-2026-11-18/ · status checked 19 Nov 2026</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 11. CAVEATS ============ -->

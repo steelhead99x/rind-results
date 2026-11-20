@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>rind host speed-ups in review, November 2026</title>
+<title>rind host speed-ups, November 2026</title>
 <!--
   Self-contained deck: no network access, no external libraries.
   STYLE: the CSS and navigation of presentations/rind-hardware-today (itself from rind-rp2040).
@@ -15,7 +15,7 @@
   --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
   --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
   --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
-  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --mono: "JetBrains Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
@@ -158,6 +158,11 @@ table.sv td:first-child{white-space:nowrap}
 .slide p.small{font-size:15px}
 .slide .chart-title{font-size:15px;margin-bottom:8px}
 .slide .callout{font-size:16.5px}
+/* PR links (2026-11-19): one muted "PRs:" line at the top of each footer */
+.slide .foot .src .prs{display:block;margin-bottom:3px;color:var(--ink2);font-weight:600}
+.slide .foot .src .prs a{color:var(--ink2);border-bottom:1px solid #c3ccd7;font-weight:600}
+.slide .foot .src .prs a:hover{color:var(--accent2)}
+.slide.title .foot .src .prs,.slide.title .foot .src .prs a{color:#c8d3e0;border-color:#3d5573}
 </style>
 </head>
 <body>
@@ -167,26 +172,26 @@ table.sv td:first-child{white-space:nowrap}
   <div class="bar"></div>
   <div class="inner">
     <div class="kicker">rind · speed on desktop, server and Arm hosts</div>
-    <h1>Four speed-ups in review: ML-DSA signing, P-256, big-number math, and table alignment</h1>
+    <h1>Four speed-ups and where they stand: ML-DSA signing, P-256, big-number math, and table alignment</h1>
     <div class="sub">What each change does in plain words, what it measured, on which machine, and what is still not measured. Every figure names the PR or file it comes from.</div>
   </div>
-  <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Checked 17 November 2026 · times are America/Los_Angeles (PST)</div>
-  <div class="foot"><span class="src">None of these numbers are a published rind-results set except the Pi 5 alignment A/B (hosts/pi5/ab-narrow-mul/). The rest come from PR bodies and PR comments, named on each slide.</span><span class="num"></span></div>
+  <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Checked 17 November 2026, PR status refreshed 19 November · times are America/Los_Angeles (PST)</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a> · <a href="https://github.com/kixel-ai/rind/pull/863">rind #863</a> · <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/780">rind #780</a> · <a href="https://github.com/kixel-ai/rind/pull/790">rind #790</a></span>None of these numbers are a published rind-results set except the Pi 5 alignment A/B (hosts/pi5/ab-narrow-mul/). The rest come from PR bodies and PR comments, named on each slide.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 2. SUMMARY ============ -->
 <section class="slide" data-section="Summary">
   <div class="kicker">In one table</div>
-  <h2>Three changes measured faster and one is neutral on its own; none of them has landed upstream yet</h2>
+  <h2>Three changes measured faster and one is neutral on its own; none of these four PRs merged upstream as sent</h2>
   <table class="t" style="margin-top:14px;font-size:14px">
     <tr><th style="width:21%">Change</th><th>What it measured</th><th style="width:17%">Where</th><th style="width:19%">Status</th></tr>
-    <tr class="hl"><td>ML-DSA signing: check the likeliest rejection first</td><td>4.9–8.3% faster on x86_64; 4.4–7.7% faster on a Jetson Orin Nano. Same signatures</td><td>x86_64 cloud VM; Orin Nano</td><td>fork #126 closed for <a href="https://github.com/kixel-ai/rind/pull/863">kixel-ai/rind#863</a> (same change, open)</td></tr>
+    <tr class="hl"><td>ML-DSA signing: check the likeliest rejection first</td><td>4.9–8.3% faster on x86_64; 4.4–7.7% faster on a Jetson Orin Nano. Same signatures</td><td>x86_64 cloud VM; Orin Nano</td><td>fork #126 closed; the maintainer's kixel-ai/rind#863 made the same change and merged 17 Nov</td></tr>
     <tr><td>P-256 on x86_64: s2n-bignum's verified point addition</td><td>ECDSA sign −5.5% in the cleaner run; about 16% on the multiply alone</td><td>2-vCPU Sapphire Rapids VM</td><td><a href="https://github.com/steelhead99x/rind/pull/79">steelhead99x/rind#79</a>, open; Lean CI passes</td></tr>
-    <tr><td>Big-number multiply: four products before the carry</td><td>16 to 128 words: 14–27% less time with 64-bit limbs; 2 words slightly slower</td><td>Core Ultra 9 275HX, one CPU</td><td><a href="https://github.com/kixel-ai/rind/pull/780">kixel-ai/rind#780</a>, ready for review</td></tr>
-    <tr><td>Generator tables on a 64-byte line</td><td>Neutral where the table was already aligned; removes a 2.5–3.1% P-256 loss where it was not</td><td>Raspberry Pi 5 at 1.5 GHz</td><td><a href="https://github.com/kixel-ai/rind/pull/790">kixel-ai/rind#790</a>, ready for review</td></tr>
+    <tr><td>Big-number multiply: four products before the carry</td><td>16 to 128 words: 14–27% less time with 64-bit limbs; 2 words slightly slower</td><td>Core Ultra 9 275HX, one CPU</td><td>kixel-ai/rind#780, closed 18 Nov, not merged</td></tr>
+    <tr><td>Generator tables on a 64-byte line</td><td>Neutral where the table was already aligned; removes a 2.5–3.1% P-256 loss where it was not</td><td>Raspberry Pi 5 at 1.5 GHz</td><td>kixel-ai/rind#790, closed 18 Nov, not merged</td></tr>
   </table>
-  <div class="callout" style="margin-top:16px">"Ready for review" means the PR is open on kixel-ai/rind and out of draft. Nothing here is merged upstream.</div>
-  <div class="foot"><span class="src">steelhead99x/rind#126 body and comment 6936142476 · steelhead99x/rind#79 body (Profile, Benchmarks, run 1) · kixel-ai/rind#780 body (fork #76 table) · hosts/pi5/ab-narrow-mul/table-align/README.md and series2-layout/ (rind-results main 88cbf85)</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:16px">Status read 19 Nov 2026. #863 is the maintainer's own PR, not this fork's; the measurements here are the fork's. #780 and #790 were closed without a merge on 18 Nov at 10:07 PM PST.</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a> · <a href="https://github.com/kixel-ai/rind/pull/863">rind #863</a> · <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/780">rind #780</a> · <a href="https://github.com/kixel-ai/rind/pull/790">rind #790</a></span>steelhead99x/rind#126 body and comment 6936142476 · steelhead99x/rind#79 body (Profile, Benchmarks, run 1) · kixel-ai/rind#780 body (fork #76 table) · hosts/pi5/ab-narrow-mul/table-align/README.md and series2-layout/ (rind-results main 88cbf85)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 3. ML-DSA: WHAT AND X86 ============ -->
@@ -213,7 +218,7 @@ table.sv td:first-child{white-space:nowrap}
       <p class="small">Fixed randomness means both builds run the same tries, so rejection-count luck drops out. The criterion bench rows, with fresh randomness, agree for 65 and 87 and are inconclusive for 44.</p>
     </div>
   </div>
-  <div class="foot"><span class="src">steelhead99x/rind#126 body (Approach, Validation: paired fixed-randomness timing on a 2-vCPU shared cloud host, differential check, rind-bench mldsa rows)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a></span>steelhead99x/rind#126 body (Approach, Validation: paired fixed-randomness timing on a 2-vCPU shared cloud host, differential check, rind-bench mldsa rows)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 4. ML-DSA: ORIN ============ -->
@@ -233,12 +238,12 @@ table.sv td:first-child{white-space:nowrap}
       <li>aws-lc-rs, libcrux and RustCrypto in the same runs moved by about 1% at most, so the board was steady.</li>
     </ul></div>
     <div class="card"><h3>Where it is</h3><ul class="b sm">
-      <li>Fork PR #126 closed on 17 Nov in favor of kixel-ai/rind#863, the maintainer's PR with the same reorder. #863 is open.</li>
+      <li>Fork PR #126 closed on 17 Nov in favor of kixel-ai/rind#863, the maintainer's PR with the same reorder, merged 17 Nov at 9:40 PM PST.</li>
       <li>Signature equality was checked on x86_64, not again on the board.</li>
       <li>This A/B lives in a PR comment, not in rind-results.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">steelhead99x/rind#126 comment 6936142476 (16 Nov 18:29 PST) and closing comment 6963461185 (17 Nov) · kixel-ai/rind#863 (open, checked 17 Nov)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a> · <a href="https://github.com/kixel-ai/rind/pull/863">rind #863</a></span>steelhead99x/rind#126 comment 6936142476 (16 Nov 18:29 PST) and closing comment 6963461185 (17 Nov) · kixel-ai/rind#863 (merged 17 Nov, checked 19 Nov)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 5. P-256: PROFILE ============ -->
@@ -264,7 +269,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>Three ideas to speed up the row select were measured and dropped: no gain, or under about 4%.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">steelhead99x/rind#79 body (Approach items 2 and 3; Profile: microbenchmarks in a temporary ignored test, 3 runs each)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a></span>steelhead99x/rind#79 body (Approach items 2 and 3; Profile: microbenchmarks in a temporary ignored test, 3 runs each)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 6. P-256: BENCH ============ -->
@@ -289,7 +294,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>Not measured: AMD Zen. An older PR found aws-lc's addition 2–10% faster there for verification, so the swap should be checked on Zen 3 first.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">steelhead99x/rind#79 body (Benchmarks: base origin/main 034efee4 against the branch; run 1 table and raw rounds; Waiting: AMD Zen, kixel-ai/rind#234)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a></span>steelhead99x/rind#79 body (Benchmarks: base origin/main 034efee4 against the branch; run 1 table and raw rounds; Waiting: AMD Zen, kixel-ai/rind#234)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 7. MONTGOMERY ============ -->
@@ -316,7 +321,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>Ad hoc harness, Core Ultra 9 275HX pinned to one CPU, nine alternating samples, from fork head <code>7ebf1a90</code>.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">kixel-ai/rind#780 body (Problem, Approach, Validation: medians from steelhead99x/rind#76 head 7ebf1a90, not admin/bench-report). Percentages are computed from that table's 64-bit columns.</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/780">rind #780</a> · <a href="https://github.com/steelhead99x/rind/pull/76">fork #76</a></span>kixel-ai/rind#780 body (Problem, Approach, Validation: medians from steelhead99x/rind#76 head 7ebf1a90, not admin/bench-report). Percentages are computed from that table's 64-bit columns.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 8. ALIGNMENT ============ -->
@@ -337,10 +342,10 @@ table.sv td:first-child{white-space:nowrap}
       <li>One wrapper puts the P-256, P-384 and P-521 tables on a 64-byte boundary on every backend.</li>
       <li>Table bytes do not change; at most 63 bytes of padding before each.</li>
       <li>On x86_64, aligning alone measured no gain (steelhead99x/rind#79).</li>
-      <li>#790 is ready for review. Its Criterion table compares rind with aws-lc-rs at one head, not the fix with its parent, so it is not shown here.</li>
+      <li>#790 was closed on 18 Nov without a merge. Its Criterion table compares rind with aws-lc-rs at one head, not the fix with its parent, so it is not shown here.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">hosts/pi5/ab-narrow-mul/table-align/README.md (8e6f1670 vs 529a9d64) and series2-layout/ (rind-results main 88cbf85) · presentations/rind-aarch64-perf/PROGRESS.md (2026-11-12 20:15) · kixel-ai/rind#790 body · steelhead99x/rind#79 body (Problem)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/790">rind #790</a> · <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a></span>hosts/pi5/ab-narrow-mul/table-align/README.md (8e6f1670 vs 529a9d64) and series2-layout/ (rind-results main 88cbf85) · presentations/rind-aarch64-perf/PROGRESS.md (2026-11-12 20:15) · kixel-ai/rind#790 body · steelhead99x/rind#79 body (Problem)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 9. OPEN ============ -->
@@ -359,12 +364,12 @@ table.sv td:first-child{white-space:nowrap}
       <li>BENCHMARKS.md refreshes on the next scheduled bench run, not in these PRs.</li>
     </ul></div>
     <div class="card fix"><div class="pn">next</div><ul class="b sm">
-      <li>Review and land #863, #780 and #790 upstream.</li>
+      <li>#863 is merged; #780 and #790 were closed on 18 Nov. Decide whether to send them again.</li>
       <li>Decide whether #79's addition swap goes in its own PR, apart from #790's alignment.</li>
       <li>A wider P-384 comb could cut 15–20% of P-384 keygen, by #79's profile. Not built.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">steelhead99x/rind#79 body (Waiting) · kixel-ai/rind#780 body (Impact, Follow-ups) · steelhead99x/rind#126 body (Follow-ups) and comment 6936142476</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/780">rind #780</a> · <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a></span>steelhead99x/rind#79 body (Waiting) · kixel-ai/rind#780 body (Impact, Follow-ups) · steelhead99x/rind#126 body (Follow-ups) and comment 6936142476</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 10. SOURCES ============ -->

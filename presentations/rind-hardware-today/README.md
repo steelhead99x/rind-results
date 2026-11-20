@@ -25,7 +25,8 @@ XChaCha, and a late-evening timeline. Those figures are not on rind-results main
 14. ChaCha20-Poly1305 and XChaCha: 32-bit-limb Poly1305 and rolled HChaCha (unpublished)
 15. Timeline, late evening on the perf branch
 16. Update, 17 Nov: the fix that merged on the fork (steelhead99x/rind#69) and its board run against upstream main
-17. Update, 17 Nov: where the ESP32 and Xtensa work stands (#69, kixel-ai/rind#793, steelhead99x/rind#85, #94)
+17. Update, 17 Nov, status refreshed 19 Nov: where the ESP32 and Xtensa work stands (#69 merged on the fork,
+    kixel-ai/rind#793 merged upstream 19 Nov, steelhead99x/rind#85 closed, #94 open with raw logs on main from rind-results #79)
 18. Caveats: noise, layout, and work that is not on main, including these evening figures
 19. Sources, with a separate row for the unpublished raw jsonl and one for the 17 Nov update
 
@@ -50,6 +51,14 @@ PR comment, not on rind-results main, and the slides say so.
 
 Left out for lack of data: steelhead99x/rind#94's SHA-512-in-IRAM figures (0.911× to 0.918× main) have no raw
 logs, so slide 17 lists the PR as "not verified" and uses none of its numbers.
+
+## 19 November status refresh
+
+Slide 17 only: kixel-ai/rind#793 merged upstream on 19 Nov at 9:51 AM PST (its board numbers are still the fork's;
+the merged head was not flashed), steelhead99x/rind#85 is closed, and #94's raw board logs are now on rind-results
+main in `results/diag/esp32s3-pr94-pr87-pr85-2026-11-18/` (rind-results #79), so its row now cites them. Slides 16
+and 17 carry a `PRs:` footer line (`fork #N` is steelhead99x/rind, `rind #N` is kixel-ai/rind, `rind-results #N`
+is steelhead99x/rind-results). The new rind-esp32-sha2-cache deck covers #793 in full.
 
 ## Opening it
 
