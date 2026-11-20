@@ -1,6 +1,6 @@
 # rind on the boards, 12 November 2026: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 17 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 19 slides at 1280×720,
 with the CSS of `presentations/rind-rp2040`. It covers what changed on the microcontroller benchmarks on
 12 November 2026 and a timeline built from git history. All times are America/Los_Angeles (PST).
 
@@ -24,8 +24,11 @@ XChaCha, and a late-evening timeline. Those figures are not on rind-results main
 13. HMAC-SHA256, HKDF-SHA256, and the SHA-256 64 B 25.7% spread (unpublished)
 14. ChaCha20-Poly1305 and XChaCha: 32-bit-limb Poly1305 and rolled HChaCha (unpublished)
 15. Timeline, late evening on the perf branch
-16. Caveats: noise, layout, and work that is not on main, including these evening figures
-17. Sources, with a separate row for the unpublished raw jsonl
+16. Update, 17 Nov: the fix that merged on the fork (steelhead99x/rind#69) and its board run against upstream main
+17. Update, 17 Nov, status refreshed 19 Nov: where the ESP32 and Xtensa work stands (#69 merged on the fork,
+    kixel-ai/rind#793 merged upstream 19 Nov, steelhead99x/rind#85 closed, #94 open with raw logs on main from rind-results #79)
+18. Caveats: noise, layout, and work that is not on main, including these evening figures
+19. Sources, with a separate row for the unpublished raw jsonl and one for the 17 Nov update
 
 ## Sources
 
@@ -37,6 +40,25 @@ unpublished perf-branch run on the ESP32-S3 at steelhead99x/rind `6aba8055` plus
 on the slides and are not on rind-results main. Other work that is only on branches (the RP2040
 SysTick and SHA-512/GHASH fixes on rind-hardware, the Pi 5 lane on rind-results) is named but
 its unpublished numbers are left out.
+
+## 17 November update
+
+Slides 2, 8 and 18 now say the 12 Nov Pi 5 lane is on rind-results main (`hosts/pi5/ab-narrow-mul/`, and a full
+1.5 GHz set at rind a6577cb4 in `results/pi5-nofan-1p5ghz/`, rind fastest on 45 of 68 shared operations). Slides 16
+and 17 are new. Their ESP32-S3 figures come from steelhead99x/rind#69 comment 6936378505, the maintainer's board run
+of #69 head 504049d4 against upstream main 19f94a07 (3 runs per image, 0 known-answer failures). That run is in a
+PR comment, not on rind-results main, and the slides say so.
+
+Left out for lack of data: steelhead99x/rind#94's SHA-512-in-IRAM figures (0.911× to 0.918× main) have no raw
+logs, so slide 17 lists the PR as "not verified" and uses none of its numbers.
+
+## 19 November status refresh
+
+Slide 17 only: kixel-ai/rind#793 merged upstream on 19 Nov at 9:51 AM PST (its board numbers are still the fork's;
+the merged head was not flashed), steelhead99x/rind#85 is closed, and #94's raw board logs are now on rind-results
+main in `results/diag/esp32s3-pr94-pr87-pr85-2026-11-18/` (rind-results #79), so its row now cites them. Slides 16
+and 17 carry a `PRs:` footer line (`fork #N` is steelhead99x/rind, `rind #N` is kixel-ai/rind, `rind-results #N`
+is steelhead99x/rind-results). The new rind-esp32-sha2-cache deck covers #793 in full.
 
 ## Opening it
 
