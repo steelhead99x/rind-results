@@ -1,12 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # rind benchmark results
 
-A 12-slide PowerPoint of the published host and board results in this
+A 14-slide PowerPoint of the published host and board results in this
 repo, including what the red and orange cells on the Apple hosts mean
 (DIT) and how `Dit::hold()` changes the comparison. Open
 `rind-results-deck.pptx` in PowerPoint, Keynote, or LibreOffice.
 JPEG renders of each slide are in `renders/`; `renders/contact.jpg`
-is a contact sheet of all 12.
+is a contact sheet of all 14. Related pull requests are linked in
+the slide footers.
 
 ## Slides
 
@@ -21,7 +22,9 @@ is a contact sheet of all 12.
 9. Microcontrollers
 10. Corrections along the way
 11. Build cost
-12. Open gaps and next steps
+12. The work so far
+13. Benchmarking and verifying at scale
+14. Open gaps and next steps
 
 ## Sources
 
@@ -39,3 +42,7 @@ python3 build.py
 Needs `python-pptx` and Pillow, and the PNGs in `img/`. The script
 writes `rind-results-deck.pptx` beside itself. The JPEG renders are a
 snapshot of that deck; rebuilding the `.pptx` does not refresh them.
+
+`build.py` still builds the original 12-slide deck. Slides 12 and 13,
+and the PR links in the footers, were edited directly in the `.pptx`
+after `build.py` ran. Rerunning `build.py` drops those edits.
