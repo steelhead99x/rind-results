@@ -13,7 +13,7 @@ Host: Intel(R) Xeon(R) Processor, 8 vCPUs, Debian GNU/Linux 13 (trixie), Linux 6
 | rind-hardware `cargo xtask apply-patches` | rind-hardware `ec7743a8` | as named | base series committed at `eb053e787735b1898fa64ebc91ae13b31db663ec`, the commit README.md gives for this pin |
 | rind-hardware `cargo xtask check` | same, after apply-patches | as named | rustfmt ok, clippy xtask ok; stopped at `clippy aes_gcm`: the ESP toolchain (`.tools/export-esp.sh`) is not installed on this host. Firmware lints were not run |
 | rind-results gate | rind-results `9037ce2d` | `cargo xtask ci` | exit 0: fmt, clippy, 115 tests passed (1 ignored), cargo deny ok, `cargo verify` ok on the published trees and on 12 `verify --dir` trees |
-| rind-agent gate | rind-agent `a6e83a7b` | `cargo xtask ci` | exit 0: 18 tests passed, MSRV 1.74 check ok, checker ok |
+| Skills repository gate | a private skills repository | `cargo xtask ci` | exit 0: 18 tests passed, MSRV 1.74 check ok, checker ok |
 | rind-agent-lite | rind-agent-lite `244b1ecc` | `cargo test --locked`, then `cargo run --locked --quiet` | exit 0 both: 11 tests passed; pin check `acc61b3892ceb6afecfa96c94132bf6e35bbf1fb` (kixel-ai/rind) ok |
 
 Not run: SLOW_TESTS, ctgrind and the other constant-time harnesses, fuzzing, `just` recipes, and any firmware build, flash or board run.
