@@ -22,7 +22,7 @@ fixes stand. All times are America/Los_Angeles (PST).
 Everything is in [`results/firetv-aftsss/`](../../results/firetv-aftsss/README.md):
 
 - Slides 1, 3, 4: `firetv-aftsss.json` and `RESULTS.md` (run at steelhead99x/rind `ac0f2f93`); pair counts from `NOTES.md`.
-- Slide 2: `README.md`, `raw/cpuinfo.txt`, `raw/tv/cpuid.json`, `harness/run.sh`. The current Fire OS build
+- Slide 2: `README.md`, `raw/cpuinfo.txt`, `raw/tv/cpuid.json`, `raw/harness/run.sh`. The current Fire OS build
   (`PS7717.5746N`, patch 2026-03-01) is a read-only `getprop` on 20 Nov, 12:48 AM PST.
 - Slide 5: `raw/handoff/bench-main-repeat.txt` against `RESULTS.md`.
 - Slide 6: `raw/handoff/lowmem-rind-rows.txt` and `raw/handoff/lowmem-run.txt`.

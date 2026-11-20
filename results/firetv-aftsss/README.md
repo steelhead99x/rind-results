@@ -31,7 +31,7 @@ noisy (`noisy: true`), and it covers 14 of the bench binaries. Read it as a firs
   cross-compiled on an x86_64 Linux host.
 - Run: binaries pushed with `adb` to `/data/local/tmp`, one core (`taskset 8`, CPU 3),
   `--noplot --warm-up-time 1 --measurement-time 3`, filtered to rind, aws-lc-rs, ring and OpenSSL.
-  [harness/run.sh](harness/run.sh) is the on-device loop; the host scripts are in fork #217
+  [raw/harness/run.sh](raw/harness/run.sh) is the on-device loop; the host scripts are in fork #217
   (`admin/handoff-firetv-armv7/scripts/`).
 - The on-device loop was cut off at about 17:47Z when the TV rebooted. `aes_gcm`,
   `chacha20poly1305` and `xchacha20poly1305` come from that pass; the other 11 binaries
@@ -48,11 +48,13 @@ noisy (`noisy: true`), and it covers 14 of the bench binaries. Read it as a firs
 | File | What it is |
 |---|---|
 | [firetv-aftsss.json](firetv-aftsss.json) | `admin/bench-report` schema 1, 164 results |
+| [summary.md](summary.md) | rind against the fastest other library per row, in `admin/bench-report summary` shape so `cargo verify --dir` checks it against the JSON |
 | [RESULTS.md](RESULTS.md) | rind against the other libraries, and against the Galaxy A16 and Pixel 9 Pro |
 | [NOTES.md](NOTES.md) | the run summary written at the time |
 | [raw/tv/](raw/tv/) | `run.log` (criterion output), `snap.log` (clock and memory per bench), `stat-before`, `stat-after`, `cpuid.json`, start and finish times |
 | [raw/before.txt](raw/before.txt), [raw/during-freq.txt](raw/during-freq.txt), [raw/after.txt](raw/after.txt) | `top`, clock and memory snapshots |
 | [raw/handoff/](raw/handoff/) | the repeat, low-memory and probe data behind fork #217 |
+| [raw/harness/](raw/harness/) | the on-device loop, bench list and row filter |
 
 ## Caveats
 
