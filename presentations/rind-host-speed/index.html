@@ -172,8 +172,8 @@ table.sv td:first-child{white-space:nowrap}
   <div class="bar"></div>
   <div class="inner">
     <div class="kicker">rind · speed on desktop, server and Arm hosts</div>
-    <h1>Four speed-ups and where they stand: ML-DSA signing, P-256, big-number math, and table alignment</h1>
-    <div class="sub">What each change does in plain words, what it measured, on which machine, and what is still not measured. Every figure names the PR or file it comes from.</div>
+    <h1>ML-DSA signing, P-256, big-number multiply and table alignment on hosts</h1>
+    <div class="sub">What each change does, what it measured and where, and what is not measured. Each figure names its PR or file.</div>
   </div>
   <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Checked 17 November 2026, PR status refreshed 19 November · times are America/Los_Angeles (PST)</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a> · <a href="https://github.com/kixel-ai/rind/pull/863">rind #863</a> · <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/780">rind #780</a> · <a href="https://github.com/kixel-ai/rind/pull/790">rind #790</a></span>None of these numbers are a published rind-results set except the Pi 5 alignment A/B (hosts/pi5/ab-narrow-mul/). The rest come from PR bodies and PR comments, named on each slide.</span><span class="num"></span></div>
@@ -181,7 +181,7 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 2. SUMMARY ============ -->
 <section class="slide" data-section="Summary">
-  <div class="kicker">In one table</div>
+  <div class="kicker">Summary</div>
   <h2>Three changes measured faster and one is neutral on its own; none of these four PRs merged upstream as sent</h2>
   <table class="t" style="margin-top:14px;font-size:14px">
     <tr><th style="width:21%">Change</th><th>What it measured</th><th style="width:17%">Where</th><th style="width:19%">Status</th></tr>
@@ -288,7 +288,7 @@ table.sv td:first-child{white-space:nowrap}
       </table>
       <p class="small">P-384 did not change, yet moved 3.7%. That sets the noise floor on this shared host.</p>
     </div>
-    <div class="card"><h3>How to read it</h3><ul class="b sm">
+    <div class="card"><h3>Notes</h3><ul class="b sm">
       <li>Every new sign round (13.47 to 13.74 µs) is below every old one (14.08 to 14.70 µs).</li>
       <li>A second, P-256-only run showed bigger gains, but its base drifted up with host load, so it overstates them.</li>
       <li>Not measured: AMD Zen. An older PR found aws-lc's addition 2–10% faster there for verification, so the swap should be checked on Zen 3 first.</li>
@@ -314,7 +314,7 @@ table.sv td:first-child{white-space:nowrap}
       </table>
       <p class="small">Columns are limb sizes of rind's portable code. aws-lc runs native assembly, so it is a reference, not a like-for-like.</p>
     </div>
-    <div class="card"><h3>Plain words, and limits</h3><ul class="b sm">
+    <div class="card"><h3>Notes and limits</h3><ul class="b sm">
       <li>Each limb product used to wait on the carry chain before the next multiply started. Now four start at once.</li>
       <li>This is the portable code that armv7 shares. x86_64 and aarch64 keep their assembly.</li>
       <li>2 words is slightly slower. No end-to-end RSA time is claimed for this change.</li>
@@ -352,8 +352,7 @@ table.sv td:first-child{white-space:nowrap}
 <section class="slide" data-section="Open">
   <div class="kicker">What is left</div>
   <h2>What these numbers do not cover yet</h2>
-  <p class="lede">Three kinds of gap: things nobody has measured, numbers that live only in PRs, and the next steps named in those PRs.</p>
-  <div class="cols3 fixes">
+    <div class="cols3 fixes">
     <div class="card fix warnc"><div class="pn">not measured</div><ul class="b sm">
       <li>P-256 swap on AMD Zen (#79).</li>
       <li>End-to-end RSA with the four-product multiply (#780).</li>
@@ -375,7 +374,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 10. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Every figure in this deck, and where it comes from</h2>
+  <h2>Sources</h2>
   <table class="t" style="margin-top:14px;font-size:13.5px">
     <tr><th style="width:22%">Topic</th><th>Source</th></tr>
     <tr><td>ML-DSA, x86_64</td><td><a href="https://github.com/steelhead99x/rind/pull/126">steelhead99x/rind#126</a> body, Validation (paired timing, differential check, bench rows)</td></tr>

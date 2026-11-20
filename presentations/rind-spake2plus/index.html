@@ -248,7 +248,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="inner">
     <div class="kicker">rind · password-authenticated key exchange</div>
     <h1>SPAKE2+ comes to rind: RFC 9383 and Matter PASE</h1>
-    <div class="sub">What the protocol does, how rind implements it, how pull request kixel-ai/rind#689 was merged on 13 November with four fixes split out of it, and the aarch64 performance work from the same days</div>
+    <div class="sub">The protocol and rind's implementation. kixel-ai/rind#689 merged 13 Nov; four fixes split out of it merged 13 and 14 Nov. Also the aarch64 work from the same days.</div>
   </div>
   <div class="meta">kixel-ai/rind (formerly moq-dev/rind) · steelhead99x/rind-results<br>November 12, 2026 · merge status updated 19 November 2026 · times are PST</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a> · <a href="https://github.com/kixel-ai/rind/pull/722">rind #722</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/kixel-ai/rind/pull/724">rind #724</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a></span>Sources are listed on the last slide. Facts with no source are left out. Merge facts come from the merged PR bodies on kixel-ai/rind.</span><span class="num"></span></div>
@@ -431,7 +431,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 
 <!-- ============ 8. HARD PART ============ -->
 <section class="slide" data-section="rind design">
-  <div class="kicker">rind design · the hard part</div>
+  <div class="kicker">rind design · identity check</div>
   <h2>The identity check runs without a secret-dependent branch</h2>
   <p class="lede">A share equal to w0·M or w0·N makes X − w0·M or Y − w0·N the identity point, and the handshake must reject it. Testing for that with an ordinary <code>if</code> would branch on a value derived from the password.</p>
   <div class="cols">
@@ -440,7 +440,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <li>The "was identity" bit is declassified once, together with the tag check result.</li>
       <li>The maintainer refactored <code>complete_add</code> onto hash-to-curve's <code>sum</code>.</li>
     </ul></div>
-    <div class="card"><h3>Other limits and hygiene</h3><ul class="b sm">
+    <div class="card"><h3>Limits</h3><ul class="b sm">
       <li>Hostile input is bounded: context and identities at 1024 bytes, scalars at 128 bytes.</li>
       <li>Secrets are wiped on drop.</li>
       <li>Per-handshake state is consumed by <code>finish</code>, so it cannot be reused.</li>
@@ -452,7 +452,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ 9. PR JOURNEY ============ -->
 <section class="slide" data-section="Pull request">
   <div class="kicker">The pull request · 12 to 13 Nov 2026 (times PST)</div>
-  <h2>Three earlier attempts led to kixel-ai/rind#689, and the maintainer merged it on 13 November</h2>
+  <h2>#689 replaced three earlier attempts and merged on 13 November</h2>
   <div class="timeline t5" style="margin-top:18px">
     <div class="tl"><div class="ph">Before</div><h4>#616, #680, #685</h4>Earlier attempts, superseded by #689.</div>
     <div class="tl"><div class="ph">12 Nov</div><h4>#689 opened</h4>By steelhead99x: "feat(spake2plus): add RFC 9383 and Matter PASE". At opening: 8 commits, +2061 / −20, 17 files.</div>
@@ -496,7 +496,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ 11. SPLIT-OUT FIXES ============ -->
 <section class="slide" data-section="Follow-ups">
   <div class="kicker">One contributor PR, five upstream merges</div>
-  <h2>Four fixes were split out of #689 so each could be reviewed and reverted alone, and all four merged with authorship kept</h2>
+  <h2>Four fixes split out of #689, each merged on its own with authorship kept</h2>
   <table class="t" style="margin-top:12px;font-size:15.5px">
     <tr><th style="width:15%">PR</th><th style="width:19%">Merged (PST)</th><th>What it fixed</th></tr>
     <tr><td>#724 docs</td><td>13 Nov, 11:26 AM</td><td>The aarch64 SHA-512 doc claimed the scalar build matched the proof. <code>admin/prove</code> builds only Linux targets, so the claim is now limited to Linux. +3 / −2</td></tr>
@@ -576,7 +576,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ 16. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Every fact in this deck comes from one of these sources</h2>
+  <h2>Sources</h2>
   <table class="t" style="margin-top:14px;font-size:14px">
     <tr><th style="width:26%">Topic</th><th>Source</th></tr>
     <tr><td>Pull request, checks, timeline</td><td><a href="https://github.com/kixel-ai/rind/pull/689">github.com/kixel-ai/rind/pull/689</a> (merged body) · split-out fixes <a href="https://github.com/kixel-ai/rind/pull/722">#722</a>, <a href="https://github.com/kixel-ai/rind/pull/723">#723</a>, <a href="https://github.com/kixel-ai/rind/pull/724">#724</a>, <a href="https://github.com/kixel-ai/rind/pull/725">#725</a> · earlier attempts #616, #680, #685 · fork <a href="https://github.com/steelhead99x/rind/pull/67">#67</a>, <a href="https://github.com/steelhead99x/rind/pull/68">#68</a></td></tr>

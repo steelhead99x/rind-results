@@ -172,8 +172,8 @@ table.sv td:first-child{white-space:nowrap}
   <div class="bar"></div>
   <div class="inner">
     <div class="kicker">rind · ESP32-S3 · merged upstream 19 Nov 2026</div>
-    <h1>Why SHA-512 was 33× slower than ring on a microcontroller, and the fix that merged</h1>
-    <div class="sub">On a Seeed XIAO ESP32-S3, HACL*'s unrolled SHA-2 code did not fit in the 16 KiB instruction cache. kixel-ai/rind#793 rolls SHA-512 and HChaCha20 on 32-bit microcontrollers and runs SHA-256 from internal RAM. What it fixed, what it costs, and which numbers are the fork's.</div>
+    <h1>SHA-512 on the ESP32-S3 was 33× slower than ring; #793 fixes it</h1>
+    <div class="sub">On a Seeed XIAO ESP32-S3, HACL*'s unrolled SHA-2 code did not fit in the 16 KiB instruction cache. kixel-ai/rind#793 rolls SHA-512 and HChaCha20 on 32-bit microcontrollers and runs SHA-256 from internal RAM.</div>
   </div>
   <div class="meta">kixel-ai/rind#793 (port of fork #69) · steelhead99x/rind-results<br>Merged 19 November 2026, 9:51 AM · times are America/Los_Angeles (PST)</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>Board numbers in this deck come from fork runs, not from a run of the merged head. Each slide says which run.</span><span class="num"></span></div>
@@ -190,13 +190,13 @@ table.sv td:first-child{white-space:nowrap}
     <div class="kpi" style="border-left-color:var(--bad)"><div class="v">about 33×</div><div class="l">slower than ring</div><div class="d">SHA-512 on that board, before the fix</div></div>
   </div>
   <div class="cols">
-    <div class="card"><h3>Plain words</h3><ul class="b sm">
-      <li>A desktop CPU likes fully unrolled code: no loop overhead.</li>
-      <li>A small chip reads its code from flash through a small cache. When the code is bigger than the cache, it keeps missing and waits on flash.</li>
+    <div class="card"><h3>Cause</h3><ul class="b sm">
+      <li>The chip runs code from flash through a 16 KiB cache.</li>
+      <li>Code larger than the cache keeps missing and waits on flash.</li>
     </ul></div>
-    <div class="card"><h3>Who is hit</h3><ul class="b sm">
-      <li>SHA-512 and what is built on it, such as HMAC-SHA384 and HKDF-SHA384/512.</li>
-      <li>SHA-256 too, because both compete for the same 16 KiB.</li>
+    <div class="card"><h3>Affected</h3><ul class="b sm">
+      <li>SHA-512, HMAC-SHA384, HKDF-SHA384/512.</li>
+      <li>SHA-256, which shares the cache.</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>kixel-ai/rind#793 merged body (Problem)</span><span class="num"></span></div>
@@ -205,16 +205,15 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 3. ROOT CAUSE ============ -->
 <section class="slide" data-section="Root cause">
   <div class="kicker">Evidence that it is the cache · rind-results main</div>
-  <h2>With a 32 KB cache build, the XChaCha20-Poly1305 gap falls from 7.5× to 1.1×, so the gap is the cache, not the math</h2>
+  <h2>With a 32 KB cache, XChaCha20-Poly1305 goes from 7.5× to 1.1× RustCrypto's time</h2>
   <div class="cols c64" style="margin-top:14px">
     <div>
       <div class="chart-title">XChaCha20-Poly1305 32 B, rind's time over RustCrypto's, 80 MHz flash</div>
       <svg width="790" height="104" viewBox="0 0 790 104"><line x1="227.3" y1="0" x2="227.3" y2="84" stroke="#7b8797" stroke-dasharray="4 3"/><text x="0" y="26" font-size="13.5" fill="#16202e">16 KB cache (default)</text><rect x="170" y="10" width="430.0" height="24" rx="2" fill="#b4532a"/><text x="608.0" y="27" font-size="13.5" font-weight="700" fill="#0e2238">7.50×</text><text x="0" y="64" font-size="13.5" fill="#16202e">32 KB cache (check only)</text><rect x="170" y="48" width="63.1" height="24" rx="2" fill="#0f766e"/><text x="241.1" y="65" font-size="13.5" font-weight="700" fill="#0e2238">1.10×</text><text x="231.3" y="96" font-size="11.5" fill="#5d6878">1.0× = same time as RustCrypto</text></svg>
     </div>
-    <div class="card"><h3>What the check is</h3><ul class="b sm">
-      <li>A diagnostic build with a 32 KB instruction cache, same code, same board.</li>
-      <li>32 KB is a build option for this check only. Published numbers use ESP-IDF's 16 KB default.</li>
-      <li>This is why #793 makes the hot code smaller or moves it out of the cache's way.</li>
+    <div class="card"><h3>The check</h3><ul class="b sm">
+      <li>Diagnostic build with a 32 KB instruction cache. Same code, same board.</li>
+      <li>Published numbers use ESP-IDF's 16 KB default.</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src">rind-results main: results/diag/esp32s3-icache32-80mhz-98568332/README.md and ratios.md, as shown in the rind-hardware-today deck (32 KB icache slide)</span><span class="num"></span></div>
@@ -222,8 +221,8 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 4. THE FIX ============ -->
 <section class="slide" data-section="Fix">
-  <div class="kicker">The fix, three pieces · kixel-ai/rind#793</div>
-  <h2>Roll the big loops on 32-bit microcontrollers, and run SHA-256 from internal RAM on ESP-IDF Xtensa</h2>
+  <div class="kicker">The change · kixel-ai/rind#793</div>
+  <h2>Rolled loops on 32-bit microcontrollers; SHA-256 in internal RAM on ESP-IDF Xtensa</h2>
   <div class="cols3" style="margin-top:14px">
     <div class="card fix"><div class="pn">SHA-384 / SHA-512</div><ul class="b sm">
       <li>A rolled 80-round loop over a 16-word window, <code>low/generic/sha512.rs</code>.</li>
@@ -238,7 +237,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>Rotates and the block load are Xtensa <code>asm!</code>.</li>
     </ul></div>
   </div>
-  <div class="callout" style="margin-top:18px">A new CI check, <code>admin/esp32s3-sha256-layout</code>, builds the body with esp rustc and checks placement, internal-RAM addresses, no call from the block, and the exact <code>ssai</code> sequences. A toolchain change that moves the code back to flash would otherwise fail silently.</div>
+  <div class="callout" style="margin-top:18px">New CI check <code>admin/esp32s3-sha256-layout</code> builds the body with esp rustc and checks placement, internal-RAM addresses, no call from the block, and the exact <code>ssai</code> sequences. <code>link_section</code> and outlining into flash fail silently without it.</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>kixel-ai/rind#793 merged body (Approach, Decisions)</span><span class="num"></span></div>
 </section>
 
@@ -281,7 +280,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 7. FORK 94 ============ -->
 <section class="slide" data-section="Raw board data">
   <div class="kicker">Raw board data on rind-results main · fork #94, not #793</div>
-  <h2>Raw logs for the next step, fork #94: SHA-512 in IRAM takes 0.911× to 0.918× of fork main's cycles</h2>
+  <h2>Fork #94, raw logs: SHA-512 in IRAM at 0.911× to 0.918× of fork main's cycles</h2>
   <div class="cols c64" style="margin-top:10px">
     <table class="t compact">
       <tr><th>rind row, cycles</th><th class="n">fork main</th><th class="n">IRAM</th><th class="n">IRAM / main</th><th class="n">flash / main</th></tr>
@@ -291,7 +290,7 @@ table.sv td:first-child{white-space:nowrap}
       <tr><td>HMAC-SHA384 64B</td><td class="n">107,680</td><td class="n">98,752</td><td class="n">0.917</td><td class="n">11.741</td></tr>
       <tr><td>HMAC-SHA384 16KB</td><td class="n">3,315,560</td><td class="n">3,021,746</td><td class="n">0.911</td><td class="n">11.340</td></tr>
     </table>
-    <div class="card"><h3>How to read it</h3><ul class="b sm">
+    <div class="card"><h3>Notes</h3><ul class="b sm">
       <li>Fork main already has the rolled loop. #94 also places it in IRAM.</li>
       <li>With <code>esp32s3-sha512-flash</code>, the unrolled block runs from flash and is 11.3× to 13.1× slower than fork main.</li>
       <li>ESP32-S3 at 240 MHz, 5 interleaved rounds, 165 known-answer checks pass in each sha2 image, largest spread 0.051%.</li>
@@ -304,7 +303,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 8. COSTS ============ -->
 <section class="slide" data-section="Costs">
   <div class="kicker">What it costs, and what is next</div>
-  <h2>The speed costs 4,516 B of internal RAM and the formal proof on these targets; a proof quest follows</h2>
+  <h2>It costs 4,516 B of IRAM and the formal proof on these targets</h2>
   <div class="kpis" style="margin-top:14px;grid-template-columns:repeat(3,1fr)">
     <div class="kpi"><div class="v">+4,516 B</div><div class="l">IRAM</div><div class="d">ESP-IDF Xtensa sha2 image, fork's measurement</div></div>
     <div class="kpi"><div class="v">−4,608 B</div><div class="l">heap</div><div class="d">same image, fork's measurement</div></div>
@@ -313,7 +312,7 @@ table.sv td:first-child{white-space:nowrap}
   <div class="cols">
     <div class="card"><h3>Stated in the PR</h3><ul class="b sm">
       <li>These paths "no longer run formally verified code". Every target the bench report measures runs the same code as before.</li>
-      <li>The maintainer chose to merge and plan a proof of the rolled loops in a follow-up quest.</li>
+      <li>Merged with a follow-up quest to prove the rolled loops.</li>
     </ul></div>
     <div class="card fix warnc"><div class="pn">open</div><ul class="b sm">
       <li>kixel-ai/rind#794 (open, drops libcrux) stacks on this PR.</li>
@@ -326,7 +325,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 9. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Where every number comes from</h2>
+  <h2>Sources</h2>
   <table class="t compact" style="margin-top:12px">
     <tr><th style="width:26%">Slide</th><th>Source</th><th style="width:20%">Kind</th></tr>
     <tr><td>Problem, fix, i686, costs</td><td>kixel-ai/rind#793 merged body</td><td>PR body</td></tr>

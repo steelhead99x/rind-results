@@ -172,8 +172,8 @@ table.sv td:first-child{white-space:nowrap}
   <div class="bar"></div>
   <div class="inner">
     <div class="kicker">rind · proofs</div>
-    <h1>Keeping rind's proven code proven: P-256 on x86_64, table alignment, and two honest gaps</h1>
-    <div class="sub">What the proof jobs check, the P-256 change that moved more of x86_64 onto proven code, the Lean fix that made it build, and where a speed fix gave up a proof.</div>
+    <h1>rind proofs: P-256 on x86_64, table alignment, SHA-512 on Intel, SHA-2 on ESP32</h1>
+    <div class="sub">The Lean and HOL Light jobs, fork #79's P-256 change and its Lean fix, #790's table alignment, and #821 and #793.</div>
   </div>
   <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Checked 17 November 2026, PR status refreshed 19 November · times are America/Los_Angeles (PST)</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>Sources are PR bodies, PR comments and CI job results, named on each slide. None of this is a rind-results set except the Pi 5 Lean log under hosts/pi5/ab-narrow-mul/table-align/.</span><span class="num"></span></div>
@@ -187,7 +187,7 @@ table.sv td:first-child{white-space:nowrap}
     <div class="card tall"><h3>Lean, over rind's own Rust</h3><ul class="b sm">
       <li>Tools translate rind's Rust into Lean, and Lean proofs say what the code computes.</li>
       <li><code>admin/prove lean</code> rebuilds every proof. CI runs it as the <code>lean</code> job.</li>
-      <li>When the Rust changes, a proof can stop matching and the build fails. That is the point.</li>
+      <li>When the Rust changes, a proof can stop matching and the build fails.</li>
     </ul></div>
     <div class="card tall"><h3>HOL Light, over imported assembly</h3><ul class="b sm">
       <li>Assembly from s2n-bignum and aws-lc comes with HOL Light proofs of what each routine does.</li>
@@ -195,7 +195,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>Lean then uses those results as named assumptions (axioms), so the two connect.</li>
     </ul></div>
   </div>
-  <div class="callout" style="margin-top:18px">A proof covers code that runs. If a speed change swaps in new code, the proof has to move with it, or the claim goes away.</div>
+  <div class="callout" style="margin-top:18px">A proof covers the code that runs. New code needs its own proof.</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>steelhead99x/rind#79 body (Approach, Validation: Lean, Axioms.lean, HOL Light proofs) and its CI job list on head c2b8f5ca · kixel-ai/rind#793 body (Impact)</span><span class="num"></span></div>
 </section>
 
@@ -232,7 +232,7 @@ table.sv td:first-child{white-space:nowrap}
     <div class="kpi"><div class="v">pass</div><div class="l">HOL Light on all three</div><div class="d">x86_64, aarch64 and armv7 jobs, same head; <code>cosim</code> also passes</div></div>
   </div>
   <div class="cols">
-    <div class="card"><h3>What broke, in plain words</h3><ul class="b sm">
+    <div class="card"><h3>What broke</h3><ul class="b sm">
       <li>The translator lifts one point, <code>sum0</code>, out of the loop. The new routine overwrites it, so the loop's proof had to take that point as an input.</li>
       <li><code>loop_spec</code> and <code>jac_base_multiply_spec</code> in <code>P256Base.lean</code> were rewritten, with helpers ported from <code>P384Keygen.lean</code>.</li>
     </ul></div>
@@ -261,7 +261,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 6. GAINED AND LOST ============ -->
 <section class="slide" data-section="Trade-offs">
   <div class="kicker">Two other changes that touch proofs</div>
-  <h2>Both merged on 19 Nov: one moves Intel's newest CPUs onto proven SHA-512 code; the other gives up a proof on small chips for speed</h2>
+  <h2>#821 moves newer Intel CPUs onto proven SHA-512 code; #793 drops the proof on small chips. Both merged 19 Nov</h2>
   <div class="cols" style="margin-top:16px">
     <div class="card tall" style="border-top:4px solid var(--accent)"><h3>Gained: SHA-512 on Arrow Lake and later · #821, merged 19 Nov</h3><ul class="b sm">
       <li>These CPUs used OpenSSL's SHA512-extension routine, which had no proof and uses instructions missing from Intel's fixed-timing list.</li>
@@ -273,7 +273,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>The fast ESP32-S3 SHA-256 is rind's own code placed in internal RAM, not the proven HACL* code.</li>
       <li>SHA-256 on ESP-IDF Xtensa and SHA-512 on 32-bit microcontrollers "no longer run formally verified code". Every target the bench report measures runs the same code as before.</li>
       <li>The maintainer merged it with a follow-up quest to prove the rolled loops.</li>
-      <li>The win it buys is in the rind-esp32-sha2-cache deck.</li>
+      <li>Speed results: rind-esp32-sha2-cache deck.</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>kixel-ai/rind#821 merged body (Approach, Impact, Validation) · kixel-ai/rind#793 merged body (Impact, Decisions, Follow-ups), a port of fork #69 · checked 19 Nov 2026</span><span class="num"></span></div>
@@ -282,7 +282,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 7. STATUS ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Where each one stands</div>
-  <h2>Two of these proof changes are merged upstream, one was closed, and the fork PR is still open</h2>
+  <h2>#821 and #793 merged, #790 closed, fork #79 open</h2>
   <table class="t" style="margin-top:14px">
     <tr><th style="width:24%">PR</th><th>Proof state</th><th style="width:20%">PR state</th></tr>
     <tr><td><a href="https://github.com/steelhead99x/rind/pull/79">steelhead99x/rind#79</a></td><td>Lean 3,705 jobs local; CI lean, HOL Light and cosim pass on <code>c2b8f5ca</code></td><td><span class="tag pending">open on fork</span></td></tr>
@@ -296,7 +296,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 8. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Every claim in this deck, and where it comes from</h2>
+  <h2>Sources</h2>
   <table class="t" style="margin-top:14px">
     <tr><th style="width:24%">Topic</th><th>Source</th></tr>
     <tr><td>P-256 swap and axioms</td><td>steelhead99x/rind#79 body: Approach, correctness argument, Validation (Lean), Waiting</td></tr>

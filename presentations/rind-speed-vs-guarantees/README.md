@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
-# Fast is not the only goal: speed versus guarantees
+# rind speed versus guarantees: slide deck
 
 `index.html` is a self-contained HTML deck (no network access, no external libraries), 9 slides at 1280×720,
 with the CSS and navigation of `presentations/rind-testing`. It covers two PRs merged into kixel-ai/rind on

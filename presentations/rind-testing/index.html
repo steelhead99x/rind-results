@@ -172,8 +172,8 @@ table.sv td:first-child{white-space:nowrap}
   <div class="bar"></div>
   <div class="inner">
     <div class="kicker">rind · tests and checks · merged upstream</div>
-    <h1>Tests that catch more: what seven merged test and CI changes now prove</h1>
-    <div class="sub">Ed25519 edge cases and wipe checks on wasm, adapter mutants, hash-to-curve sums, HPKE edge vectors, CI alerts, the dev shell, and the mutation tool. All seven came from the fork and were merged into kixel-ai/rind between 14 and 19 November 2026.</div>
+    <h1>Seven test and CI changes merged into kixel-ai/rind, 14 to 19 November</h1>
+    <div class="sub">#797 wasm and Ed25519, #792 adapter mutants, #791 hash-to-curve sums, #798 HPKE edge vectors, #796 CI alerts, #876 dev shell, #725 mutation tool. All from the fork.</div>
   </div>
   <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Refreshed 19 November 2026 from the merged PR bodies · times are America/Los_Angeles (PST)</div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a> · <a href="https://github.com/kixel-ai/rind/pull/792">rind #792</a> · <a href="https://github.com/kixel-ai/rind/pull/798">rind #798</a> · <a href="https://github.com/kixel-ai/rind/pull/791">rind #791</a> · <a href="https://github.com/kixel-ai/rind/pull/796">rind #796</a> · <a href="https://github.com/kixel-ai/rind/pull/876">rind #876</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a></span>Every count is as stated in the merged PR body on kixel-ai/rind, not a rind-results raw log, unless the slide says so.</span><span class="num"></span></div>
@@ -181,8 +181,8 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 2. SUMMARY ============ -->
 <section class="slide" data-section="Summary">
-  <div class="kicker">In one table</div>
-  <h2>Seven test and CI changes from the fork are merged upstream; the fork sync and the VM run are the context</h2>
+  <div class="kicker">Summary</div>
+  <h2>Merged upstream, with merge times</h2>
   <table class="t compact" style="margin-top:10px">
     <tr><th style="width:22%">Change</th><th>What it now catches</th><th style="width:22%">Merged (PST)</th></tr>
     <tr class="hl"><td>wasm and Ed25519 (#797)</td><td>Ed25519 edge cases and wipe checks on wasm, where aws-lc cannot build</td><td><span class="tag ok">merged</span> 18 Nov, 9:45 PM</td></tr>
@@ -200,12 +200,12 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 3. WASM ============ -->
 <section class="slide" data-section="wasm">
   <div class="kicker">wasm and Ed25519 · kixel-ai/rind#797 · merged 18 Nov</div>
-  <h2>Ed25519's 914 edge-case vectors and the memory-wipe checks now run on wasm, and a flipped verdict fails the test</h2>
+  <h2>914 Ed25519 CCTV vectors and the wipe checks now run on wasm</h2>
   <div class="cols c46" style="margin-top:12px">
     <div><ul class="b">
-      <li><b>No reference on wasm.</b> aws-lc does not build there, so a file now records aws-lc's accept or reject for each of the 914 CCTV Ed25519 vectors. Every target checks rind against it.</li>
-      <li><b>Checks that could not run.</b> The wipe checks panicked on purpose, and wasm aborts on a panic. They now return a result and assert on it.</li>
-      <li><b>In the gate: clippy only.</b> <code>just ci</code> clippy-checks both test binaries for wasm. The nightly <code>just wasm</code> runs them. Running them in every gate was considered and rejected.</li>
+      <li>aws-lc does not build on wasm. A file now records aws-lc's accept or reject for each of the 914 CCTV Ed25519 vectors, and every target checks rind against it.</li>
+      <li>The wipe checks panicked on purpose, and wasm aborts on a panic. They now return a result and assert on it.</li>
+      <li><code>just ci</code> clippy-checks both test binaries for wasm. The nightly <code>just wasm</code> runs them. Running them in every gate was rejected.</li>
     </ul></div>
     <div>
       <div class="chart-title">Merged body, Validation, on <code>d00812be5</code> (x86_64 Linux)</div>
@@ -225,7 +225,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 4. ADAPTERS ============ -->
 <section class="slide" data-section="Adapters">
   <div class="kicker">Adapter mutants · kixel-ai/rind#792 · merged 19 Nov</div>
-  <h2>With the exclusions gone, the mutation runs leave 0 missed mutants in ring and rustls and 1 in dimpl and str0m</h2>
+  <h2>0 missed mutants in ring and rustls, 1 in dimpl and str0m, after removing the exclusions</h2>
   <div class="cols c64" style="margin-top:10px">
     <div>
       <div class="chart-title"><code>admin/mutants --file</code> over every file whose exclusions the PR drops</div>
@@ -238,7 +238,7 @@ table.sv td:first-child{white-space:nowrap}
         <tr><td>str0m <code>dtls.rs</code> re-run</td><td class="n">25</td><td class="n">20</td><td class="n">5</td><td class="n">0</td></tr>
       </table>
     </div>
-    <div class="card"><h3>Plain words</h3><ul class="b sm">
+    <div class="card"><h3>Notes</h3><ul class="b sm">
       <li>A mutation test changes a line and checks that some test fails. Excluded lines were never checked.</li>
       <li>The one miss was str0m's <code>Dtls</code> <code>Debug</code>, now excluded with the other <code>Debug</code> impls.</li>
       <li>Tests: 233 passed on the five crates with all features; 184 with default features on ring, rustls and rcgen.</li>
@@ -251,7 +251,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 5. H2C AND HPKE ============ -->
 <section class="slide" data-section="Edge cases">
   <div class="kicker">Edge cases · kixel-ai/rind#791 and #798 · merged 19 Nov</div>
-  <h2>Two edge cases that no test reached before: a sum at the identity point, and an HPKE key that needs a second try</h2>
+  <h2>New tests for identity-point sums (#791) and the HPKE edge vectors (#798)</h2>
   <div class="cols" style="margin-top:14px">
     <div class="card tall"><h3>Hash-to-curve sums (#791)</h3><ul class="b sm">
       <li>main already refused a sum at infinity. The PR proves it and tightens the tests; no production behavior change.</li>
@@ -272,7 +272,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 6. CONSTANT TIME ============ -->
 <section class="slide" data-section="Constant time">
   <div class="kicker">Constant-time checks</div>
-  <h2>The constant-time tools ran clean on the speed changes, and one tool now refuses SHA-512 instructions on Intel</h2>
+  <h2>ctgrind found 0 errors on two speed changes; <code style="font-size:.8em">ct-vartime</code> now refuses vsha512</h2>
   <table class="t" style="margin-top:14px">
     <tr><th style="width:24%">Where</th><th>Check</th><th style="width:28%">Result</th></tr>
     <tr><td>ML-DSA reorder (fork #126)</td><td><code>admin/ctgrind unit --release -- mldsa</code>, plus a planted bug to prove the tool notices</td><td>27 passed, 0 errors; the planted bug fails as it should</td></tr>
@@ -285,8 +285,8 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 7. CI ALERTS AND DEV SHELL ============ -->
 <section class="slide" data-section="CI">
-  <div class="kicker">Tooling that keeps CI honest · kixel-ai/rind#796 and #876</div>
-  <h2>An alert now fires only when a run really hit its time limit, and the dev shell runs the flake's own rustfmt and clippy</h2>
+  <div class="kicker">CI and dev shell · kixel-ai/rind#796 and #876</div>
+  <h2>Alerts fire only on a time-limit cancel; the dev shell runs the flake's rustfmt and clippy</h2>
   <div class="cols" style="margin-top:14px">
     <div class="card tall"><h3>CI alerts (#796, merged 18 Nov)</h3><ul class="b sm">
       <li>A job past its time limit ends "cancelled", not "timed out". Every scheduled cancel posted (14 in the week before), and a hung Release or Site deploy posted nothing.</li>
@@ -304,8 +304,8 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 8. MUTANTS TOOL AND FORK SYNC ============ -->
 <section class="slide" data-section="CI">
-  <div class="kicker">Checking the checkers · kixel-ai/rind#725 and fork #134</div>
-  <h2>A mutation run over shared code could pass without mutating anything; and the fork caught up with 29 upstream commits</h2>
+  <div class="kicker">Mutation tool and fork sync · kixel-ai/rind#725 and fork #134</div>
+  <h2>cargo-mutants could select nothing and exit 0; the fork synced 29 upstream commits</h2>
   <div class="cols" style="margin-top:14px">
     <div class="card tall"><h3>Mutation tool (#725, merged 14 Nov)</h3><ul class="b sm">
       <li>cargo-mutants 27.1.0 names a module included through <code>#[path = "../generic/aes_nohw.rs"]</code> with a literal <code>..</code>, so <code>--in-diff</code> matched nothing.</li>
@@ -324,7 +324,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 9. XEON VM ============ -->
 <section class="slide" data-section="Xeon VM">
   <div class="kicker">Correctness run · rind-results notes, 15 November · before these PRs merged</div>
-  <h2>On a shared Xeon cloud VM, every correctness check passed: 91 known-answer checks and 912 library tests</h2>
+  <h2>91 of 91 known-answer checks and 912 library tests passed on a shared Xeon VM</h2>
   <div class="kpis" style="margin-top:14px">
     <div class="kpi"><div class="v">91 / 91</div><div class="l">known-answer checks</div><div class="d">20 vectors, 9 libraries, 0 failed</div></div>
     <div class="kpi"><div class="v">912</div><div class="l">rind library tests passed</div><div class="d">0 failed, 40 ignored, fork main 3fc24bd1</div></div>
@@ -332,7 +332,7 @@ table.sv td:first-child{white-space:nowrap}
     <div class="kpi"><div class="v">115</div><div class="l">rind-results gate tests</div><div class="d"><code>cargo xtask ci</code>, cargo-deny ok</div></div>
   </div>
   <div class="cols">
-    <div class="card"><h3>What it is</h3><ul class="b sm">
+    <div class="card"><h3>Scope</h3><ul class="b sm">
       <li>Correctness only. No timing was measured and no board was touched.</li>
       <li>Intel Xeon, 8 vCPUs, Debian 13, rustc 1.100.0, shared with other agents.</li>
     </ul></div>
@@ -347,7 +347,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 10. NOT RUN ============ -->
 <section class="slide" data-section="Gaps">
   <div class="kicker">What was and was not run</div>
-  <h2>Each PR says what it did not run; these are the limits on the numbers in this deck</h2>
+  <h2>Not run, or partial</h2>
   <table class="t" style="margin-top:12px">
     <tr><th style="width:18%">PR</th><th>Not run, or partial</th></tr>
     <tr><td>#796</td><td>The 120-second <code>timeout</code> path did not run. It takes the same branch as the 404 case, which did.</td></tr>
@@ -363,7 +363,7 @@ table.sv td:first-child{white-space:nowrap}
 <!-- ============ 11. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Where every count comes from</h2>
+  <h2>Sources</h2>
   <table class="t compact" style="margin-top:12px">
     <tr><th style="width:26%">Slide</th><th>Source</th></tr>
     <tr><td>wasm and Ed25519</td><td>kixel-ai/rind#797 merged body; fork #64</td></tr>
