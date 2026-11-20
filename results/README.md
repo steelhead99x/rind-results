@@ -41,6 +41,7 @@ These stay in the layout they were published in. They are not the new per-commit
 | [`host/`](host/README.md) | x86-host-c at rind `99b509a`. The machine was noisy (bench-report `noisy: true`); do not read a gap off it without a quiet rerun. |
 | [`diag/`](diag/) | Diagnostics and relinks. Each directory says what it varied. |
 | [`uno-r3/`](uno-r3/README.md) | Arduino Uno R3 (ATmega328P at 16 MHz). A `no_std` port of rind's generic primitives from `c08c91ea`, not the full crate and not the comparable set. |
+| [`firetv-aftsss/`](firetv-aftsss/README.md) | Amazon Fire TV Stick (AFTSSS, MediaTek MT8695, 4x Cortex-A53, armv7 Android 9) at fork commit `ac0f2f93`, 19 Nov 2026, plus same-day repeats on fork main `847a3e3c`. Noisy (`noisy: true`), 14 bench binaries, not the comparable set. |
 
 `cargo verify` with no arguments still checks the published ESP32-S3 set, the nRF52840 set, x86-host-c's summary, and `results/jetson-orin-nano/`. `cargo verify --dir <tree>` checks any other directory, including one of these.
 
@@ -57,3 +58,4 @@ These are not that set:
 - x86-host-c at rind `99b509a` ([`host/`](host/README.md)) was noisy (`noisy: true`). Do not read a gap off it without a quiet rerun.
 - The ESP32-S3 set at 40 MHz ([`diag/esp32s3-40mhz-2026-11-11/`](diag/esp32s3-40mhz-2026-11-11/README.md)) is not comparable with the 80 MHz set. Cache-missing rows slow down with the flash clock.
 - The Arduino Uno R3 tree ([`uno-r3/`](uno-r3/README.md)) is a `no_std` port of rind's generic primitives from `c08c91ea`, not the full crate and not the comparable set at `d6ca9a75`.
+- The Fire TV Stick tree ([`firetv-aftsss/`](firetv-aftsss/README.md)) is a fork commit (`ac0f2f93`), noisy, and covers 14 of the bench binaries.

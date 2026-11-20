@@ -19,6 +19,7 @@ and board results.
 | [rind-testing](rind-testing/) | Tests that catch more: seven test and CI PRs merged upstream 14 to 19 Nov (#797, #792, #791, #798, #796, #876, #725), with numbers refreshed from the merged bodies, plus constant-time checks, the fork sync and the Xeon VM run | `decks/refresh-2026-11-17` |
 | [rind-esp32-sha2-cache](rind-esp32-sha2-cache/) | kixel-ai/rind#793, merged 19 Nov: why SHA-512 was 33× slower than ring on the ESP32-S3, the rolled loops and IRAM SHA-256, the i686 check, and the IRAM, heap and proof costs. Board numbers are fork runs and labelled so | `decks/refresh-2026-11-17` |
 | [rind-speed-vs-guarantees](rind-speed-vs-guarantees/) | kixel-ai/rind#821 and #793, merged 19 Nov: SHA-512 on Intel gives up speed for a timing guarantee and a proof, small chips give up a proof for speed; the 275HX "after" is pending a rerun | `decks/refresh-2026-11-17` |
+| [rind-firetv](rind-firetv/) | rind on an Amazon Fire TV Stick (AFTSSS, 4x Cortex-A53, 32-bit Android 9), run 19 Nov: rind faster in 88 of 118 comparisons, the ChaCha20-Poly1305 and P-256 gaps and their measured causes, the same-day repeat, and the fork's status (#207, #217, #215, #222 merged). Raw data in [`results/firetv-aftsss/`](../results/firetv-aftsss/README.md) | `docs/firetv-deck` |
 
 Each deck's README lists its sources and anything left out for lack of data. Slides tied to a PR carry a
 muted `PRs:` footer line: `rind #N` is kixel-ai/rind, `fork #N` is steelhead99x/rind, and `rind-results #N` is
