@@ -8,7 +8,7 @@ and board results.
 
 | Deck | What it covers | Source branch (newest files used) |
 |---|---|---|
-| [rind-benchmarks](rind-benchmarks/) | Published host and board results: how to read the speed chart, the Apple DIT tradeoff and `Dit::hold()`, later corrections, and the ESP32-S3 and nRF52840. Updated 17 Nov: SHA-512 and Intel's timing list (kixel-ai/rind#821), and the sets published on main since | `docs/benchmarks-deck` |
+| [rind-benchmarks](rind-benchmarks/) | Published host and board results: how to read the speed chart, the Apple DIT tradeoff and `Dit::hold()`, later corrections, and the ESP32-S3 and nRF52840. Updated 19 Nov (rind-results #85): work-so-far and scale slides. For SHA-512 and Intel's timing list (kixel-ai/rind#821), see rind-speed-vs-guarantees | `docs/benchmarks-deck` |
 | [rind-hardware-today](rind-hardware-today/) | 12 November board improvements: Poly1305-32, layout and cache, flash and watchdog, RP2040, the move to rind-hardware, and a timeline; plus an unpublished late-evening ESP32-S3 run that closed the SHA-512, HMAC/HKDF, ChaCha/XChaCha and SHA-256-spread I-cache gaps. Updated 17 Nov: the fix that merged on the fork and its board run, the Xtensa CI lint, and the Pi 5 lane now on main | `docs/esp32s3-gaps-deck` |
 | [rind-rp2040](rind-rp2040/) | RP2040 port, SysTick fix, SHA-512/GHASH findings, no_std split | `docs/rp2040-deck-r3` |
 | [rind-systick](rind-systick/) | SysTick and timing across the benched hardware, including the 12 November harness fixes | `docs/systick-deck` |
