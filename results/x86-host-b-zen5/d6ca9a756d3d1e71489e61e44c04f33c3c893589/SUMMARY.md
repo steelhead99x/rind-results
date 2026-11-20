@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
-# x86-host-b-zen5 (Ryzen 7 255, Zen 5, AVX-512): rind against the other libraries, and SPHINCS+ #143
+# x86-host-b-zen5 (Ryzen 7 255, Zen 4, AVX-512): rind against the other libraries, and SPHINCS+ #143
 
-Host: AMD Ryzen 7 255 w/ Radeon 780M Graphics (Zen 5, 16 logical CPUs, AVX-512 reported by rind-cpuid), Oracle Linux Server 10.1, rustc 1.98.1, governor `performance`, benchmarks pinned to CPUs 2 and 10. Measured 2026-11-18 (UTC 07:23 to 09:55). rind is upstream `d6ca9a756d3d1e71489e61e44c04f33c3c893589`, unpatched, 3 runs, noisy flag false on every run. Full tables: [RESULTS.md](RESULTS.md), [RUNS.md](RUNS.md), [x86-host-b-zen5.json](x86-host-b-zen5.json).
+Host: AMD Ryzen 7 255 w/ Radeon 780M Graphics (Zen 4, 16 logical CPUs, AVX-512 reported by rind-cpuid), Oracle Linux Server 10.1, rustc 1.98.1, governor `performance`, benchmarks pinned to CPUs 2 and 10. Measured 2026-11-18 (UTC 07:23 to 09:55). rind is upstream `d6ca9a756d3d1e71489e61e44c04f33c3c893589`, unpatched, 3 runs, noisy flag false on every run. Full tables: [RESULTS.md](RESULTS.md), [RUNS.md](RUNS.md), [x86-host-b-zen5.json](x86-host-b-zen5.json).
 
 ## 1. rind against each library, per algorithm
 
@@ -82,7 +82,7 @@ Round 2 of "after" was noisy for SHAKE-128f keygen/sign and 128s sign (1.26M aga
 
 ### Comparison with the AVX2-only Arrow Lake reference
 
-| | Arrow Lake PC (AVX2 only, as given) | This host (Zen 5, AVX-512) |
+| | Arrow Lake PC (AVX2 only, as given) | This host (Zen 4, AVX-512) |
 |---|---|---|
 | SHAKE-128f sign, C reference | about 43.7M cycles | 34.89M (sp-native); 70.13M (sp-haswell) |
 | SHAKE-128f verify, C reference | about 3.24M cycles | 2.96M (sp-native); 5.08M (sp-haswell) |
@@ -90,7 +90,7 @@ Round 2 of "after" was noisy for SHAKE-128f keygen/sign and 128s sign (1.26M aga
 | rind verify gain from #143 | not given | 26 to 28% |
 | rind (after) sign against C native | not given | 0.68x on 128f (23.76M against 34.89M), 0.71x on 256f |
 
-On Zen 5 with AVX-512 the #143 rind change is a large win (about 38% on sign and keygen, 26 to 28% on verify), where the AVX2-only Arrow Lake machine saw 0 to 6% on sign. After #143, rind signs SHAKE-128f in about 23.8M cycles, about 32% fewer than the AVX-512-capable C reference and about 66% fewer than the AVX2-only C build. Before #143 rind was slower than the C reference on sign (38.7M against 34.9M, 1.11x) and keygen (1.64M against 1.50M), and faster on verify (2.64M against 2.96M). This run did not isolate whether the gain comes from AVX-512 paths or from the interleaved-state change alone.
+On Zen 4 with AVX-512 the #143 rind change is a large win (about 38% on sign and keygen, 26 to 28% on verify), where the AVX2-only Arrow Lake machine saw 0 to 6% on sign. After #143, rind signs SHAKE-128f in about 23.8M cycles, about 32% fewer than the AVX-512-capable C reference and about 66% fewer than the AVX2-only C build. Before #143 rind was slower than the C reference on sign (38.7M against 34.9M, 1.11x) and keygen (1.64M against 1.50M), and faster on verify (2.64M against 2.96M). This run did not isolate whether the gain comes from AVX-512 paths or from the interleaved-state change alone.
 
 Caveats: 2 rounds of rind only; the cycle conversion is approximate; the C -march=native build was compiled by the system compiler on this host and its vectorization is whatever that compiler did; the Arrow Lake figures are the ones supplied, not re-measured here.
 
