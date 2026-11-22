@@ -55,6 +55,35 @@ pub struct Args {
     images: Option<PathBuf>,
 }
 
+impl Args {
+    /// `cargo xtask report --rind <rind> --dir <dir>` for a host tree with `raw/run-*.json`.
+    /// `board` is unused: `run` returns through `host_report` when the dir has host runs.
+    pub fn host_dir(rind: PathBuf, dir: PathBuf) -> Self {
+        Self {
+            board: "esp32s3".into(),
+            raw: PathBuf::from("results/raw"),
+            rind,
+            firmware: None,
+            dir: Some(dir),
+            sizes: None,
+            meta: None,
+            gaps: PathBuf::from("results/gaps.toml"),
+            out: PathBuf::from("results"),
+            images: None,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn rind(&self) -> &Path {
+        &self.rind
+    }
+
+    #[cfg(test)]
+    pub fn dir(&self) -> Option<&Path> {
+        self.dir.as_deref()
+    }
+}
+
 /// What differs between the boards; the rest of the report is the same.
 struct Board {
     title: &'static str,
