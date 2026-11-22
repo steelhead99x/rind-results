@@ -140,14 +140,85 @@ pub fn write_relaxations(path: &Path, upstream: &Path, relax: &Relax) -> Result<
     std::fs::write(path, body).map_err(|e| format!("{}: {e}", path.display()))
 }
 
+/// Default intended pin for rind's `admin/bench-report` (`RIND_PINNED_CPUS`).
+/// Until that script applies it around single-thread rows only, it is an env
+/// hint: the Python process itself is not pinned.
+pub const DEFAULT_PINNED_CPUS: &str = "2,3";
+
+/// `run.log` text when the process has no `taskset` affinity.
+pub const NO_PROCESS_AFFINITY: &str = "none (no process affinity)";
+
+/// How `admin/bench-report` is spawned.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BenchReportSpawn {
+    /// `taskset` or `python3`.
+    pub program: &'static str,
+    /// Arguments after the program, before the script or `-c` loader.
+    pub prefix_args: Vec<String>,
+    /// Value of `RIND_PINNED_CPUS`, when set.
+    pub pinned_cpus_env: Option<String>,
+    /// Text after `cpus=` in `run.log`.
+    pub cpus_log: String,
+}
+
+/// `process_pin` is the legacy process-wide `taskset -c` list (opt-in `--cpus`).
+/// `intended_pin` is passed as `RIND_PINNED_CPUS` when there is no process-wide pin.
+pub fn bench_report_spawn(
+    process_pin: Option<&str>,
+    intended_pin: Option<&str>,
+) -> BenchReportSpawn {
+    bench_report_spawn_on(cfg!(target_os = "linux"), process_pin, intended_pin)
+}
+
+/// Same as [`bench_report_spawn`], with the OS choice supplied for tests.
+pub fn bench_report_spawn_on(
+    linux: bool,
+    process_pin: Option<&str>,
+    intended_pin: Option<&str>,
+) -> BenchReportSpawn {
+    let pin = process_pin.and_then(|s| {
+        let t = s.trim();
+        if t.is_empty() { None } else { Some(t) }
+    });
+    if let Some(cpus) = pin {
+        if linux {
+            return BenchReportSpawn {
+                program: "taskset",
+                prefix_args: vec!["-c".into(), cpus.to_string(), "python3".into()],
+                pinned_cpus_env: None,
+                cpus_log: cpus.to_string(),
+            };
+        }
+    }
+    BenchReportSpawn {
+        program: "python3",
+        prefix_args: vec![],
+        pinned_cpus_env: intended_pin
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+        cpus_log: NO_PROCESS_AFFINITY.to_string(),
+    }
+}
+
+/// Label a spawn failure with the program that failed to start.
+pub fn spawn_cmd_error(program: &str, err: impl std::fmt::Display) -> String {
+    format!("{program}: {err}")
+}
+
 /// `args` is what follows `admin/bench-report`, for example
 /// `["run", "--host", "pi5", ...]`. The script file is not modified.
+///
+/// `process_pin` is a legacy process-wide `taskset -c` list, used only on
+/// Linux when the caller opted in. `intended_pin` is set as
+/// `RIND_PINNED_CPUS` when the process is not wrapped in `taskset`.
 pub fn run_bench_report(
     rind: &Path,
     args: &[String],
     relax: &Relax,
     env: &[(&str, &str)],
-    cpus: Option<&str>,
+    process_pin: Option<&str>,
+    intended_pin: Option<&str>,
     log: Option<&Path>,
 ) -> Result<(), String> {
     let script = rind.join("admin/bench-report");
@@ -155,14 +226,9 @@ pub fn run_bench_report(
         return Err(format!("no {}", script.display()));
     }
     let before = std::fs::read(&script).map_err(|e| format!("{}: {e}", script.display()))?;
-    let mut cmd = match cpus {
-        Some(cpus) => {
-            let mut c = Command::new("taskset");
-            c.args(["-c", cpus, "python3"]);
-            c
-        }
-        None => Command::new("python3"),
-    };
+    let spawn = bench_report_spawn(process_pin, intended_pin);
+    let mut cmd = Command::new(spawn.program);
+    cmd.args(&spawn.prefix_args);
     if relax.any() {
         cmd.arg("-c").arg(LOADER).arg(&script);
         if let Some(share) = &relax.busy_share {
@@ -198,7 +264,12 @@ pub fn run_bench_report(
         ));
         cmd.stderr(std::process::Stdio::from(file));
     }
-    let status = cmd.status().map_err(|e| format!("python3: {e}"))?;
+    if let Some(cpus) = &spawn.pinned_cpus_env {
+        cmd.env("RIND_PINNED_CPUS", cpus);
+    }
+    let status = cmd
+        .status()
+        .map_err(|e| spawn_cmd_error(spawn.program, e))?;
     let after = std::fs::read(&script).map_err(|e| format!("{}: {e}", script.display()))?;
     if before != after {
         return Err(format!(
@@ -331,6 +402,106 @@ pub fn sample_least_busy_core() -> Result<u32, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_host_spawn_passes_rind_pinned_cpus_and_does_not_taskset() {
+        let s = bench_report_spawn_on(true, None, Some(DEFAULT_PINNED_CPUS));
+        assert_eq!(s.program, "python3");
+        assert!(s.prefix_args.is_empty());
+        assert_eq!(s.pinned_cpus_env.as_deref(), Some(DEFAULT_PINNED_CPUS));
+        assert_eq!(s.cpus_log, NO_PROCESS_AFFINITY);
+        let native = bench_report_spawn(None, Some(DEFAULT_PINNED_CPUS));
+        assert_eq!(native.program, "python3");
+        assert!(native.prefix_args.is_empty());
+    }
+
+    #[test]
+    fn linux_process_pin_uses_taskset_and_skips_the_env_hint() {
+        let s = bench_report_spawn_on(true, Some("2,3"), Some(DEFAULT_PINNED_CPUS));
+        assert_eq!(s.program, "taskset");
+        assert_eq!(
+            s.prefix_args,
+            vec!["-c".to_string(), "2,3".into(), "python3".into()]
+        );
+        assert_eq!(s.pinned_cpus_env, None);
+        assert_eq!(s.cpus_log, "2,3");
+    }
+
+    #[test]
+    fn macos_or_no_pin_never_execs_taskset() {
+        for process in [None, Some("2,3")] {
+            let s = bench_report_spawn_on(false, process, Some(DEFAULT_PINNED_CPUS));
+            assert_eq!(s.program, "python3", "process={process:?}");
+            assert!(s.prefix_args.is_empty(), "process={process:?}");
+            assert_eq!(s.cpus_log, NO_PROCESS_AFFINITY, "process={process:?}");
+        }
+        let none = bench_report_spawn_on(true, None, None);
+        assert_eq!(none.program, "python3");
+        assert!(none.prefix_args.is_empty());
+        assert_eq!(none.pinned_cpus_env, None);
+    }
+
+    #[test]
+    fn missing_taskset_errors_as_taskset() {
+        let err = spawn_cmd_error(
+            "taskset",
+            std::io::Error::new(std::io::ErrorKind::NotFound, "No such file or directory"),
+        );
+        assert!(err.starts_with("taskset:"), "{err}");
+        assert!(!err.starts_with("python3:"), "{err}");
+
+        if cfg!(target_os = "linux") {
+            let dir =
+                std::env::temp_dir().join(format!("rind-missing-taskset-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(dir.join("admin")).unwrap();
+            std::fs::write(dir.join("admin/bench-report"), "print(0)\n").unwrap();
+            let empty = dir.join("empty-bin");
+            std::fs::create_dir_all(&empty).unwrap();
+            let err = run_bench_report(
+                &dir,
+                &["run".into()],
+                &Relax::default(),
+                &[("PATH", empty.to_str().unwrap())],
+                Some("2,3"),
+                None,
+                None,
+            )
+            .unwrap_err();
+            assert!(err.starts_with("taskset:"), "{err}");
+            let _ = std::fs::remove_dir_all(&dir);
+        }
+    }
+
+    #[test]
+    fn run_bench_report_default_sets_rind_pinned_cpus() {
+        let dir = std::env::temp_dir().join(format!("rind-pinned-env-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("admin")).unwrap();
+        std::fs::write(
+            dir.join("admin/bench-report"),
+            "import os,sys\nprint('program', sys.argv[0])\nprint('pin', os.environ.get('RIND_PINNED_CPUS', ''))\n",
+        )
+        .unwrap();
+        let log = dir.join("out.log");
+        run_bench_report(
+            &dir,
+            &["run".into()],
+            &Relax::default(),
+            &[],
+            None,
+            Some(DEFAULT_PINNED_CPUS),
+            Some(&log),
+        )
+        .unwrap();
+        let body = std::fs::read_to_string(&log).unwrap();
+        assert!(body.contains("pin 2,3"), "{body}");
+        assert!(
+            !body.contains("taskset"),
+            "python process was wrapped in taskset: {body}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn relaxations_record_a_repo_relative_bench_report() {
