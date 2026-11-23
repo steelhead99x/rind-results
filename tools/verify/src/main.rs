@@ -224,6 +224,14 @@ fn read(path: &Path) -> String {
     .into_owned()
 }
 
+/// A start record's boot clock check in Hz (`check_cycles` over `check_us`
+/// microseconds), when the firmware recorded one.
+fn start_clock_hz(start: &Value) -> Option<f64> {
+    let cycles = start.get("check_cycles")?.as_f64()?;
+    let us = start.get("check_us")?.as_f64()?;
+    (us > 0.0).then(|| cycles * 1e6 / us)
+}
+
 struct Raw {
     per: Ordered<Vec<Value>>,
     starts: Vec<Value>,
@@ -452,6 +460,33 @@ fn check_board_at(
                 ),
             );
         }
+    }
+    // The RP2040 firmware records its boot clock check in the start record:
+    // SysTick cycles over `check_us` of the 1 MHz TIMER.
+    let start_clocks: Vec<f64> = raw.starts.iter().filter_map(start_clock_hz).collect();
+    for rate in &start_clocks {
+        if hz_expect > 0.0 && (rate / hz_expect - 1.0).abs() > 0.001 {
+            rep.bad(
+                board,
+                format!(
+                    "cycle counter ran at {:.3} MHz against the start record's timer",
+                    rate / 1e6
+                ),
+            );
+        }
+    }
+    if !start_clocks.is_empty() {
+        let lo = start_clocks.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = start_clocks
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
+        println!(
+            "{board}: {} start-record clock checks, {:.4} to {:.4} MHz",
+            start_clocks.len(),
+            lo / 1e6,
+            hi / 1e6
+        );
     }
     if !raw.clocks.is_empty() {
         let first: Vec<String> = raw
@@ -1645,6 +1680,16 @@ mod provenance_tests {
                 }
             }
         })
+    }
+
+    #[test]
+    fn start_record_clock_check_is_cycles_over_timer_microseconds() {
+        let start = serde_json::json!({"type": "start", "cpu_hz": 125_000_000u64,
+                                       "check_cycles": 37_500_817u64, "check_us": 300_020u64});
+        let hz = start_clock_hz(&start).unwrap();
+        assert!((hz / 125e6 - 1.0).abs() < 1e-4, "{hz}");
+        assert!(start_clock_hz(&serde_json::json!({"cpu_hz": 240_000_000u64})).is_none());
+        assert!(start_clock_hz(&serde_json::json!({"check_cycles": 1, "check_us": 0})).is_none());
     }
 
     #[test]

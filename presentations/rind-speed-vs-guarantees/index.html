@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rind speed versus guarantees: SHA-512 on Intel and SHA-2 on small chips</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  STYLE: the CSS and navigation of presentations/rind-testing (from rind-hardware-today).
+  SLIDES: one section per slide. Speed figures are as stated in the merged PR bodies.
+-->
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+table.t.compact th,table.t.compact td{padding:4px 8px}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions (reused) */
+.flow text{font-family:var(--sans)}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .t1{font-size:15px;fill:var(--ink)}
+.flow .t2{font-size:12.5px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:12px;fill:var(--navy)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board.b2{grid-template-columns:1fr 1fr}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+/* RP2040 deck additions */
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+.err{background:var(--bad-bg);border-left:4px solid var(--bad);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px;color:var(--bad)}
+.cons{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.con{position:relative;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--bad);border-radius:0 0 10px 10px;padding:16px 14px 64px;min-height:330px}
+.con .ix{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.con .ck{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:12px}
+.con .cv{font-size:26px;font-weight:700;color:var(--navy);margin:4px 0 10px;white-space:nowrap}
+.con .cw{font-size:13.5px;line-height:1.45;color:var(--ink)}
+.con .cf{position:absolute;left:14px;right:14px;bottom:14px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--good-bg);border-radius:6px;padding:6px 8px;line-height:1.3}
+.card.fix{border-top:4px solid var(--accent)}
+.card.fix.warnc{border-top-color:#c9a227}
+.card .pn{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.card.warnc .pn{color:#8a6d0b}
+table.grid th.c,table.grid td.c{text-align:center}
+table.grid th span{font-size:10px;color:var(--mute);text-transform:none;letter-spacing:0}
+table.grid td{padding:5px 8px}
+table.grid td.r{font-size:12.5px;color:var(--ink2)}
+i.dot{display:inline-block;font-style:normal;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+i.dot.y{background:var(--good-bg);color:var(--accent)}
+i.dot.n{background:var(--bad-bg);color:var(--bad)}
+table.sv{font-size:12.5px}
+table.sv td.bad{color:var(--bad);font-weight:700}
+.timeline.t6{grid-template-columns:repeat(6,1fr)}
+.tl.done{border-top-color:var(--mute);background:#eef0f3}
+.pendbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:9px 14px;border-radius:0 8px 8px 0;font-size:14.5px;color:#5c4a08}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.sub2{font-size:11px;color:var(--mute)}
+.mut{color:var(--mute);font-style:italic}
+a{color:var(--accent2);text-decoration:none}
+table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
+/* new-deck spacing (2026-11-17): larger type so tables and cards fill the slide */
+.slide table.t{font-size:16px !important}
+.slide table.t td{padding:9px 10px}
+.slide table.t th{font-size:12.5px;padding:7px 10px}
+.slide ul.b.sm{font-size:16.5px}
+.slide ul.b.sm li{margin-bottom:11px}
+.slide .card{padding:18px 20px}
+.slide p.small{font-size:15px}
+.slide .chart-title{font-size:15px;margin-bottom:8px}
+.slide .callout{font-size:16.5px}
+/* PR links (2026-11-19): one muted "PRs:" line at the top of each footer */
+.slide .foot .src .prs{display:block;margin-bottom:3px;color:var(--ink2);font-weight:600}
+.slide .foot .src .prs a{color:var(--ink2);border-bottom:1px solid #c3ccd7;font-weight:600}
+.slide .foot .src .prs a:hover{color:var(--accent2)}
+.slide.title .foot .src .prs,.slide.title .foot .src .prs a{color:#c8d3e0;border-color:#3d5573}
+</style>
+</head>
+<body>
+<div id="deck">
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · speed versus guarantees · merged upstream 19 Nov 2026</div>
+    <h1>#821 trades speed for a timing guarantee; #793 trades a proof for speed</h1>
+    <div class="sub">kixel-ai/rind#821: SHA-512 on x86_64 stops using VSHA512 and takes 2.0× to 4.6× its old time on CPUs that have it. kixel-ai/rind#793: SHA-2 on 32-bit microcontrollers leaves formally verified code; SHA-512 takes 0.033× its old time in the fork's board run.</div>
+  </div>
+  <div class="meta">kixel-ai/rind#821 (fork mirror #131) · kixel-ai/rind#793 (port of fork #69)<br>Both merged 19 November 2026 · times are America/Los_Angeles (PST)</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/131">fork #131</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>Speed numbers are as stated in the merged PR bodies. The #821 table is the maintainer's run on one CPU.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 2. INTEL LIST ============ -->
+<section class="slide" data-section="The rule">
+  <div class="kicker">What constant time needs from the CPU · kixel-ai/rind#821</div>
+  <h2>Intel's fixed-timing list has the SHA-1 and SHA-256 instructions, and no VSHA512 instruction</h2>
+  <div class="cols" style="margin-top:14px">
+    <div>
+      <div class="chart-title">Intel "Data Operand Independent Timing Instructions", page updated 2026-02-23</div>
+      <table class="t">
+        <tr><th>Instruction</th><th>On the list</th></tr>
+        <tr><td><code>SHA1RNDS4</code>, <code>SHA1MSG1/2</code>, <code>SHA1NEXTE</code></td><td><span class="tag ok">yes</span></td></tr>
+        <tr><td><code>SHA256RNDS2</code>, <code>SHA256MSG1/2</code></td><td><span class="tag ok">yes</span></td></tr>
+        <tr class="hl"><td><code>VSHA512RNDS2</code>, <code>VSHA512MSG1</code>, <code>VSHA512MSG2</code></td><td><span class="tag drop">no</span></td></tr>
+      </table>
+    </div>
+    <div class="card"><h3>Effect on rind</h3><ul class="b sm">
+      <li>rind ran the VSHA512 instructions on every x86_64 CPU with the SHA512 extension, from Arrow Lake and Lunar Lake on.</li>
+      <li>HMAC keys and Ed25519 nonces went through instructions with no timing guarantee.</li>
+      <li><code>admin/ct-vartime</code> accepted them.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/353">rind #353</a></span>kixel-ai/rind#821 merged body (Problem, Validation: Intel's list read live on 2026-11-18). Caused by kixel-ai/rind#353.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 3. WHAT RIND DID ============ -->
+<section class="slide" data-section="The change">
+  <div class="kicker">What rind did · kixel-ai/rind#821 · merged 19 Nov, 2:48 PM</div>
+  <h2>x86_64 drops VSHA512 and uses OpenSSL's AVX2 routine, which has rind's HOL Light proof</h2>
+  <div class="cols3" style="margin-top:14px">
+    <div class="card fix"><div class="pn">code</div><ul class="b sm">
+      <li>SHA-384, SHA-512 and SHA-512/256 use the AVX2 routine, as aws-lc does.</li>
+      <li>Every mnemonic in it is on Intel's list.</li>
+      <li>No API or wire change; digests unchanged.</li>
+    </ul></div>
+    <div class="card fix"><div class="pn">checks</div><ul class="b sm">
+      <li><code>admin/ct-vartime</code> now refuses <code>vsha512*</code> on x86.</li>
+      <li>HMAC-SHA384 and HMAC-SHA512 now run only what valgrind models, so ctgrind covers them.</li>
+    </ul></div>
+    <div class="card fix"><div class="pn">proofs</div><ul class="b sm">
+      <li>The AVX2 routine has rind's HOL Light proof, so x86_64 SHA-512 is proven on every AVX2 CPU.</li>
+      <li>The proof quest for the removed routine is retired.</li>
+    </ul></div>
+  </div>
+  <div class="callout" style="margin-top:18px">CI on the merged head <code>e8b72339</code>: 47 checks pass, 25 skipped, none failed, including the SDE CPU rows up to Diamond Rapids, <code>cosim</code>, <code>lean</code> and binsec.</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a></span>kixel-ai/rind#821 merged body (Summary, Approach, Decisions, Validation)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 4. THE PRICE ============ -->
+<section class="slide" data-section="The price">
+  <div class="kicker">The price, measured by the maintainer · Core Ultra 7 270K Plus (Arrow Lake), one core</div>
+  <h2>SHA-512 takes 2.0× its old time at 64 B and 4.2× to 4.6× from 1200 B, and is still faster than aws-lc-rs</h2>
+  <div class="cols c46" style="margin-top:6px">
+    <div>
+      <div class="chart-title">AVX2 time over the old VSHA512 time</div>
+      <svg width="560" height="202" viewBox="0 0 560 202"><text x="0" y="26" font-size="13.5" fill="#16202e">64 B</text><rect x="70" y="10" width="130.4" height="24" rx="2" fill="#b4532a"/><text x="208.4" y="27" font-size="13.5" font-weight="700" fill="#0e2238">2.0×</text><text x="0" y="64" font-size="13.5" fill="#16202e">1200 B</text><rect x="70" y="48" width="273.9" height="24" rx="2" fill="#b4532a"/><text x="351.9" y="65" font-size="13.5" font-weight="700" fill="#0e2238">4.2×</text><text x="0" y="102" font-size="13.5" fill="#16202e">1350 B</text><rect x="70" y="86" width="280.4" height="24" rx="2" fill="#b4532a"/><text x="358.4" y="103" font-size="13.5" font-weight="700" fill="#0e2238">4.3×</text><text x="0" y="140" font-size="13.5" fill="#16202e">8 KB</text><rect x="70" y="124" width="300.0" height="24" rx="2" fill="#b4532a"/><text x="378.0" y="141" font-size="13.5" font-weight="700" fill="#0e2238">4.6×</text><text x="0" y="178" font-size="13.5" fill="#16202e">16 KB</text><rect x="70" y="162" width="300.0" height="24" rx="2" fill="#b4532a"/><text x="378.0" y="179" font-size="13.5" font-weight="700" fill="#0e2238">4.6×</text></svg>
+      <div class="chart-title" style="margin-top:6px">AVX2 time over aws-lc-rs's time</div>
+      <svg width="560" height="218" viewBox="0 0 560 218"><line x1="370.0" y1="0" x2="370.0" y2="198" stroke="#7b8797" stroke-dasharray="4 3"/><text x="0" y="26" font-size="13.5" fill="#16202e">64 B</text><rect x="70" y="10" width="246.0" height="24" rx="2" fill="#0f766e"/><text x="324.0" y="27" font-size="13.5" font-weight="700" fill="#0e2238">0.82×</text><text x="0" y="64" font-size="13.5" fill="#16202e">1200 B</text><rect x="70" y="48" width="255.0" height="24" rx="2" fill="#0f766e"/><text x="333.0" y="65" font-size="13.5" font-weight="700" fill="#0e2238">0.85×</text><text x="0" y="102" font-size="13.5" fill="#16202e">1350 B</text><rect x="70" y="86" width="255.0" height="24" rx="2" fill="#0f766e"/><text x="333.0" y="103" font-size="13.5" font-weight="700" fill="#0e2238">0.85×</text><text x="0" y="140" font-size="13.5" fill="#16202e">8 KB</text><rect x="70" y="124" width="258.0" height="24" rx="2" fill="#0f766e"/><text x="336.0" y="141" font-size="13.5" font-weight="700" fill="#0e2238">0.86×</text><text x="0" y="178" font-size="13.5" fill="#16202e">16 KB</text><rect x="70" y="162" width="258.0" height="24" rx="2" fill="#0f766e"/><text x="336.0" y="179" font-size="13.5" font-weight="700" fill="#0e2238">0.86×</text><text x="374.0" y="210" font-size="11.5" fill="#5d6878">1.0× = aws-lc-rs's time</text></svg>
+    </div>
+    <table class="t compact">
+      <tr><th>Size</th><th class="n">old</th><th class="n">AVX2</th><th class="n">aws-lc-rs</th><th class="n">AVX2 / old</th><th class="n">/ aws-lc-rs</th></tr>
+      <tr><td>64 B</td><td class="n">54 ns</td><td class="n">111 ns</td><td class="n">136 ns / 136 ns</td><td class="n">2.0×</td><td class="n">0.82×</td></tr><tr><td>1200 B</td><td class="n">230 ns</td><td class="n">977 ns</td><td class="n">1.34 µs / 1.15 µs</td><td class="n">4.2×</td><td class="n">0.85×</td></tr><tr><td>1350 B</td><td class="n">251 ns</td><td class="n">1.08 µs</td><td class="n">1.26 µs / 1.26 µs</td><td class="n">4.3×</td><td class="n">0.85×</td></tr><tr><td>8 KB</td><td class="n">1.35 µs</td><td class="n">6.25 µs</td><td class="n">7.25 µs / 7.24 µs</td><td class="n">4.6×</td><td class="n">0.86×</td></tr><tr class="hl"><td>16 KB</td><td class="n">2.67 µs</td><td class="n">12.37 µs</td><td class="n">14.37 µs / 14.32 µs</td><td class="n">4.6×</td><td class="n">0.86×</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a></span>kixel-ai/rind#821 merged body (Validation): main's code, unpatched and then forced past HaveSha512, pinned with taskset -c 2. aws-lc-rs column shows main's run / AVX2 run.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 5. KYLE'S CPU ============ -->
+<section class="slide" data-section="275HX">
+  <div class="kicker">On Kyle's Core Ultra 9 275HX · rind-results main</div>
+  <h2>Core Ultra 9 275HX: "before" published, "after" pending a rerun at the merged commit</h2>
+  <div class="cols" style="margin-top:12px">
+    <div>
+      <div class="chart-title">Before: rind <code>d6ca9a75</code>, 13 Nov, 3 runs</div>
+      <table class="t">
+        <tr><th>Row</th><th class="n">rind</th><th>Fastest other</th></tr>
+        <tr><td>sha512/64B</td><td class="n">62 ns</td><td>RustCrypto + dalek, 131 ns</td></tr>
+        <tr><td>sha512/1350B</td><td class="n">263 ns</td><td>OpenSSL, 1.24 µs</td></tr>
+        <tr><td>sha512/16KB</td><td class="n">2.78 µs</td><td>OpenSSL, 12.97 µs</td></tr>
+        <tr class="hl"><td>After, merged #821</td><td class="n"><span class="tag pending">pending</span></td><td>rerun needed</td></tr>
+      </table>
+    </div>
+    <div class="card fix"><div class="pn">path measured: VSHA512</div><ul class="b sm">
+      <li>The chip has the SHA512 instructions (Kyle, 19 Nov). Oracle Linux does not list the flag.</li>
+      <li>The 13 Nov run used VSHA512. After #821 this chip runs the AVX2 routine.</li>
+      <li>Rerun at the merged commit: pending. CPU flags: next slide.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/commit/a674bc6e0cd1948c583f8283324802d1af7695f6">commit a674bc6e</a></span>rind-results main: results/intel-core-ultra-9-275hx/d6ca9a75.../RESULTS.md (sha512 rows) · Kyle's confirmation, 19 Nov 2026 11:20 PM PST</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 6. THE OS CAN HIDE A CPU FEATURE ============ -->
+<section class="slide" data-section="275HX">
+  <div class="kicker">On Kyle's Alienware · Oracle Linux · read-only check, 19 Nov 2026</div>
+  <h2>Oracle Linux's /proc/cpuinfo does not list sha512 on this chip; CPUID detection finds it</h2>
+  <div class="cols" style="margin-top:12px">
+    <div>
+      <table class="t">
+        <tr><th style="width:42%">Check</th><th>What it shows</th></tr>
+        <tr><td>OS</td><td>Oracle Linux Server 10.2</td></tr>
+        <tr><td>Kernel</td><td><code>7.2.13-1.el10.elrepo.x86_64</code></td></tr>
+        <tr><td>CPU</td><td>Intel Core Ultra 9 275HX</td></tr>
+        <tr class="hl"><td><code>/proc/cpuinfo</code> flags</td><td><code>sha_ni</code> listed; <code>sha512</code> <b>not listed</b></td></tr>
+        <tr class="hl"><td>rind's runtime CPUID detection, 13 Nov run</td><td><code>sha512</code> found</td></tr>
+        <tr><td>#821 commit <code>a674bc6e</code> on this chip</td><td>2.0× to 2.2× (32 and 64 B) and 4.4× to 4.7× (from 1200 B) slower after the change</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="card"><h3>Evidence</h3><ul class="b sm">
+        <li>#821 changes only CPUs on the SHA512 path. Without it, both builds run AVX2 and nothing slows down.</li>
+        <li>This chip slowed by 2.0× to 4.7×, so it was on the SHA512 path.</li>
+        <li>Why the kernel omits the flag: not checked.</li>
+      </ul></div>
+      <div class="callout" style="margin-top:14px">Record both in every results run. Trust CPUID detection over <code>/proc/cpuinfo</code>.</div>
+    </div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/commit/a674bc6e0cd1948c583f8283324802d1af7695f6">commit a674bc6e</a></span>Read-only check on the Alienware, 19 Nov 2026 evening PST · rind-results main: results/intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md (CPU features rind reads) · kixel-ai/rind#821 commit a674bc6e message. The "after" rerun is still pending.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. OTHER DIRECTION ============ -->
+<section class="slide" data-section="Both ways">
+  <div class="kicker">The same choice in the other direction · kixel-ai/rind#793</div>
+  <h2>What each PR gives up and gains</h2>
+  <table class="t" style="margin-top:14px">
+    <tr><th style="width:16%"></th><th style="width:42%">#821, SHA-512 on newer Intel</th><th>#793, SHA-2 on 32-bit microcontrollers</th></tr>
+    <tr><td>Gives up</td><td>Speed: 2.0× to 4.6× the old time on CPUs with the SHA512 extension</td><td>The formal proof: SHA-256 on ESP-IDF Xtensa and SHA-512 on 32-bit microcontrollers</td></tr>
+    <tr><td>Gains</td><td>Only instructions on Intel's fixed-timing list, and a proven routine on every AVX2 CPU</td><td>Fork board run: SHA-512 0.033× its old time; SHA-256 0.315× to 0.741× of main's</td></tr>
+    <tr><td>Also costs</td><td>Still 0.82× to 0.86× of aws-lc-rs's time</td><td>+4,516 B IRAM, −4,608 B heap (fork's measurement)</td></tr>
+    <tr class="hl"><td>Follow-up</td><td>Revisit if Intel adds the instructions to its list</td><td>A quest to prove the rolled loops</td></tr>
+  </table>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>kixel-ai/rind#821 and #793 merged bodies (Impact, Decisions, Follow-ups). #793's board numbers are from the fork's run, cited in its body.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 8. TRIED AND DROPPED ============ -->
+<section class="slide" data-section="Tried">
+  <div class="kicker">Fork PRs, and #723</div>
+  <h2>Fork #136 kept VSHA512 for Ed25519 verify only; the gain was within noise and it was closed</h2>
+  <div class="cols3" style="margin-top:14px">
+    <div class="card"><h3>fork #131, merged on the fork</h3><ul class="b sm">
+      <li>The fork's mirror of #821, with review fixes. Merged into fork main 19 Nov, 7:47 AM.</li>
+      <li>It keeps the sha512-x86-ext quest as a revisit quest; upstream deleted it.</li>
+    </ul></div>
+    <div class="card"><h3>fork #136, closed</h3><ul class="b sm">
+      <li>Would have kept VSHA512 for Ed25519 verification only.</li>
+      <li>Measured verify gain within noise: 1.8% slower on a CPU without VSHA512, 0.5% to 1.8% at best with it.</li>
+    </ul></div>
+    <div class="card"><h3>#723, merged 14 Nov</h3><ul class="b sm">
+      <li>The FIPS DRBG self-test could hang a forked child. A per-thread test was about 9.6 µs per thread against about 19.6 µs to spawn one.</li>
+      <li>The shipped once-per-process flag costs one run. Maintainer's timing.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/131">fork #131</a> · <a href="https://github.com/steelhead99x/rind/pull/136">fork #136</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a></span>kixel-ai/rind#821 merged body (Fork PRs) · kixel-ai/rind#723 merged body (Decisions)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 9. GAPS AND SOURCES ============ -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Gaps, and sources</div>
+  <h2>Missing data</h2>
+  <div class="cols c46" style="margin-top:12px">
+    <div class="card fix warnc"><div class="pn">gaps</div><ul class="b sm">
+      <li>No "after" for #821 on the Core Ultra 9 275HX in rind-results; rerun at the merged commit, saving both CPUID detection and <code>/proc/cpuinfo</code> flags.</li>
+      <li>No data for CPUs without the extension beyond fork #136's percentages.</li>
+      <li>No board run of the merged #793 head.</li>
+    </ul></div>
+    <table class="t compact">
+      <tr><th style="width:34%">Topic</th><th>Source</th></tr>
+      <tr><td>Intel list, change, price</td><td>kixel-ai/rind#821 merged body</td></tr>
+      <tr><td>275HX before</td><td>rind-results results/intel-core-ultra-9-275hx/d6ca9a75.../RESULTS.md</td></tr>
+      <tr><td>275HX after (ratios only)</td><td>#821 commit a674bc6e</td></tr>
+      <tr><td>275HX OS and flags</td><td>read-only check on the Alienware, 19 Nov</td></tr>
+      <tr><td>Small chips</td><td>kixel-ai/rind#793 merged body</td></tr>
+      <tr><td>Fork PRs</td><td>fork #131, #136, as described in #821</td></tr>
+      <tr><td>DRBG self-test</td><td>kixel-ai/rind#723 merged body</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/steelhead99x/rind/pull/131">fork #131</a> · <a href="https://github.com/steelhead99x/rind/pull/136">fork #136</a></span>github.com/kixel-ai/rind · github.com/steelhead99x/rind · github.com/steelhead99x/rind-results · checked 19 Nov 2026 evening PST</span><span class="num"></span></div>
+</section>
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>

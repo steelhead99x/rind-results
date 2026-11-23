@@ -231,7 +231,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="inner">
     <div class="kicker">rind · aarch64 performance</div>
     <h1>From trailing to leading on the Cortex-A76: the aarch64 work, phase by phase</h1>
-    <div class="sub">PR #33's narrow-multiplier dispatch, the Pi 5 follow-up series, and three rounds of Argon2id NEON work, measured on a Raspberry Pi 5 and an Apple M1 Pro</div>
+    <div class="sub">PR #33's narrow-multiplier dispatch, the Pi 5 follow-up series, and three rounds of Argon2id NEON work, measured on a Raspberry Pi 5 and an Apple M1 Pro. Updated 17 November with an ML-DSA result on the Jetson Orin Nano.</div>
   </div>
   <div class="meta">steelhead99x/rind · steelhead99x/rind-results<br>Window: 2026-11-11 → <span data-k="meta.asOf"></span></div>
   <div class="foot"><span class="src">Every number in this deck comes from the rind-results branches, rind commit messages and status files listed in the appendix.</span><span class="num"></span></div>
@@ -602,28 +602,52 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     </ul></div>
     <div class="card"><h3>Review and landing</h3><ul class="b sm">
       <li>PR #33: cherry-pick the p521 seed fix (b5eb9ec2), the Lean <code>wide_mux</code> declaration patch and the P-256 table fix (8e6f1670 applies cleanly to 603b7120). Leave narrow X25519 to ct-qemu in the BINSEC CI row.</li>
-      <li>Open PRs for the pushed perf branches, and get <b>CodeRabbit reviews</b>.</li>
+      <li>Open PRs for the pushed perf branches, and get <b>CodeRabbit reviews</b>. <span class="tag win">17 Nov</span> The table alignment is upstream as kixel-ai/rind#790 (all three NIST curves), ready for review; CodeRabbit passed.</li>
       <li>Land the tooling patches: Argon2 ctgrind test taint, ct-qemu reserved VA, prove SIGPIPE</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src">results/argon2-scalar-rider/RESULTS.md ("Not tried") · hosts/pi5/ab-narrow-mul/README.md · lane and verification status notes</span><span class="num"></span></div>
 </section>
 
-<!-- ============ WHERE THE NUMBERS LIVE (added 2026-11-12 evening) ============ -->
+<!-- ============ 17 NOV UPDATE: ML-DSA ON THE ORIN (added 2026-11-17) ============ -->
+<section class="slide" data-section="Update · 17 Nov">
+  <div class="kicker">Update · 17 November 2026 · NVIDIA Jetson Orin Nano</div>
+  <h2>A new aarch64 result: checking ML-DSA's most likely rejection first makes signing 4.4–7.7% faster on the Orin Nano</h2>
+  <p class="lede">ML-DSA signing tries again whenever a check fails, and most tries fail. The change runs the check that fails most often first, so a failed try stops sooner. Signatures do not change. The maintainer measured it on the Orin: 3 interleaved runs each, pinned to one core.</p>
+  <div>
+      <table class="t" style="font-size:15px">
+        <tr><th style="width:14%">rind sign</th><th class="n" style="text-transform:none">Before (µs)</th><th class="n" style="text-transform:none">After (µs)</th><th class="n">Change</th><th style="padding-left:28px">Per-run medians, before / after</th></tr>
+        <tr><td>ML-DSA-44</td><td class="n">149.40</td><td class="n">142.79</td><td class="n">−4.4%</td><td class="mono" style="font-size:13px;padding-left:28px;white-space:nowrap">149.29 149.49 149.40 / 142.72 142.79 143.01</td></tr>
+        <tr class="hl"><td>ML-DSA-65</td><td class="n">227.97</td><td class="n">210.36</td><td class="n">−7.7%</td><td class="mono" style="font-size:13px;padding-left:28px;white-space:nowrap">227.97 225.67 229.16 / 209.75 210.36 210.53</td></tr>
+        <tr><td>ML-DSA-87</td><td class="n">247.27</td><td class="n">229.81</td><td class="n">−7.1%</td><td class="mono" style="font-size:13px;padding-left:28px;white-space:nowrap">247.27 247.99 247.22 / 229.81 229.73 231.28</td></tr>
+      </table>
+    </div>
+  <div class="cols" style="margin-top:18px">
+    <div class="callout" style="align-self:start">After is faster in every run of every set, and the runs do not overlap. aws-lc-rs, libcrux and RustCrypto in the same runs stayed within about 1%, so the board was steady.</div>
+    <div class="card"><h3>Where it is</h3><ul class="b sm">
+      <li>Fork PR <a href="https://github.com/steelhead99x/rind/pull/126">steelhead99x/rind#126</a> was closed on 17 Nov in favor of the maintainer's <a href="https://github.com/kixel-ai/rind/pull/863">kixel-ai/rind#863</a>, which makes the same reorder. #863 is open.</li>
+      <li>On x86_64 the same change measured 4.9–8.3% faster (#126 body, paired timing).</li>
+      <li>This A/B is in a PR comment, not on rind-results main.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src">steelhead99x/rind#126 comment 6936142476 (16 Nov 18:29 PST): Jetson Orin Nano Developer Kit Super, base 19f94a07, head bbae5dc0, criterion sign/ rows, taskset -c 3 · #126 body (Validation) and closing comment 6963461185</span><span class="num"></span></div>
+</section>
+
+<!-- ============ WHERE THE NUMBERS LIVE (added 2026-11-12 evening, updated 2026-11-17) ============ -->
 <section class="slide" data-section="Status">
-  <div class="kicker">Where the numbers live · checked <span data-k="meta.asOf"></span></div>
-  <h2>This deck's Pi 5 and M1 Pro numbers are on results branches, not on rind-results main; Orin results are pending</h2>
+  <div class="kicker">Where the numbers live · checked 17 November 2026</div>
+  <h2>Every Pi 5 and M1 Pro source in this deck is on rind-results main now, and the Orin has a published set</h2>
   <table class="t" style="margin-top:16px;font-size:14.5px">
-    <tr><th style="width:30%">Source used in this deck</th><th style="width:34%">Where it is</th><th>Status</th></tr>
+    <tr><th style="width:34%">Source used in this deck</th><th style="width:36%">Where it is now</th><th>Status</th></tr>
     <tr><td><code>hosts/pi5/NOTES.md</code>, <code>hosts/pi5/pi5.json</code></td><td>main (the b6651423 host run)</td><td><span class="tag ok">on main</span></td></tr>
-    <tr><td><code>hosts/pi5/ab-narrow-mul/</code></td><td>branch <code>results/pi5-lane-2026-11-12</code></td><td><span class="tag pending">in progress</span></td></tr>
-    <tr><td><code>results/pr33-pi5/</code>, <code>results/argon2/</code>, <code>results/m1pro-8feee30e/</code></td><td>branches <code>results/m1pro-pi5-argon2-2026-11-12</code>, <code>results/argon2-a76-interleave</code></td><td><span class="tag pending">not merged</span></td></tr>
-    <tr><td><code>results/argon2-interleave/</code>, <code>results/argon2-scalar-rider/</code></td><td>branch <code>results/argon2-a76-interleave</code></td><td><span class="tag pending">not merged</span></td></tr>
-    <tr><td><code>hosts/pi5/ab-narrow-mul/series2-layout/</code>, <code>table-align/</code></td><td>branch <code>results/pi5-lane-2026-11-12</code></td><td><span class="tag pending">not merged</span></td></tr>
-    <tr><td>NVIDIA Jetson Orin Nano</td><td>bench scripts on main (edcd461); no results yet</td><td><span class="tag pending">pending</span></td></tr>
+    <tr><td><code>hosts/pi5/ab-narrow-mul/</code>, incl. <code>series2-layout/</code> and <code>table-align/</code></td><td>main (was branch <code>results/pi5-lane-2026-11-12</code>)</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td><code>results/pr33-pi5/</code>, <code>results/argon2/</code>, <code>results/m1pro-8feee30e/</code></td><td>main (was on the Argon2 results branches)</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td><code>results/argon2-interleave/</code>, <code>results/argon2-scalar-rider/</code></td><td>main (was branch <code>results/argon2-a76-interleave</code>)</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td>NVIDIA Jetson Orin Nano</td><td><code>results/jetson-orin-nano/</code>: rind 98568332, fastest on 65 of 68 shared operations</td><td><span class="tag ok">on main</span></td></tr>
+    <tr><td>Orin ML-DSA signing A/B (previous slide)</td><td>steelhead99x/rind#126 comment 6936142476</td><td><span class="tag pending">PR comment only</span></td></tr>
   </table>
-  <div class="callout warn" style="margin-top:18px">Until these branches are merged, treat this deck's phase results as branch results. The Pi 5 runs at a fixed 1.5 GHz, and the M1 Pro medians are marked noisy.</div>
-  <div class="foot"><span class="src">git ls-tree of steelhead99x/rind-results main (edcd461) and branches results/pi5-lane-2026-11-12 (14c89e4), results/m1pro-pi5-argon2-2026-11-12 (94b8b1a), results/argon2-a76-interleave (3a481c4) · README.md host table</span><span class="num"></span></div>
+  <div class="callout" style="margin-top:18px">The Pi 5 still runs at a fixed 1.5 GHz, and the M1 Pro medians are still marked noisy. Those caveats did not change when the files moved to main.</div>
+  <div class="foot"><span class="src">rind-results main 88cbf85, checked 17 Nov 2026 (files listed above; results/jetson-orin-nano/RESULTS.md) · earlier check: main edcd461 and branches results/pi5-lane-2026-11-12 (14c89e4), results/m1pro-pi5-argon2-2026-11-12 (94b8b1a), results/argon2-a76-interleave (3a481c4)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ APPENDIX ============ -->

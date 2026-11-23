@@ -11,8 +11,8 @@ rind aarch64 performance work from the starting point on 2026-11-11 to the state
 5. The Argon2id two-round interleave, with the PMU root cause, and the scalar rider rounds
 
 It also covers verification status, what was dropped, the current state, next steps, a status slide that says which
-sources are on rind-results main and which are still on results branches (Orin results still pending),
-and an appendix of branches and data files.
+sources are on rind-results main (all of them, as of the 17 November check),
+an update slide with the ML-DSA signing A/B on the NVIDIA Jetson Orin Nano (17 November), and an appendix of branches and data files.
 
 ## Opening it
 
@@ -48,5 +48,8 @@ Only facts from these sources are used. Numbers with no source are left out or m
   `perf/argon2-sha3-umlal`, `perf/argon2-interleave`, `perf/pi5-narrow-nist`, `perf/pi5-rsa-bench-sizes`,
   `perf/pi5-cpu-detect`, `perf/pi5-rsa-8n`, `perf/pi5-mont-uninit`, `perf/pi5-p384-verify-w7`,
   `perf/pi5-p521-verify-w7`, `fix/p256-table-align`, `perf/argon2-neon-scalar-rider`
+
+- steelhead99x/rind#126 comment 6936142476 (Orin ML-DSA A/B, measured by the maintainer) and closing comment 6963461185;
+  kixel-ai/rind#863 and #790 (PR state, checked 2026-11-17)
 
 A dated log of what each refresh changed is in `PROGRESS.md`.
