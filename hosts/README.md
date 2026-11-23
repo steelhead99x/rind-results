@@ -25,7 +25,7 @@ Each one calls rind's `admin/bench-report` and does not edit that file.
 ## `admin/bench-report` hosts (rind `b6651423`)
 
 Raw JSON, a trimmed log, and notes are in each folder. The top-level
-[README.md](../README.md) tables are rendered from these JSON files.
+[REPORT-2026-11-12.md](../REPORT-2026-11-12.md) tables are rendered from these JSON files.
 
 | Host | Hardware | Results |
 |---|---|---|
