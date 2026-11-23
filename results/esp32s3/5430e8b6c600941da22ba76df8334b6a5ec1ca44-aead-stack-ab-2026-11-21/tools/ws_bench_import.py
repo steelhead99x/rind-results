@@ -256,117 +256,133 @@ def main():
         )
     open("RUNS.md", "w").write("\n".join(w) + "\n")
 
-    # ab.json
-    ab = {
-        "schema": "rind-results/ab-v1",
-        "host": host,
-        "chip": cfg["chip"],
-        "board": cfg["board"],
-        "clock_hz": cfg["clock_hz"],
-        "commit": cfg["commit"],
-        "control": ctl,
-        "order": [f"{f['n']} {f['variant']}" for f, _ in flashes],
-        "modes": {v: d for v, d in cfg["variants"].items()},
-        "method": (
-            "Interleaved A/B. One flash = one boot = one run. A run's value for a row is the median over that "
-            "boot's complete rounds (rows before the first '# round complete' dropped) of the firmware's printed "
-            "median_ns. Each result here is one flash."
-        ),
-        "results": [],
-    }
-    for f, p in flashes:
-        for key in p["order"]:
-            op, lib = key
-            r = p["rows"][key]
-            ab["results"].append(
-                {
-                    "operation": op,
-                    "library": lib,
-                    "mode": f["variant"],
-                    "flash": f["n"],
-                    "ns": statistics.median(r["rounds_ns"]),
-                    "rounds": len(r["rounds_ns"]),
-                }
-            )
-    with open("ab.json", "w") as o:
-        json.dump(ab, o, indent=1, ensure_ascii=False)
-        o.write("\n")
+    def write_ab(flashes, stem, title, note=None):
+        # ab.json
+        ab = {
+            "schema": "rind-results/ab-v1",
+            "host": host,
+            "chip": cfg["chip"],
+            "board": cfg["board"],
+            "clock_hz": cfg["clock_hz"],
+            "commit": cfg["commit"],
+            "control": ctl,
+            "order": [f"{f['n']} {f['variant']}" for f, _ in flashes],
+            "modes": {v: d for v, d in cfg["variants"].items()},
+            "method": (
+                "Interleaved A/B. One flash = one boot = one run. A run's value for a row is the median over that "
+                "boot's complete rounds (rows before the first '# round complete' dropped) of the firmware's printed "
+                "median_ns. Each result here is one flash."
+            ),
+            "results": [],
+        }
+        if note:
+            ab["note"] = note
+        for f, p in flashes:
+            for key in p["order"]:
+                op, lib = key
+                r = p["rows"][key]
+                ab["results"].append(
+                    {
+                        "operation": op,
+                        "library": lib,
+                        "mode": f["variant"],
+                        "flash": f["n"],
+                        "ns": statistics.median(r["rounds_ns"]),
+                        "rounds": len(r["rounds_ns"]),
+                    }
+                )
+        with open(f"{stem}.json", "w") as o:
+            json.dump(ab, o, indent=1, ensure_ascii=False)
+            o.write("\n")
 
-    # ab.md
-    modes = cfg["ab_order"]
-    samples = {}
-    for f, p in flashes:
-        for key, r in p["rows"].items():
-            samples.setdefault((key[0], key[1], f["variant"]), []).append(statistics.median(r["rounds_ns"]))
-    counts = {v: sum(1 for f, _ in flashes if f["variant"] == v) for v in modes}
-    a = [SPDX, GEN, f"# {cfg['title']}: every image", ""]
-    a.append(
-        "rind's time for each image, in µs: the median over that image's flashes, with the number of flashes (n) "
-        "and the spread (slowest − fastest flash) / fastest. A ratio is the image's median over the control's "
-        f"(`{ctl}`); below 1 is faster than the control. "
-        + "; ".join(f"`{v}` was flashed {'once' if counts[v] == 1 else str(counts[v]) + ' times'}" for v in modes)
-        + ". An image flashed once has one run, so its spread is 0 and says nothing about repeatability; "
-        "read it against the control's spread. The RustCrypto column is the median of every flash of every image "
-        "(the same RustCrypto code in each image, a layout control). Every number here is recomputed from "
-        "[ab.json](ab.json) by `cargo verify`."
-    )
-    a.append("")
+        # ab.md
+        modes = cfg["ab_order"]
+        samples = {}
+        for f, p in flashes:
+            for key, r in p["rows"].items():
+                samples.setdefault((key[0], key[1], f["variant"]), []).append(statistics.median(r["rounds_ns"]))
+        counts = {v: sum(1 for f, _ in flashes if f["variant"] == v) for v in modes}
+        a = [SPDX, GEN, f"# {title}: every image", ""]
+        a.append(
+            "rind's time for each image, in µs: the median over that image's flashes, with the number of flashes (n) "
+            "and the spread (slowest − fastest flash) / fastest. A ratio is the image's median over the control's "
+            f"(`{ctl}`); below 1 is faster than the control. "
+            + "; ".join(f"`{v}` was flashed {'once' if counts[v] == 1 else str(counts[v]) + ' times'}" for v in modes)
+            + ". An image flashed once has one run, so its spread is 0 and says nothing about repeatability; "
+            "read it against the control's spread. The RustCrypto column is the median of every flash of every image "
+            "(the same RustCrypto code in each image, a layout control). Every number here is recomputed from "
+            f"[{stem}.json]({stem}.json) by `cargo verify`."
+        )
+        if note:
+            a.append(note)
+            a.append("")
+        a.append("")
 
-    def table(with_rc):
-        sel = [op for op in ops if ((op, "rustcrypto") in by) == with_rc and (op, "rind") in by]
-        if not sel:
-            return
-        hdr = ["op"]
-        for v in modes:
-            hdr.append(f"{v} µs (n, spread)")
-            if v != ctl:
-                hdr.append(f"{v}/{ctl}")
-        if with_rc:
-            hdr.append("rustcrypto µs")
-            hdr.append(f"{ctl}/rustcrypto")
-        a.append("| " + " | ".join(hdr) + " |")
-        a.append("|" + "---|" * len(hdr))
-        for op in sel:
-            cells = [label(op)]
-            base = samples.get((op, "rind", ctl))
+        def table(with_rc):
+            sel = [op for op in ops if ((op, "rustcrypto") in by) == with_rc and (op, "rind") in by]
+            if not sel:
+                return
+            hdr = ["op"]
             for v in modes:
-                xs = samples.get((op, "rind", v))
-                if xs:
-                    cells.append(f"{us(statistics.median(xs))} ({len(xs)}, {fmt_pct(spread_min(xs), 2)}%)")
-                else:
-                    cells.append("–")
+                hdr.append(f"{v} µs (n, spread)")
                 if v != ctl:
-                    if xs and base:
-                        cells.append(f"{statistics.median(xs) / statistics.median(base):.4f}")
+                    hdr.append(f"{v}/{ctl}")
+            if with_rc:
+                hdr.append("rustcrypto µs")
+                hdr.append(f"{ctl}/rustcrypto")
+            a.append("| " + " | ".join(hdr) + " |")
+            a.append("|" + "---|" * len(hdr))
+            for op in sel:
+                cells = [label(op)]
+                base = samples.get((op, "rind", ctl))
+                for v in modes:
+                    xs = samples.get((op, "rind", v))
+                    if xs:
+                        cells.append(f"{us(statistics.median(xs))} ({len(xs)}, {fmt_pct(spread_min(xs), 2)}%)")
                     else:
                         cells.append("–")
-            if with_rc:
-                pooled = [x for (o, l, _), xs in samples.items() if o == op and l == "rustcrypto" for x in xs]
-                cells.append(us(statistics.median(pooled)))
-                cells.append(f"{statistics.median(base) / statistics.median(pooled):.4f}")
-            a.append("| " + " | ".join(cells) + " |")
-        a.append("")
+                    if v != ctl:
+                        if xs and base:
+                            cells.append(f"{statistics.median(xs) / statistics.median(base):.4f}")
+                        else:
+                            cells.append("–")
+                if with_rc:
+                    pooled = [x for (o, l, _), xs in samples.items() if o == op and l == "rustcrypto" for x in xs]
+                    cells.append(us(statistics.median(pooled)))
+                    cells.append(f"{statistics.median(base) / statistics.median(pooled):.4f}")
+                a.append("| " + " | ".join(cells) + " |")
+            a.append("")
 
-    a.append("## Rows with a RustCrypto counterpart")
-    a.append("")
-    table(True)
-    if any((op, "rustcrypto") not in by for op in ops):
-        a.append("## rind-only rows")
+        a.append("## Rows with a RustCrypto counterpart")
         a.append("")
-        table(False)
+        table(True)
+        if any((op, "rustcrypto") not in by for op in ops):
+            a.append("## rind-only rows")
+            a.append("")
+            table(False)
 
-    # RustCrypto per image, for the layout control (not checked cell by cell: the verifier checks rind per mode).
-    a.append("## Flashes")
-    a.append("")
-    a.append("| Flash | Image | Log | Complete rounds | Known-answer checks (pass, fail) | Other lines after round 1 |")
-    a.append("|---:|---|---|---:|---|---:|")
-    for f, p in flashes:
-        a.append(
-            f"| {f['n']} | `{f['variant']}` | [{os.path.basename(f['log'])}]({f['log']}) | {p['complete_rounds']} | "
-            f"{p['kats']['pass']}, {p['kats']['fail']} | {p['other_lines']} |"
-        )
-    a.append("")
-    open("ab.md", "w").write("\n".join(a) + "\n")
+        # RustCrypto per image, for the layout control (not checked cell by cell: the verifier checks rind per mode).
+        a.append("## Flashes")
+        a.append("")
+        a.append("| Flash | Image | Log | Complete rounds | Known-answer checks (pass, fail) | Other lines after round 1 |")
+        a.append("|---:|---|---|---:|---|---:|")
+        for f, p in flashes:
+            a.append(
+                f"| {f['n']} | `{f['variant']}` | [{os.path.basename(f['log'])}]({f['log']}) | {p['complete_rounds']} | "
+                f"{p['kats']['pass']}, {p['kats']['fail']} | {p['other_lines']} |"
+            )
+        a.append("")
+        open(f"{stem}.md", "w").write("\n".join(a) + "\n")
+    write_ab(flashes, "ab", cfg["title"])
+    if cfg.get("pooled"):
+        pf = []
+        for f in cfg["pooled"]["flashes"]:
+            pp = parse(f["log"])
+            if pp["kats"]["fail"] or pp["failed_lines"]:
+                raise SystemExit(f"{f['log']}: failed known-answer checks")
+            pf.append((f, pp))
+        write_ab(pf, cfg["pooled"]["stem"], cfg["pooled"]["title"], cfg["pooled"]["note"])
+
 
     # RESULTS.md
     r = [SPDX, GEN, f"# {cfg['title']}", ""]

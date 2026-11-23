@@ -473,6 +473,7 @@ const RESULT_DIRS: &[&str] = &[
     // walk treats its other revision directories as history; name them here.
     "results/esp32c6",
     "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-2026-11-22",
+    "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-repeat-2026-11-23",
     "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22",
     "results/esp32s3/5430e8b6c600941da22ba76df8334b6a5ec1ca44-aead-stack-ab-2026-11-21",
     "results/esp32s3/5430e8b6c600941da22ba76df8334b6a5ec1ca44-aead-stack-ab-2026-11-22",
