@@ -181,7 +181,7 @@ table.sv td:first-child{white-space:nowrap}
     <tr><td>32 KB icache at 80 MHz</td><td>XChaCha20-Poly1305 32B goes from 7.50× to 1.10× RustCrypto: the gap is the 16 KB cache</td><td><span class="tag ok">published</span></td><td><code>results/diag/esp32s3-icache32-80mhz-98568332/</code></td></tr>
     <tr><td>Flash clock 40 → 80 MHz</td><td>The first ESP32-S3 set ran at 40 MHz; cache-missing rows were up to 1.92× slow, and the set was rerun</td><td><span class="tag ok">fixed</span></td><td><code>results/diag/flash-80mhz/README.md</code></td></tr>
     <tr><td>nRF52840 watchdog</td><td>A leftover 90 s Meshtastic watchdog reset the first image; the firmware now feeds it</td><td><span class="tag ok">fixed</span></td><td><code>results/diag/nrf52840-watchdog-2026-11-12/</code></td></tr>
-    <tr><td>Firmware repo move</td><td>rind-bench is archived; the firmware is public as rind-hardware</td><td><span class="tag ok">done</span></td><td>rind-hardware <code>README.md</code></td></tr>
+    <tr><td>Firmware repo move</td><td>The earlier private firmware repository is archived; the firmware is public as rind-hardware</td><td><span class="tag ok">done</span></td><td>rind-hardware <code>README.md</code></td></tr>
     <tr><td>RP2040 port</td><td>All 12 images build; known-answer checks passed on a Pico. Published timing results are not on main yet</td><td><span class="tag pending">partial</span></td><td><code>hosts/rp2040/NOTES.md</code></td></tr>
     <tr><td>Jetson Orin Nano</td><td>rind 98568332 against six libraries, three pinned runs; rind fastest on 65 of 68 shared operations, no gap over 10%</td><td><span class="tag ok">on main</span></td><td><a href="https://github.com/steelhead99x/rind-results/tree/main/results/jetson-orin-nano">results/jetson-orin-nano</a></td></tr>
     <tr><td>The 12 Nov Pi 5 lane</td><td>Merged since: the A/B runs, plus a full 1.5 GHz Pi 5 set at rind a6577cb4 (rind fastest on 45 of 68 shared operations)</td><td><span class="tag ok">on main</span></td><td><code>hosts/pi5/ab-narrow-mul/</code> · <code>results/pi5-nofan-1p5ghz/</code></td></tr>
@@ -298,7 +298,7 @@ table.sv td:first-child{white-space:nowrap}
 
 <!-- ============ 7. RP2040 + MOVE ============ -->
 <section class="slide" data-section="Port and repo">
-  <div class="kicker">RP2040 port · rind-bench → rind-hardware</div>
+  <div class="kicker">RP2040 port · public rind-hardware</div>
   <h2>The RP2040 images build and the firmware is now public as rind-hardware; first-run numbers are not on main</h2>
   <div class="cols" style="margin-top:18px">
     <div class="card tall"><h3>RP2040 (Cortex-M0+, 125 MHz)</h3><ul class="b sm">
@@ -307,9 +307,9 @@ table.sv td:first-child{white-space:nowrap}
       <li>Known-answer checks passed on a Pico (2026-11-12). Published timing results are not in rind-results (no <code>results/rp2040/</code> on main), so this deck does not treat unpublished snapshot figures as the repo's published set. The SysTick wrap fix is on rind-hardware <code>rp2040/systick-wrap-fix-r2</code> (rebased on main); SHA-512/GHASH patches are on <code>rp2040/armv6m-sha512-ghash</code> and conflict with poly1305-32's 0006 numbering, so they stay off main for now.</li>
     </ul></div>
     <div class="card tall"><h3>The firmware repo move</h3><ul class="b sm">
-      <li><code>steelhead99x/rind-bench</code> is archived. Its history was squashed into the first commit of the public <code>steelhead99x/rind-hardware</code>, 8d9c1bb (12 Nov, 17:19 PST).</li>
+      <li>The earlier private firmware repository is archived. Its history was squashed into the first commit of the public <code>steelhead99x/rind-hardware</code>, 8d9c1bb (12 Nov, 17:19 PST).</li>
       <li>rind-results now points clone URLs, reproduce steps, the skill and the toolchain script at rind-hardware.</li>
-      <li>Provenance SHAs already published (for example rind-bench f656f95 for the RP2040 images) were left as recorded. They refer to the private history, which is not public.</li>
+      <li>Provenance SHAs already published (for example f656f95 for the RP2040 images) were left as recorded. They refer to the private history, which is not public.</li>
     </ul></div>
   </div>
   <div class="foot"><span class="src">hosts/rp2040/NOTES.md and images.json · commits 2aa9e24, 0df7c03, 876586c (rind-results) · rind-hardware README.md, 8d9c1bb, branches rp2040/systick-wrap-fix (a9d057a) and rp2040/armv6m-sha512-ghash (6abf7fd)</span><span class="num"></span></div>
@@ -363,7 +363,7 @@ table.sv td:first-child{white-space:nowrap}
     <tr class="hl"><td>14:29</td><td>rind-results</td><td><code>0a07749</code></td><td>nRF52840: leftover 90 s watchdog confirmed; remaining pad1031 relinks</td></tr>
     <tr><td>15:49 – 15:57</td><td>rind-results</td><td><code>06d1344</code> <code>7fe32d6</code></td><td>Relinks that really move the libraries, on both boards</td></tr>
     <tr><td>16:36</td><td>rind-results</td><td><code>2aa9e24</code></td><td>RP2040: all 12 images build and are ready for hardware</td></tr>
-    <tr class="hl"><td>17:19</td><td>rind-hardware</td><td><code>8d9c1bb</code></td><td>rind-hardware published: the firmware, squashed from private rind-bench</td></tr>
+    <tr class="hl"><td>17:19</td><td>rind-hardware</td><td><code>8d9c1bb</code></td><td>rind-hardware published: the firmware, squashed from the earlier private history</td></tr>
     <tr><td>17:55</td><td>rind-results</td><td><code>c3c50d5</code></td><td>ESP32-S3 relink at a third alignment (pad1039)</td></tr>
     <tr><td>18:00 – 18:10</td><td>rind-hardware</td><td><code>7852fdb</code> … <code>7a14b38</code></td><td>Optional poly1305-32 patch set, tests, built images and their hashes</td></tr>
     <tr><td>18:09 – 18:16</td><td>rind-results</td><td><code>0df7c03</code> <code>6b66950</code> <code>876586c</code></td><td>Docs point at rind-hardware; 32 KB icache diagnostics at 80 MHz</td></tr>
@@ -502,7 +502,7 @@ table.sv td:first-child{white-space:nowrap}
     <tr class="hl"><td>23:49:11</td><td>steelhead99x/rind</td><td><code>fa0ab77c</code></td><td>Rolled HChaCha20 committed (author 23:48:34)</td></tr>
     <tr><td>23:50</td><td>ESP32-S3</td><td><code>compare-hchacha-rolled.txt</code></td><td>3-run compare written: XChaCha 32 B 1.03 ms → 164.07 µs, 6.43× → 1.02× RustCrypto</td></tr>
   </table>
-  <div class="foot"><span class="src">git log --format committer dates of steelhead99x/rind perf/esp32s3-rolled-sha512 (fa0ab77c); mtimes of the compare-*.txt files under <home> on x86-host-c. Not on rind-results main. Flash only /dev/ttyACM1, 80 MHz, no erase.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">git log --format committer dates of steelhead99x/rind perf/esp32s3-rolled-sha512 (fa0ab77c); mtimes of the compare-*.txt files under <home> on the x86_64 laptop. Not on rind-results main. Flash only /dev/ttyACM1, 80 MHz, no erase.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 17 NOV UPDATE 1 (added 2026-11-17) ============ -->
@@ -567,7 +567,7 @@ table.sv td:first-child{white-space:nowrap}
       <li>The 12 Nov Pi 5 lane: merged to main since (updated 17 Nov).</li>
       <li>The late-evening I-cache figures (slides after the published Poly1305 A/B) are an unpublished perf-branch run on ESP32-S3 at fork <code>6aba8055</code> plus five patches, not on rind-results main. 64-bit portable paths were not changed.</li>
       <li>steelhead99x/rind#69 merged on 16 Nov with a different SHA-256 fix than this evening run (slide 16). Its board numbers are in a PR comment, not on rind-results main.</li>
-      <li>Older provenance SHAs point into the private rind-bench history.</li>
+      <li>Older provenance SHAs point into the earlier private firmware history.</li>
       <li>The RP2040 has no hardware RNG; its images use a seeded placeholder.</li>
     </ul></div>
   </div>
@@ -591,7 +591,7 @@ table.sv td:first-child{white-space:nowrap}
     <tr><td>Pi 5 lane, now on main</td><td><code>hosts/pi5/ab-narrow-mul/</code> · <code>results/pi5-nofan-1p5ghz/a6577cb4…/RESULTS.md</code> (rind-results main 88cbf85)</td></tr>
     <tr class="hl"><td>17 Nov update</td><td>steelhead99x/rind#69 body and board-run comment 6936378505 (504049d4 against 19f94a07) · kixel-ai/rind#793 · steelhead99x/rind#85 comment 6964935963 · steelhead99x/rind#94 body</td></tr>
     <tr><td>Timeline, slides 9–10</td><td><code>git log</code> of both main branches, committer dates in America/Los_Angeles</td></tr>
-    <tr class="hl"><td>Evening I-cache gaps</td><td>Unpublished ESP32-S3 raw jsonl, 3 runs at 80 MHz, on x86-host-c under <code><home></code> (compare-sha512-rolled.txt, compare-sha256-hybrid.txt, compare-poly1305-32.txt, compare-hchacha-rolled.txt). steelhead99x/rind <code>6aba8055</code> plus <code>61570282</code>, <code>9dbb1ed2</code>, <code>e54b7894</code>, <code>a60ee4b8</code>, <code>fa0ab77c</code>. Not on this repo's main.</td></tr>
+    <tr class="hl"><td>Evening I-cache gaps</td><td>Unpublished ESP32-S3 raw jsonl, 3 runs at 80 MHz, on the x86_64 laptop under <code><home></code> (compare-sha512-rolled.txt, compare-sha256-hybrid.txt, compare-poly1305-32.txt, compare-hchacha-rolled.txt). steelhead99x/rind <code>6aba8055</code> plus <code>61570282</code>, <code>9dbb1ed2</code>, <code>e54b7894</code>, <code>a60ee4b8</code>, <code>fa0ab77c</code>. Not on this repo's main.</td></tr>
   </table>
   <div class="foot"><span class="src">github.com/steelhead99x/rind-results · github.com/steelhead99x/rind-hardware</span><span class="num"></span></div>
 </section>

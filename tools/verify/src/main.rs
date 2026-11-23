@@ -1049,7 +1049,7 @@ fn check_summary(name: &str, json_path: &Path, summary: &Path, rep: &mut Report)
     println!("{name}: summary.md {n} rows checked, noisy={noisy}");
 }
 
-/// Maps recorded private rind-bench SHAs to public rind-hardware commits.
+/// Maps recorded SHAs from the earlier private firmware history to public rind-hardware commits.
 /// Duplicated from xtask: the two crates share no code.
 const PROVENANCE_MAP: &str = "tools/legacy-rind-bench-map.json";
 const SQUASH: &str = "8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3";

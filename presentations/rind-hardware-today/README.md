@@ -15,7 +15,7 @@ XChaCha, and a late-evening timeline. Those figures are not on rind-results main
 4. ESP32-S3 relinks at three alignments (pad0, pad1031, pad1039) and their controls
 5. The 32 KB instruction-cache diagnostics at 80 MHz (a diagnostic build, not the published setup)
 6. The flash-clock fix (40 → 80 MHz) and the nRF52840 watchdog fix
-7. The RP2040 port and the move from rind-bench to rind-hardware
+7. The RP2040 port and the move to the public rind-hardware repository
 8. Hosts: Jetson Orin Nano results are on main; today's Pi 5 lane is still on branches (not on main)
 9. Timeline, overnight to midday
 10. Timeline, afternoon to evening

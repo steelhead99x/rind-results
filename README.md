@@ -26,7 +26,7 @@ Open the `RESULTS.md` link for each machine's full table.
 | Raspberry Pi 5 (no fan, 1.5 GHz) | Arm Cortex-A76 | `a6577cb4` | [RESULTS.md](results/pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) |
 | Raspberry Pi 2 | Arm Cortex-A7, 32-bit | `a6577cb4` | [RESULTS.md](results/pi-host-a-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) |
 | Xeon cloud VM, Apple M1 Pro, Raspberry Pi 5, Pixel 9 Pro | mixed | `b6651423` | [REPORT-2026-11-12.md](REPORT-2026-11-12.md) |
-| x86-host-c laptop (noisy) | x86_64 | `99b509a` | [README.md](results/host/README.md) |
+| x86_64 laptop (noisy) | x86_64 | `99b509a` | [README.md](results/host/README.md) |
 
 ### Microcontrollers
 

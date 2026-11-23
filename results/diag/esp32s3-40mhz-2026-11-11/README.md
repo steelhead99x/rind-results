@@ -4,11 +4,11 @@
 The ESP32-S3 results published until 2026-11-12 11:15 PST: the eleven images built 2026-11-11/12
 (`images.json`), three runs each. espflash flashed them without `--flash-freq`, so the flash ran at
 40 MHz, not the 80 MHz the build configures (see `../flash-80mhz/`). They were superseded by the
-80 MHz rerun in `../../RESULTS.md`: twelve images (with `sha3`) built in one pass from rind-bench
-0463305, same rind pin and patches.
+80 MHz rerun in `../../RESULTS.md`: twelve images (with `sha3`) built in one pass from the earlier private
+firmware repository at 0463305, same rind pin and patches.
 
 `RESULTS.md`, `RUNS.md` and the JSON here are regenerated from this raw with the corrected
-provenance (the old RESULTS named rind-bench `a26b1a3`, HEAD at report time, not the source the
+provenance (the old RESULTS named firmware commit `a26b1a3`, HEAD at report time, not the source the
 images came from). `tools/verify.py` checked the old tables against this raw: 0 mismatches.
 
 At 80 MHz no gap verdict changes at the 1.1x line (40 headline operations), but cache-missing

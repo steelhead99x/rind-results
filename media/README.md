@@ -13,7 +13,7 @@ rind's time over the fastest other Rust library, per report operation, log scale
 
 ![ESP32-S3](charts/esp32s3-rind-vs-fastest.svg)
 
-![x86-host-c, x86_64 (noisy run)](charts/x86-host-c-rind-vs-fastest.svg)
+![Older x86_64 laptop (noisy run)](charts/x86-host-c-rind-vs-fastest.svg)
 
 ![nRF52840 (Seeed T1000-E), Cortex-M4F at 64 MHz](charts/nrf52840-rind-vs-fastest.svg)
 
@@ -28,8 +28,8 @@ PNG copies sit next to the SVGs for chat and slides.
 Rendered from the Markdown with `cargo xtask md2png` (headless Chrome):
 
 - [ESP32-S3 headline table](screenshots/esp32s3-headline.png)
-- [x86-host-c summary (rind's `bench-report summary`)](screenshots/x86-host-c-summary.png)
-- [this repo's README](screenshots/rind-results-readme.png), [the firmware README](screenshots/rind-bench-readme.png) (taken when that repo was still called rind-bench)
+- [Older laptop summary (rind's `bench-report summary`)](screenshots/x86-host-c-summary.png)
+- [this repo's README](screenshots/rind-results-readme.png), [the firmware README](screenshots/rind-bench-readme.png) (taken before the firmware moved to the public rind-hardware repository)
 
 ## OLED pages
 

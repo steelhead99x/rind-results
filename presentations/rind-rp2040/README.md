@@ -81,7 +81,7 @@ The 2026-11-12 on-device work is not yet published in this repository. Slides 2 
 - no_std lane: `STATUS.md` and its gates log
 - X25519 / Ed25519 / Poly1305 lane: `STATUS.md` (work in progress)
 
-The fairness rules on slide 9 come from the rind-bench team's measurement plan as of 2026-11-12. The SysTick
+The fairness rules on slide 9 come from the firmware team's measurement plan as of 2026-11-12. The SysTick
 extension to 32 bits and the 1 MHz timer as a startup cross-check come from `hosts/rp2040/NOTES.md` at 2cb88c3.
 No pull request has been opened upstream; slide 18 lists the branches being prepared.
 
