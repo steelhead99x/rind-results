@@ -1,0 +1,3934 @@
+{
+ "schema": "rind-results/ab-v1",
+ "host": "esp32s3",
+ "chip": "esp32s3",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 3D:C8",
+ "clock_hz": 80000000,
+ "commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "control": "ctl",
+ "order": [
+  "1 ctl",
+  "2 zero",
+  "3 ctl",
+  "4 rot",
+  "5 ctl",
+  "6 notag",
+  "7 ctl",
+  "8 poly",
+  "9 ctl",
+  "10 all",
+  "11 ctl",
+  "12 xor",
+  "13 ctl",
+  "14 polyw",
+  "15 ctl"
+ ],
+ "modes": {
+  "ctl": {
+   "rind_commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+   "image": "s3-ctl.bin",
+   "what": "kixel-ai/rind main 8a5977ad as it is (HACL* Poly1305 in u64 limbs, HACL* ChaCha20; rolled SHA-512 is upstream's default here, #944)",
+   "image_sha256": "dcdc3205ae9bf1ba9b7393bf31bc6d4cd65f77dcfa120cb632227b3a75ef5edd",
+   "elf_sha256": "d39ab485eaea0c90f8afb3c33bfa1e49eebc868c03726ef8f67d792656dc65e5"
+  },
+  "zero": {
+   "rind_commit": "1efdd366ada969b4b1269dccf2e693004146b2ef",
+   "image": "s3-zero.bin",
+   "what": "+ key wipe as one memset on Xtensa",
+   "image_sha256": "2733d510bbdcb975869378f83a821d5345cc554039b3b8a63db5c3bec6bd0e70",
+   "elf_sha256": "baccca6dfb87025cd812830c0874ff9eb3df81f05cb89be90964900f791b4ff9",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/294"
+  },
+  "rot": {
+   "rind_commit": "8218d57cf8100e37bffba79b6d5406d3f9b61ba0",
+   "image": "s3-rot.bin",
+   "what": "+ ChaCha20 rotates as ssai/src (rounds4), with the word XOR (#295 head)",
+   "image_sha256": "ec950833b1bb68e443316ceda55883c788374064080e176f48706663e1c5b869",
+   "elf_sha256": "58e67be4058a66798d90268a6fe7e1b2d4b412ce84681e77dc01f1b4795f55d0",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/295"
+  },
+  "notag": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-notag.bin",
+   "what": "#296 at d3f3374f with a bench-only local patch that keeps the u64 tag add (branchless block loop only); not on any branch",
+   "image_sha256": "d1e8c803a67240bacabf0ff1c876cc2cb5327a51d3b92896a1899d5f9e29f20a",
+   "elf_sha256": "fd4085c622e6743ab28e0e1715fc9fce08d6d58bdb713fa19c1b73ae6ac2599f",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  },
+  "poly": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-poly.bin",
+   "what": "+ branchless Poly1305 block loop and 16-bit-halves tag add (#296 at d3f3374f)",
+   "image_sha256": "b731e4555eeedd1458f0c48f40217b14faf23de3ecb7d2562b8a84f15cf74608",
+   "elf_sha256": "ff5f852fb7144c620b4e9124d53092c9d30400c7cd16d63758ddf18ccadc62b4",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  },
+  "all": {
+   "rind_commit": "24920d52cd59f5ed88ea46ae468361af61aa3474",
+   "image": "s3-all.bin",
+   "what": "zero + rot + poly merged (#297 at 24920d52)",
+   "image_sha256": "45630d474374d5212a03256a5b6fbc524565d21cb343b09cc24a3d295f7deaf3",
+   "elf_sha256": "8db58c03caf242e4b98c820014cddf2315b0bfdff363d33187484c599d470231",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/297"
+  },
+  "xor": {
+   "rind_commit": "ec4a74283044095ef187e9d076ceba20c97102d4",
+   "image": "s3-xor.bin",
+   "what": "+ ChaCha20 keystream XORed a word at a time from registers on Xtensa (first commit of #295)",
+   "image_sha256": "916cd24786d4e70fb4469d51f11cd7c382d6266ac09f7d6107eba8a0dc57b449",
+   "elf_sha256": "b203bcde0076cbffa0dd064660361e248e08a79bbebab1a7f43d2c59c1592c45",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/295"
+  },
+  "polyw": {
+   "rind_commit": "b0f260c0a80aa171f4b19b7faf7b6f2973a30532",
+   "image": "s3-polyw.bin",
+   "what": "+ 26-bit Poly1305 in u32 limbs on Xtensa, sums still in u64 (first commit of #296)",
+   "image_sha256": "24e7e543e89b949499589b0400e93282128dfb60017c7fd1b57a27c7b314986c",
+   "elf_sha256": "a187e28f6468f943577c2ced61e36c54932c5a67c75aac447d18c35f4ff4b164",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  }
+ },
+ "method": "Interleaved A/B. One flash = one boot = one run. A run's value for a row is the median over that boot's complete rounds (rows before the first '# round complete' dropped) of the firmware's printed median_ns. Each result here is one flash.",
+ "results": [
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 2184250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 1,
+   "ns": 64163000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 3404125,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 10059875,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 39670000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 425023000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 99375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 114000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 127125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 355750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 373125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 357375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 375125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 1857625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 1888875,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 133342000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 71760000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 321375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 950250,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 3778500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 134625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 144250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 176375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 186375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 432500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 441375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 434125.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 443125.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 2112875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 2114250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 41304000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "zero",
+   "flash": 2,
+   "ns": 64087500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 2184250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 3,
+   "ns": 64163000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 3411750,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 10063000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 39702500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 425283000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 99375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 114000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 127125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 355750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 373250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 357375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 375125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 1857625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 1888875,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 71742000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 321500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 950375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 3778500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 208750.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 219625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 255375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 266875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 468500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 481500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 472000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 485125.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 1859625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 1881250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 41541000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "rot",
+   "flash": 4,
+   "ns": 64134500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 2184250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 5,
+   "ns": 64163000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 3411250,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 10061875,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 39702000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 425280000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 99375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 114000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 127125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 355750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 373125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 357375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 375125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 1857625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 1888875,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 133378000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 71755000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 321500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 950375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 3778500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 40526000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 180250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 191000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 200375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 211875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 361000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 374125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 362750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 376000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 1420750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 1443750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 41748000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "notag",
+   "flash": 6,
+   "ns": 64117000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 2184250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 7,
+   "ns": 64163000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 3409250,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 10053375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 39680500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 424997000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 99375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 114000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 127125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 355625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 373125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 357375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 375125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 1857625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 1888875,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 133350000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 71734000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 321500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 950375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 3778500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 40526000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 180750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 191500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 200875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 212375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 361500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 374750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 363250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 376625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 1421250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 1444250,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 41726000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "poly",
+   "flash": 8,
+   "ns": 64115000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 2184125.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 9,
+   "ns": 64163000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 3407750.0,
+   "rounds": 8
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 10057625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 39694000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 425316000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 99375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 114000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 127125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 355750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 373125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 357375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 375125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 1857625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 1888875,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 133342000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "all",
+   "flash": 10,
+   "ns": 71749000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 321375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 950250,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 3778500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 40526000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 107250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 117125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 132125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 142750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 250000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 262125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 253500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 265750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 1020875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 1042375,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 41310000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "all",
+   "flash": 10,
+   "ns": 64094000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 2184250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 11,
+   "ns": 64164000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 3408750,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 10052250,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 39680000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 424994000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 99375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 114000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 127125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 355625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 373250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 357375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 375125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 1857625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 1888875,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 321500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 950375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 3778500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 216562.5,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 227375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 263125.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 274625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 484750.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 497625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 488250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 501250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 1932000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 1953687.5,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 41496000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "xor",
+   "flash": 12,
+   "ns": 64115000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 2184250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 13,
+   "ns": 64164000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 3407250,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 10059125,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 39672500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 425024000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 99375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 114000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 127125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 355750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 373125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 357375,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 375125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 1857625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 1888875,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 133345000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 71766000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 321500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 950375,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 3778500,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 40526000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 186875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 197625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 213500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 225000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 399750,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 413125,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 401500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 414875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 1627625,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 1650625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 41313000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "polyw",
+   "flash": 14,
+   "ns": 64121000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 3406000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 10055625,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 39692000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 425314000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 99250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 113875,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 127000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 142250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 355500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 373000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 357250,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 375000,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 1857500,
+   "rounds": 7
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 1888750,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 133362000,
+   "rounds": 7
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 71754000,
+   "rounds": 7
+  },
+  {
+   "operation": "sha512/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 321500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 950375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 3778500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "sha512/{lib}/16384B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 40526000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 205875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 216500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 247625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 258625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 503875.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 513625.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 505500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 515375.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 2184250.0,
+   "rounds": 6
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 2186500.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 41324000.0,
+   "rounds": 6
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "mode": "ctl",
+   "flash": 15,
+   "ns": 64163000.0,
+   "rounds": 6
+  }
+ ]
+}
