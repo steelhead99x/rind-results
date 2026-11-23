@@ -1,0 +1,21 @@
+diff --git a/rind/src/low/generic/poly1305_32.rs b/rind/src/low/generic/poly1305_32.rs
+index 50b3267e1..7582d52b5 100644
+--- a/rind/src/low/generic/poly1305_32.rs
++++ b/rind/src/low/generic/poly1305_32.rs
+@@ -232,7 +232,7 @@ impl Blocks {
+ #[inline(always)]
+ fn add_s(words: [u32; 4], s: [u32; 4]) -> [u8; 16] {
+     #[cfg(target_arch = "xtensa")]
+-    return add_s_split(words, s);
++    return add_s_wide(words, s);
+     #[cfg(not(target_arch = "xtensa"))]
+     return if tests::FORCE_SPLIT.with(|f| f.get()) {
+         add_s_split(words, s)
+@@ -242,7 +242,6 @@ fn add_s(words: [u32; 4], s: [u32; 4]) -> [u8; 16] {
+ }
+ 
+ /// The sum with a `u64` carry, the plain form `add_s_split` is checked against.
+-#[cfg(not(target_arch = "xtensa"))]
+ #[inline(always)]
+ fn add_s_wide(words: [u32; 4], s: [u32; 4]) -> [u8; 16] {
+     let mut tag = [0u8; 16];

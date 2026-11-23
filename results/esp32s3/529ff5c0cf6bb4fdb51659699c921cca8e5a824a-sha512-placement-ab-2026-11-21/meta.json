@@ -1,0 +1,65 @@
+{
+ "schema": 1,
+ "host": "esp32s3",
+ "commit": "529ff5c0cf6bb4fdb51659699c921cca8e5a824a",
+ "upstream_commit": "529ff5c0cf6bb4fdb51659699c921cca8e5a824a",
+ "fork_commit": "c1c5c8247e69eb5b9777d81be1f76bd0ec621ee5",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 37:68",
+ "chip": "esp32s3",
+ "clock_hz": 80000000,
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0), xtensa-esp32s3-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the S3 (private copy of the student repo's firmware-s3, not published here): ChaCha20-Poly1305 seal/open, Ed25519 and SHA-512 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-22T07:31:41Z",
+ "finished": "2026-11-22T07:46:39Z",
+ "control": "control",
+ "runs": 3,
+ "flashes": 5,
+ "images": {
+  "control": {
+   "rind_commit": "c1c5c8247e69eb5b9777d81be1f76bd0ec621ee5",
+   "image": "control-old-default-unrolled-flash.elf",
+   "what": "#94 before the change: the old default, unrolled SHA-512 running from flash",
+   "image_sha256": "6da99e07e8ede7d4b1458d5e4df24743920bc044e55d129b099fea7a9955bcf6",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/94",
+   "flashes": [
+    1,
+    3,
+    5
+   ],
+   "kats_pass": 42,
+   "kats_fail": 0
+  },
+  "rolled": {
+   "rind_commit": "7cbb9a70ebb84c1f4d68981a0493b17b1e9b583c",
+   "image": "rolled-new-default.elf",
+   "what": "#94 at 7cbb9a70: the rolled loop in flash, the new default",
+   "image_sha256": "06e50a75a7a9e72d303921b3839aa3126cd8743bceec32c74825b9a1815b6a5f",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/94",
+   "flashes": [
+    2
+   ],
+   "kats_pass": 14,
+   "kats_fail": 0
+  },
+  "unrolled": {
+   "rind_commit": "7cbb9a70ebb84c1f4d68981a0493b17b1e9b583c",
+   "image": "unrolled-iram.elf",
+   "what": "#94 at 7cbb9a70 with esp32s3-sha512-unrolled and the bench-only tools/iram-bench-only-rind.diff, which puts the unrolled block in IRAM; not in the PR",
+   "image_sha256": "545013583c0a5d7ebd6199925054d133d1e304fab7dffcb99cdad5dc761f93ca",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/94",
+   "flashes": [
+    4
+   ],
+   "kats_pass": 13,
+   "kats_fail": 0
+  }
+ },
+ "kats": {
+  "checks": 69,
+  "failures": 0,
+  "boots": 5
+ }
+}

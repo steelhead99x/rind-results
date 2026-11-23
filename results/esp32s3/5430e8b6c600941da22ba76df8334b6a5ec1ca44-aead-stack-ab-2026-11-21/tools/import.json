@@ -1,0 +1,108 @@
+{
+ "host": "esp32s3",
+ "chip": "esp32s3",
+ "title": "ESP32-S3 ChaCha20-Poly1305 stack A/B (#275, #278, #279, #280), CPU at 80 MHz",
+ "commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "control": "ctl",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 37:68",
+ "cpu": {
+  "model": "Espressif ESP32-S3 (Xtensa LX7), 80 MHz",
+  "arch": "xtensa",
+  "logical_cpus": 1
+ },
+ "clock_hz": 80000000,
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0), xtensa-esp32s3-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the S3 (private copy of the student repo's firmware-s3, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-22T04:54:47Z",
+ "finished": "2026-11-22T05:07:29Z",
+ "note": "Control of an interleaved A/B on one ESP32-S3. Each run is one flash of the control image; the run's value is the median over that boot's complete rounds. Every flash of every image is in ab.json.",
+ "variants": {
+  "ctl": {
+   "rind_commit": "05498de75934e3e44778b18d0485188383f76c95",
+   "image": "s3-ctl-05498de75.elf",
+   "what": "#275 then: 26-bit Poly1305 and word-XOR ChaCha20 on 32-bit targets",
+   "image_sha256": "0c79803af2fe618a95d2da229c67b443604dfa318b994641d80bdb35dd24f586",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/275"
+  },
+  "zero": {
+   "rind_commit": "b3a799f30fd6c16af59b911523b263da1e2e2700",
+   "image": "s3-zero-b3a799f30.elf",
+   "what": "#278 then: the key wipe as one memset, on top of #275",
+   "image_sha256": "4465e406e3ed505c4eec9fa0d9a1174d1968bcb55faa52c0438c0d4bc284f178",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/278"
+  },
+  "chacha": {
+   "rind_commit": "42a18ef6b5665e37174abbecf5fd35fb33f25497",
+   "image": "s3-chacha-42a18ef6b.elf",
+   "what": "#279 then: ChaCha20 rotates as ssai/src on Xtensa, on top of #278",
+   "image_sha256": "f548dd144241927c4115646f7b76a80a67da3aa623742d2777dcbda4fd0409e3",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/279"
+  },
+  "all": {
+   "rind_commit": "2d7fac0e5baabc46e65c4c6710f35399dac664c4",
+   "image": "s3-all-2d7fac0e5.elf",
+   "what": "#280 then: branchless Poly1305 block loop and 16-bit tag add, on top of #279",
+   "image_sha256": "32eab8c0b080527bd22f3710d12ecb2f13f75848f0bcd6f75b76aa97b7f0777e",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/280"
+  }
+ },
+ "ab_order": [
+  "ctl",
+  "zero",
+  "chacha",
+  "all"
+ ],
+ "flashes": [
+  {
+   "n": 1,
+   "variant": "ctl",
+   "log": "raw/b-1-ctl.log"
+  },
+  {
+   "n": 2,
+   "variant": "zero",
+   "log": "raw/b-2-zero.log"
+  },
+  {
+   "n": 3,
+   "variant": "ctl",
+   "log": "raw/b-3-ctl.log"
+  },
+  {
+   "n": 4,
+   "variant": "chacha",
+   "log": "raw/b-4-chacha.log"
+  },
+  {
+   "n": 5,
+   "variant": "ctl",
+   "log": "raw/b-5-ctl.log"
+  },
+  {
+   "n": 6,
+   "variant": "all",
+   "log": "raw/b-6-all.log"
+  },
+  {
+   "n": 7,
+   "variant": "ctl",
+   "log": "raw/b-7-ctl.log"
+  },
+  {
+   "n": 9,
+   "variant": "ctl",
+   "log": "raw/b-9-ctl.log"
+  }
+ ],
+ "results_intro": [
+  "Interleaved flashes of the fork's stacked ESP32-S3 ChaCha20-Poly1305 branches on one ESP32-S3. The tables below are the control image. [ab.md](ab.md) has every image against the control, [RUNS.md](RUNS.md) every control run, and [NOTES.md](NOTES.md) the method, the run counts and what each image is."
+ ],
+ "results_ab": [
+  "[ab.md](ab.md) has every image against the control, flash by flash. Images flashed fewer than three times do not meet the three-run rule; [NOTES.md](NOTES.md) says which."
+ ],
+ "fork_commit": "05498de75934e3e44778b18d0485188383f76c95"
+}
