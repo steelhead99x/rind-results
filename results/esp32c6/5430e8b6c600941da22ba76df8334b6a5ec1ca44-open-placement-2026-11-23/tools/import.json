@@ -1,0 +1,79 @@
+{
+ "host": "esp32c6",
+ "chip": "esp32c6",
+ "title": "ESP32-C6 ChaCha20-Poly1305 open-path placement check, #275 against #280",
+ "commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "control": "t275",
+ "board": "ESP32-C6 rev v0.2, 4 MB flash, USB-Serial/JTAG; the board whose MAC ends 2C:48",
+ "cpu": {
+  "model": "Espressif ESP32-C6 (RISC-V riscv32imac), 160 MHz",
+  "arch": "riscv32",
+  "logical_cpus": 1
+ },
+ "clock_hz": 160000000,
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.98.1 (nixpkgs), riscv32imac-unknown-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the C6 (private harness, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-23T20:30:52Z",
+ "finished": "2026-11-23T20:52:12Z",
+ "note": "Control of an interleaved A/B on one ESP32-C6. Each run is one flash of the control image; the run's value is the median over that boot's complete rounds. Every flash of every image is in ab.json.",
+ "variants": {
+  "t275": {
+   "rind_commit": "89da51f759dd837216712705676302aa98c42625",
+   "image": "c6-t275.bin",
+   "what": "fork #275 head at the time of the build (26-bit Poly1305 and word-XOR ChaCha20 on 32-bit targets), the earlier C6 tag run's control",
+   "image_sha256": "7daad1ccd6dfb507aeef5fad7a68a7a4302c8ab9d1acb1124657cb7152fb8349",
+   "elf_sha256": "be57f6c416f14c641b8cbc40ae35a2fca40667c3119faf8dd17414b2a80836c0",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/275"
+  },
+  "t280": {
+   "rind_commit": "5af26036fd81bfc8b6af585fab8560acd2aee770",
+   "image": "c6-t280.bin",
+   "what": "fork #280 at 5af26036 (after 9e5f0d21, which keeps the 16-bit tag add on Xtensa only): the same instructions as t275 on riscv32, at different addresses",
+   "image_sha256": "eaf44c562989c9b065984fb0bcdaf424da765102ff95866cef5431405c568bec",
+   "elf_sha256": "ed061e2bc356a974a2589e3427071c4057032ddbb6287229d33246aec8dd2075",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/280"
+  }
+ },
+ "ab_order": [
+  "t275",
+  "t280"
+ ],
+ "flashes": [
+  {
+   "n": 1,
+   "variant": "t275",
+   "log": "raw/b-1-t275.log"
+  },
+  {
+   "n": 2,
+   "variant": "t280",
+   "log": "raw/b-2-t280.log"
+  },
+  {
+   "n": 3,
+   "variant": "t275",
+   "log": "raw/b-3-t275.log"
+  },
+  {
+   "n": 4,
+   "variant": "t280",
+   "log": "raw/b-4-t280.log"
+  },
+  {
+   "n": 5,
+   "variant": "t275",
+   "log": "raw/b-5-t275.log"
+  }
+ ],
+ "results_intro": [
+  "Five interleaved flashes of two images that execute the same riscv32 instructions on the ChaCha20-Poly1305 paths but place them at different addresses (fork #275 head `89da51f7` and #280 at `5af26036`), on one ESP32-C6, 2026-11-23. The tables below are the control image. [ab.md](ab.md) has every image against the control, [RUNS.md](RUNS.md) every control run, and [NOTES.md](NOTES.md) the method, the run counts and what each image is."
+ ],
+ "results_ab": [
+  "[ab.md](ab.md) has every image against the control, flash by flash. Images flashed fewer than three times do not meet the three-run rule; [NOTES.md](NOTES.md) says which."
+ ],
+ "fork_commit": "89da51f759dd837216712705676302aa98c42625"
+}

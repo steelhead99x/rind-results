@@ -1,0 +1,54 @@
+{
+ "schema": 1,
+ "host": "esp32c6",
+ "commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "upstream_commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "fork_commit": "89da51f759dd837216712705676302aa98c42625",
+ "board": "ESP32-C6 rev v0.2, 4 MB flash, USB-Serial/JTAG; the board whose MAC ends 2C:48",
+ "chip": "esp32c6",
+ "clock_hz": 160000000,
+ "toolchain": {
+  "rustc": "rustc 1.98.1 (nixpkgs), riscv32imac-unknown-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the C6 (private harness, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-22T09:26:54Z",
+ "finished": "2026-11-22T09:34:18Z",
+ "control": "ctl",
+ "runs": 3,
+ "flashes": 5,
+ "images": {
+  "ctl": {
+   "rind_commit": "89da51f759dd837216712705676302aa98c42625",
+   "image": "c6-ctl-89da51f75.elf",
+   "what": "fork #275 head at the time (26-bit Poly1305 and word-XOR ChaCha20 on 32-bit targets)",
+   "image_sha256": "18ecfa570f1a980b7e880c336862203f251715d4cca835a5c96ac09d407e3474",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/275",
+   "flashes": [
+    1,
+    3,
+    5
+   ],
+   "kats_pass": 384,
+   "kats_fail": 0
+  },
+  "all": {
+   "rind_commit": "1d8901b8f23d5c769dc32629c4b4f044b1e80f7e",
+   "image": "c6-all-1d8901b8f.elf",
+   "what": "fork #280 at 1d8901b8 (branchless Poly1305 block loop and 16-bit tag add, merged with the Xtensa ChaCha20 rotates branch); in the riscv32 image only Poly1305::finish differs from the control",
+   "image_sha256": "675a2f9f0c483df5eda905795d9835e9db9273796d78cfeb03dc902e57f9e618",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/280",
+   "flashes": [
+    2,
+    4
+   ],
+   "kats_pass": 256,
+   "kats_fail": 0
+  }
+ },
+ "kats": {
+  "checks": 640,
+  "failures": 0,
+  "boots": 5
+ }
+}

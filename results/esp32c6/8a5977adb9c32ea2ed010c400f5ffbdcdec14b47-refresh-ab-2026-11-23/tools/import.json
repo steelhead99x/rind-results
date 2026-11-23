@@ -1,0 +1,143 @@
+{
+ "host": "esp32c6",
+ "chip": "esp32c6",
+ "title": "ESP32-C6 upstream refresh A/B at kixel-ai/rind `8a5977ad`",
+ "commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "control": "ctl",
+ "board": "ESP32-C6 rev v0.2, 4 MB flash, USB-Serial/JTAG; the board whose MAC ends 2C:48",
+ "cpu": {
+  "model": "Espressif ESP32-C6 (RISC-V riscv32imac), 160 MHz",
+  "arch": "riscv32",
+  "logical_cpus": 1
+ },
+ "clock_hz": 160000000,
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.98.1 (nixpkgs), riscv32imac-unknown-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the C6 (private harness, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek, plus rind-only AES-128-GCM seal/open and P-256 sign/verify. Rows are medians of 32 calls (8 for Ed25519 and P-256).",
+ "started": "2026-11-23T20:52:12Z",
+ "finished": "2026-11-23T22:31:29Z",
+ "note": "Control of an interleaved A/B on one ESP32-C6. Each run is one flash of c6-ctl.bin; the run's value is the median over that boot's complete rounds. Variants are in ab.json.",
+ "variants": {
+  "ctl": {
+   "rind_commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+   "image": "c6-ctl.bin",
+   "image_sha256": "4bc43079c54126ec2139f357d6c640ad02c2a3ee79127bc8c3d3bedffb9a4d1b",
+   "elf_sha256": "05ba180f401a441554f245b48c072474cc45e48c7ba6f8701e41843927567fc4",
+   "what": "kixel-ai/rind main 8a5977ad as it is (HACL* ChaCha20 rounds and 64-byte keystream array, HACL* Poly1305 in u64 limbs, aws-lc bitsliced AES, 64-bit-product GHASH, 6-bit P-256 table, byte-at-a-time volatile key wipe)"
+  },
+  "zero": {
+   "rind_commit": "617cf6a133020d67c8cae51daad3bfdd639e5c55",
+   "image": "c6-zero.bin",
+   "image_sha256": "336cad5cf0a3b279eb84bfc00c4a70f5f908fe77822fdc62c28f394657e96e9d",
+   "elf_sha256": "f7f44394ecd1146203ba6f387bc636d2a1ade14fc17e2f08bb8ddb8278a18cf8",
+   "what": "+ key wipe as one memset on riscv32",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/307"
+  },
+  "aes": {
+   "rind_commit": "a612f8051a62e5be22c65e784b652f6aa5b05528",
+   "image": "c6-aes.bin",
+   "image_sha256": "bb8a0eb8f91d828b4446c0afafc1b853696d82674f23a55d95e55c3c955ff866",
+   "elf_sha256": "56717b0a2c749aea22ffb588ac9bb16d24eb1e2d6d8a747017b8551981e4ddc2",
+   "what": "+ fixsliced AES and a mulhu-free GHASH on 32-bit portable",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/308"
+  },
+  "p256": {
+   "rind_commit": "8e2128d4ba186669837f94ef4c3bf8a6dec68457",
+   "image": "c6-p256.bin",
+   "image_sha256": "f0a0034a4ee6e4cd431fd129b5757ea9f76b281b95f023d1edbb0593385aeb87",
+   "elf_sha256": "08f0504c8b240a1b787a5e0f02b5ac2be493754581525af2cf883ef3bd1dfba5",
+   "what": "+ 4-bit P-256 generator table on 32-bit portable",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/309"
+  },
+  "cp": {
+   "rind_commit": "dacc7cc01df515584ead22ab43935965db914927",
+   "image": "c6-cp.bin",
+   "image_sha256": "e50cde7525ce3648cfe3334a24511df75ccf6896ab3dd8a406162fe6051c5600",
+   "elf_sha256": "e0c6ea4f131967fc2ca93553ab2b7407e458fe40103cb145f3a4eec040a37e28",
+   "what": "+ 26-bit Poly1305 and word-XOR ChaCha20 on riscv32",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/310"
+  },
+  "all": {
+   "rind_commit": "3cffff4d5018882b082688cd4ce5de5d5f72bc1c",
+   "image": "c6-all.bin",
+   "image_sha256": "17e36922b7b0dbb93460c95966d803846250ad1b8008b31e7c2941a49bfaeb9a",
+   "elf_sha256": "6799707bdfa8b7db73878b43dcf67e1fd6d7046763b79f862fb6156b29d93373",
+   "what": "zero + aes + p256 + cp together (on top of #297)",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/311"
+  }
+ },
+ "ab_order": [
+  "ctl",
+  "zero",
+  "aes",
+  "p256",
+  "cp",
+  "all"
+ ],
+ "flashes": [
+  {
+   "n": 1,
+   "variant": "ctl",
+   "log": "raw/b-1-ctl.log"
+  },
+  {
+   "n": 2,
+   "variant": "zero",
+   "log": "raw/b-2-zero.log"
+  },
+  {
+   "n": 3,
+   "variant": "ctl",
+   "log": "raw/b-3-ctl.log"
+  },
+  {
+   "n": 4,
+   "variant": "aes",
+   "log": "raw/b-4-aes.log"
+  },
+  {
+   "n": 5,
+   "variant": "ctl",
+   "log": "raw/b-5-ctl.log"
+  },
+  {
+   "n": 6,
+   "variant": "p256",
+   "log": "raw/b-6-p256.log"
+  },
+  {
+   "n": 7,
+   "variant": "ctl",
+   "log": "raw/b-7-ctl.log"
+  },
+  {
+   "n": 8,
+   "variant": "cp",
+   "log": "raw/b-8-cp.log"
+  },
+  {
+   "n": 9,
+   "variant": "ctl",
+   "log": "raw/b-9-ctl.log"
+  },
+  {
+   "n": 10,
+   "variant": "all",
+   "log": "raw/b-10-all.log"
+  },
+  {
+   "n": 11,
+   "variant": "ctl",
+   "log": "raw/b-11-ctl.log"
+  }
+ ],
+ "results_intro": [
+  "Interleaved A/B of five fork branches against upstream [kixel-ai/rind](https://github.com/kixel-ai/rind) main [`8a5977ad`](https://github.com/kixel-ai/rind/commit/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47) on one ESP32-C6, 2026-11-23. The tables below are the control image, six flashes. [ab.md](ab.md) has every image against the control, [RUNS.md](RUNS.md) every control run, and [NOTES.md](NOTES.md) the method and what each image is."
+ ],
+ "results_ab": [
+  "[ab.md](ab.md): each candidate image (`zero`, `aes`, `p256`, `cp`, `all`) was flashed once, between two control flashes. One flash is one run, so the candidates do not meet the three-run rule; see [NOTES.md](NOTES.md)."
+ ]
+}
