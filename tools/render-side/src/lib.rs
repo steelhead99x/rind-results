@@ -125,9 +125,16 @@ pub fn render(args: &RenderArgs) -> Result<Rendered, String> {
     }
 
     for (dest, content) in &produced.files {
-        if !outside(&rind, dest) {
+        let dest = resolve_path(dest)?;
+        if !outside(&rind, &dest) {
             return Err(format!(
                 "render-side: refused to write inside the rind checkout: {}",
+                dest.display()
+            ));
+        }
+        if !dest.starts_with(&out) || dest == out {
+            return Err(format!(
+                "render-side: refused to write outside --out: {}",
                 dest.display()
             ));
         }
@@ -142,7 +149,7 @@ pub fn render(args: &RenderArgs) -> Result<Rendered, String> {
         } else {
             format!("{content}\n")
         };
-        fs::write(dest, text).map_err(|err| format!("render-side: {}: {err}", dest.display()))?;
+        fs::write(&dest, text).map_err(|err| format!("render-side: {}: {err}", dest.display()))?;
     }
     Ok(Rendered { sheet: report })
 }
@@ -508,7 +515,8 @@ fn outside(rind: &Path, path: &Path) -> bool {
     path != rind && !path.starts_with(rind)
 }
 
-/// Python `Path.resolve(strict=False)`: absolute, follow existing symlinks.
+/// Absolute, resolve existing symlinks, and normalize parents even after a
+/// missing component. Resolve each existing prefix before handling `..`.
 pub fn resolve_path(path: &Path) -> Result<PathBuf, String> {
     let abs = if path.is_absolute() {
         path.to_path_buf()
@@ -517,41 +525,29 @@ pub fn resolve_path(path: &Path) -> Result<PathBuf, String> {
             .map_err(|err| format!("render-side: {err}"))?
             .join(path)
     };
-    let mut prefix = PathBuf::new();
-    let mut rest = Vec::new();
-    let mut saw_missing = false;
+    let mut resolved = PathBuf::new();
     for c in abs.components() {
-        if saw_missing {
-            rest.push(c.as_os_str().to_os_string());
-            continue;
-        }
         match c {
-            Component::Prefix(_) | Component::RootDir => prefix.push(c),
+            Component::Prefix(_) | Component::RootDir => resolved.push(c),
             Component::CurDir => {}
             Component::ParentDir => {
-                prefix.pop();
+                resolved.pop();
             }
             Component::Normal(s) => {
-                prefix.push(s);
-                if !prefix.exists() {
-                    prefix.pop();
-                    rest.push(s.to_os_string());
-                    saw_missing = true;
+                resolved.push(s);
+                match fs::symlink_metadata(&resolved) {
+                    Ok(_) => {
+                        resolved = resolved
+                            .canonicalize()
+                            .map_err(|err| format!("render-side: {}: {err}", resolved.display()))?;
+                    }
+                    Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(err) => {
+                        return Err(format!("render-side: {}: {err}", resolved.display()));
+                    }
                 }
             }
         }
-    }
-    let mut resolved = if prefix.as_os_str().is_empty() {
-        prefix
-    } else if prefix.exists() {
-        prefix
-            .canonicalize()
-            .map_err(|err| format!("render-side: {}: {err}", prefix.display()))?
-    } else {
-        prefix
-    };
-    for s in rest {
-        resolved.push(s);
     }
     Ok(resolved)
 }

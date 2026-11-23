@@ -4,7 +4,14 @@
 //! `bench --board <id> --rind <path> --commit <PIN> --out <dir> [--runs 3]`
 //! runs a host, an Android capture, or a bare-metal image set. It calls
 //! rind's `admin/bench-report` for host runs and does not edit that file.
-//! Relaxations are written to `relaxations.json`.
+//! Relaxations are written to `relaxations.json`. A host run then invokes
+//! `cargo xtask report --rind` on the same checkout so the report step
+//! cannot omit `--rind`.
+//!
+//! By default a host run does not wrap Python in `taskset`. It passes the
+//! intended pin as `RIND_PINNED_CPUS` for rind's bench-report to apply once
+//! that script pins single-thread rows and leaves the threaded rustls groups
+//! unpinned. `--cpus` is an explicit opt-in for the legacy process-wide pin.
 
 use crate::layout;
 use crate::upstream_run::{self, Relax};
@@ -39,7 +46,9 @@ pub struct Args {
     /// label suffix: `results/<board>/<commit>-<label>/`
     #[arg(long)]
     label: Option<String>,
-    /// cores for `taskset -c` (host runs). The Orin picks the least busy of cpu1..cpu5.
+    /// Legacy process-wide `taskset -c` pin for host runs (Linux only). Opt-in.
+    /// Without this, the process is not pinned; the intended pin (default `2,3`,
+    /// or the least busy of cpu1..cpu5 on the Orin) is passed as `RIND_PINNED_CPUS`.
     #[arg(long)]
     cpus: Option<String>,
     /// in-memory `BUSY_SHARE`. Upstream is 0.1. Recorded, not written into rind.
@@ -254,10 +263,21 @@ pub fn run(mut a: Args) -> Result<(), String> {
     )?;
     write_meta(&out, board_name(&a), &head, a.runs, &relax)?;
     match kind(board_name(&a))? {
-        Kind::Host => host_runs(&a, &out, &head, &relax),
+        Kind::Host => {
+            host_runs(&a, &out, &head, &relax)?;
+            report_host(&a.rind, &out)
+        }
         Kind::Android => android(&a, &out, &head),
         Kind::Bare => bare(&a, &out),
     }
+}
+
+/// The same `--rind` and output directory `cargo xtask report --rind … --dir …` uses.
+fn report_host(rind: &Path, out: &Path) -> Result<(), String> {
+    crate::report::run(crate::report::Args::host_dir(
+        rind.to_path_buf(),
+        out.to_path_buf(),
+    ))
 }
 
 fn write_meta(
@@ -286,13 +306,22 @@ fn write_meta(
     .map_err(|e| e.to_string())
 }
 
+fn host_pin(a: &Args, board: &str) -> Result<(Option<String>, Option<String>), String> {
+    if let Some(c) = &a.cpus {
+        return Ok((Some(c.clone()), None));
+    }
+    let intended = if board == "jetson-orin-nano" {
+        upstream_run::sample_least_busy_core()?.to_string()
+    } else {
+        upstream_run::DEFAULT_PINNED_CPUS.to_string()
+    };
+    Ok((None, Some(intended)))
+}
+
 fn host_runs(a: &Args, out: &Path, head: &str, relax: &Relax) -> Result<(), String> {
     let board = board_name(a).to_string();
-    let cpus = match &a.cpus {
-        Some(c) => c.clone(),
-        None if board == "jetson-orin-nano" => upstream_run::sample_least_busy_core()?.to_string(),
-        None => "2,3".into(),
-    };
+    let (process_pin, intended_pin) = host_pin(a, &board)?;
+    let spawn = upstream_run::bench_report_spawn(process_pin.as_deref(), intended_pin.as_deref());
     let jobs = std::thread::available_parallelism()
         .map(|n| n.get().to_string())
         .unwrap_or_else(|_| "1".into());
@@ -343,8 +372,16 @@ fn host_runs(a: &Args, out: &Path, head: &str, relax: &Relax) -> Result<(), Stri
         .into_iter()
         .map(str::to_string)
         .collect::<Vec<_>>();
-        let mut line = format!("run {n} cpus={cpus}\n");
-        match upstream_run::run_bench_report(&a.rind, &args, relax, &env_ref, Some(&cpus), None) {
+        let mut line = format!("run {n} cpus={}\n", spawn.cpus_log);
+        match upstream_run::run_bench_report(
+            &a.rind,
+            &args,
+            relax,
+            &env_ref,
+            process_pin.as_deref(),
+            intended_pin.as_deref(),
+            None,
+        ) {
             Ok(()) => line.push_str("ok\n"),
             Err(e) => {
                 line.push_str(&e);
@@ -539,5 +576,77 @@ mod tests {
             "intel-core-ultra-9-275hx"
         );
         assert!(resolve_board(Some("../x")).is_err());
+    }
+
+    #[test]
+    fn default_host_pin_passes_env_and_is_not_process_wide() {
+        let a = Args {
+            board: Some("intel-core-ultra-9-275hx".into()),
+            rind: PathBuf::new(),
+            commit: String::new(),
+            out: None,
+            runs: 3,
+            label: None,
+            cpus: None,
+            busy_share: None,
+            accept_toolchain: false,
+            record_busy: false,
+            skip_build_cost: false,
+            strict: false,
+            faketime_offset: None,
+            capture: None,
+            images: None,
+            port: None,
+        };
+        let (process, intended) = host_pin(&a, "intel-core-ultra-9-275hx").unwrap();
+        assert_eq!(process, None);
+        assert_eq!(intended.as_deref(), Some(upstream_run::DEFAULT_PINNED_CPUS));
+        let spawn = upstream_run::bench_report_spawn(process.as_deref(), intended.as_deref());
+        assert_eq!(spawn.program, "python3");
+        assert_eq!(
+            spawn.pinned_cpus_env.as_deref(),
+            Some(upstream_run::DEFAULT_PINNED_CPUS)
+        );
+        assert_eq!(spawn.cpus_log, upstream_run::NO_PROCESS_AFFINITY);
+    }
+
+    #[test]
+    fn explicit_cpus_is_the_legacy_process_wide_pin() {
+        let a = Args {
+            board: Some("intel-core-ultra-9-275hx".into()),
+            rind: PathBuf::new(),
+            commit: String::new(),
+            out: None,
+            runs: 3,
+            label: None,
+            cpus: Some("0-23".into()),
+            busy_share: None,
+            accept_toolchain: false,
+            record_busy: false,
+            skip_build_cost: false,
+            strict: false,
+            faketime_offset: None,
+            capture: None,
+            images: None,
+            port: None,
+        };
+        let (process, intended) = host_pin(&a, "intel-core-ultra-9-275hx").unwrap();
+        assert_eq!(process.as_deref(), Some("0-23"));
+        assert_eq!(intended, None);
+        let spawn =
+            upstream_run::bench_report_spawn_on(true, process.as_deref(), intended.as_deref());
+        assert_eq!(spawn.program, "taskset");
+        assert_eq!(spawn.cpus_log, "0-23");
+        assert_eq!(spawn.pinned_cpus_env, None);
+    }
+
+    #[test]
+    fn bench_report_step_passes_rind_and_dir() {
+        let args = crate::report::Args::host_dir(
+            PathBuf::from("/tmp/rind-src"),
+            PathBuf::from("/tmp/run-dir"),
+        );
+        assert_eq!(args.rind(), Path::new("/tmp/rind-src"));
+        assert_eq!(args.dir(), Some(Path::new("/tmp/run-dir")));
     }
 }

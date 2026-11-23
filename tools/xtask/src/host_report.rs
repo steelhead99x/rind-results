@@ -113,7 +113,7 @@ pub fn run(a: Args) -> Result<(), String> {
         return Err(format!("no raw/run-*.json in {}", a.dir.display()));
     }
     let first = &runs[0].1;
-    let host = first["host"].as_str().unwrap_or_default().to_string();
+    let host = crate::layout::host_id(first["host"].as_str().unwrap_or_default())?;
     for (n, v) in &runs {
         for k in [
             "host",

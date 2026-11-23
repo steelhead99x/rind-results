@@ -25,7 +25,7 @@ Each one calls rind's `admin/bench-report` and does not edit that file.
 ## `admin/bench-report` hosts (rind `b6651423`)
 
 Raw JSON, a trimmed log, and notes are in each folder. The top-level
-[README.md](../README.md) tables are rendered from these JSON files.
+[REPORT-2026-11-12.md](../REPORT-2026-11-12.md) tables are rendered from these JSON files.
 
 | Host | Hardware | Results |
 |---|---|---|
@@ -52,13 +52,14 @@ These are not rind `98568332` and are not the comparable set at `d6ca9a75`.
 |---|---|---|
 | Arduino Uno R3 | ATmega328P, 16 MHz, bare metal | [results/uno-r3/](../results/uno-r3/README.md). A `no_std` port of rind's generic primitives from `c08c91ea`, not the full crate. |
 
-## Later Linux host (rind `a6577cb4`)
+## Later Linux hosts (rind `a6577cb4`)
 
-New publishes use `results/<host>/<upstream-sha>/`. This is the first Linux host in that layout.
+New publishes use `results/<host>/<upstream-sha>/`. These are the first Linux hosts in that layout.
 
 | Board or host | Hardware | Where the numbers are |
 |---|---|---|
 | [pi-host-a-bench](../results/pi-host-a-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) | Raspberry Pi 2 Model B Rev 1.1, BCM2836 Cortex-A7, 900 MHz, armv7 | [RESULTS.md](../results/pi-host-a-bench/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) at rind `a6577cb4` |
+| [pi5-nofan-1p5ghz](../results/pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) | Raspberry Pi 5 Model B Rev 1.0, BCM2712 Cortex-A76, no fan, held at 1.5 GHz, aarch64 | [RESULTS.md](../results/pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) at rind `a6577cb4` |
 
 ## Comparable-set host (rind `d6ca9a75`)
 
@@ -79,7 +80,7 @@ These sit beside the published sets. None of them changes a gap verdict on the p
 | Poly1305-32 A/B | Optional 32-bit-limb Poly1305 is faster than rind's previous HACL* code at every size on the ESP32-S3 and the T1000-E (21/21 known-answer checks). Gain is against rind's previous code, not against ring. | [ESP32-S3](../results/esp32s3/diag/poly1305-32/README.md), [T1000-E](../results/nrf52840/diag/poly1305-32/README.md) |
 | Three-alignment relinks | Moving code by 1 KB without changing alignment does nothing; a different alignment moves some short-input rows by up to 0.3×. SHA-256 64B is 2.36×–3.07× libcrux (2.79× from the medians). An earlier relink that only moved the harness is labelled as such. | [esp32s3-relink-fixed-98568332](../results/diag/esp32s3-relink-fixed-98568332/README.md) |
 | 32 KB icache at 80 MHz | Confirms the 40 MHz diagnostic at the published pin and clock: the XChaCha gap is cache misses (7.50× → 1.10× RustCrypto at 32B). The ChaCha gap stays put (Poly1305 compute). | [esp32s3-icache32-80mhz-98568332](../results/diag/esp32s3-icache32-80mhz-98568332/README.md) |
-| Legacy provenance map | Images built from the archived private `rind-bench` history record that SHA in `legacy_rind_bench`, and map it onto public `rind-hardware` (`8d9c1bb`, or `ancestor of 8d9c1bb…`). | [tools/legacy-rind-bench-map.json](../tools/legacy-rind-bench-map.json) |
+| Legacy provenance map | Images built from the history of an earlier private firmware repository (archived) record that SHA in `legacy_rind_bench`, and map it onto public `rind-hardware` (`8d9c1bb`, or `ancestor of 8d9c1bb…`). | [tools/legacy-rind-bench-map.json](../tools/legacy-rind-bench-map.json) |
 
 ## Presentations
 

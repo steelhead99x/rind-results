@@ -598,7 +598,7 @@ table.t.sv code{font-size:11.5px}
       </ul>
     </div>
   </div>
-  <div class="foot"><span class="src">RP2040 bench lane: STATUS notes, summarize.py, raw run JSON · M0+ static-analysis REPORT (code placement) · measurement plan from the rind-bench team, 2026-11-12</span><span class="num"></span></div>
+  <div class="foot"><span class="src">RP2040 bench lane: STATUS notes, summarize.py, raw run JSON · M0+ static-analysis REPORT (code placement) · measurement plan from the firmware team, 2026-11-12</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 10. LIVE RESULTS ============ -->
@@ -811,7 +811,7 @@ table.t.sv code{font-size:11.5px}
 
   // Slide 6: pipeline + images
   (function(){ const s=$('#pipe'), I=D.images;
-    const box=[[0,"Source",`rind ${I.rind}`,`patches ${I.patches}`,'#eef0f6'],[300,"Build",`SysTick-fixed images`,`rind-bench ${I.rindBench} + wrap fix`,'#eef0f6'],[600,"Output",`${I.count} ELF images`,`plus one-change variants`,'#e6f4f1'],[900,"On the chip",D.pico.board,"rounds in progress",'#fdf6e3']];
+    const box=[[0,"Source",`rind ${I.rind}`,`patches ${I.patches}`,'#eef0f6'],[300,"Build",`SysTick-fixed images`,`firmware ${I.rindBench} + wrap fix`,'#eef0f6'],[600,"Output",`${I.count} ELF images`,`plus one-change variants`,'#e6f4f1'],[900,"On the chip",D.pico.board,"rounds in progress",'#fdf6e3']];
     el('defs',{},s).innerHTML='<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>';
     box.forEach(([x,h,a,b,f],i)=>{ el('rect',{x,y:10,width:252,height:118,rx:10,fill:f,stroke:i==3?'#c9a227':'#dfe4ea','stroke-dasharray':i==3?'6 4':''},s);
       el('text',{class:'st',x:x+16,y:38},s,h.toUpperCase()); el('text',{class:'t1',x:x+16,y:72,'font-size':15,'font-weight':600},s,a); el('text',{class:'t2',x:x+16,y:100},s,b);
@@ -887,7 +887,7 @@ table.t.sv code{font-size:11.5px}
   const base=D.meta.repo, link=(b,p)=>{ if(!p) return ''; if(p.startsWith('commit/')) return `<a href="${base}/${p}">commit ${p.slice(7)}</a>`; return `<a href="${base}/blob/${b}/${p}"><code>${p}</code></a>`; };
   $('#tb-src').innerHTML = `<tr><th style="width:22%">Topic</th><th style="width:10%">Branch</th><th>Files (github.com/steelhead99x/rind-results)</th></tr>` +
     D.sources.map(([t,b,a,x])=>`<tr><td>${t}</td><td><code>${b}</code></td><td>${[a,...x.split('|')].filter(Boolean).map(p=>link(b,p)).join(' · ')}</td></tr>`).join('') +
-    `<tr><td>Measurement plan</td><td>n/a</td><td>rind-bench team methodology, 2026-11-12</td></tr>`;
+    `<tr><td>Measurement plan</td><td>n/a</td><td>Firmware team methodology, 2026-11-12</td></tr>`;
 
   // Navigation
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;

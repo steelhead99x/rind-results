@@ -31,7 +31,7 @@
 - RNG: the RP2040 has no TRNG. `getrandom` is a seeded SplitMix64, not a
   source of entropy.
 - Image hashes and source: [images.json](images.json) and
-  [images.sha256](images.sha256) next to this note. Built from rind-bench (the private history, same tree as later published rind-hardware)
+  [images.sha256](images.sha256) next to this note. Built from the earlier private firmware history (same tree as later published rind-hardware)
   `f656f95` (2026-11-12 16:35 PST), rind `98568332`, patches 0001–0005.
   The images in this folder are the pre-run build. Known-answer checks later passed on a Pico; timing results have not been published here.
 - There is no official QEMU machine for the RP2040 with enough RAM to run

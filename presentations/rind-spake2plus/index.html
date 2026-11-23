@@ -135,7 +135,7 @@ const DATA = {
   --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
   --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
   --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
-  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --mono: "JetBrains Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
@@ -232,6 +232,11 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 .tag.skip{background:var(--split-bg);color:#4a5578}
 .timeline.t5{grid-template-columns:repeat(5,1fr)}
 .tag.fixed{background:#e8f0fa;color:var(--accent2);white-space:normal}
+/* PR links (2026-11-19): one muted "PRs:" line at the top of each footer */
+.slide .foot .src .prs{display:block;margin-bottom:3px;color:var(--ink2);font-weight:600}
+.slide .foot .src .prs a{color:var(--ink2);border-bottom:1px solid #c3ccd7;font-weight:600}
+.slide .foot .src .prs a:hover{color:var(--accent2)}
+.slide.title .foot .src .prs,.slide.title .foot .src .prs a{color:#c8d3e0;border-color:#3d5573}
 </style>
 </head>
 <body>
@@ -243,10 +248,10 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
   <div class="inner">
     <div class="kicker">rind · password-authenticated key exchange</div>
     <h1>SPAKE2+ comes to rind: RFC 9383 and Matter PASE</h1>
-    <div class="sub">What the protocol does, how rind implements it, where pull request moq-dev/rind#689 stands, and the aarch64 performance work from the same two days</div>
+    <div class="sub">The protocol and rind's implementation. kixel-ai/rind#689 merged 13 Nov; four fixes split out of it merged 13 and 14 Nov. Also the aarch64 work from the same days.</div>
   </div>
-  <div class="meta">moq-dev/rind · steelhead99x/rind-results<br>November 12, 2026</div>
-  <div class="foot"><span class="src">Sources are listed on the last slide. Facts with no source are left out.</span><span class="num"></span></div>
+  <div class="meta">kixel-ai/rind (formerly moq-dev/rind) · steelhead99x/rind-results<br>November 12, 2026 · merge status updated 19 November 2026 · times are PST</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a> · <a href="https://github.com/kixel-ai/rind/pull/722">rind #722</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/kixel-ai/rind/pull/724">rind #724</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a></span>Sources are listed on the last slide. Facts with no source are left out. Merge facts come from the merged PR bodies on kixel-ai/rind.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 2. PROBLEM ============ -->
@@ -265,7 +270,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <li>SPAKE2+ (RFC 9383) meets both. Matter uses it for PASE, its commissioning handshake.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">RFC 9383 · draft-bar-cfrg-spake2plus-01 · moq-dev/rind#689</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a></span>RFC 9383 · draft-bar-cfrg-spake2plus-01 · kixel-ai/rind#689</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 3. INFOGRAPHIC ============ -->
@@ -404,7 +409,7 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     </ul></div>
   </div>
   <div class="callout" style="margin-top:20px">Confirmation tags are compared in constant time. rind returns the shared key only after the peer's tag checks. A failed handshake tells an active attacker that one guess was wrong, and nothing else.</div>
-  <div class="foot"><span class="src">RFC 9383, sections 3.4 and 3.5 · moq-dev/rind#689</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a></span>RFC 9383, sections 3.4 and 3.5 · kixel-ai/rind#689</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 7. SUITES ============ -->
@@ -421,12 +426,12 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
     <div class="callout warn"><b>The draft disagrees with itself.</b> Its prose and its diagram split Hash(TT) differently. rind follows the draft's appendix B test vectors and the connectedhomeip vectors.</div>
     <div class="callout">The suite is part of the type. Mixing the two suites in one handshake fails to compile.</div>
   </div>
-  <div class="foot"><span class="src">moq-dev/rind#689 · RFC 9383 · draft-bar-cfrg-spake2plus-01 (appendix B)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a></span>kixel-ai/rind#689 · RFC 9383 · draft-bar-cfrg-spake2plus-01 (appendix B)</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 8. HARD PART ============ -->
 <section class="slide" data-section="rind design">
-  <div class="kicker">rind design · the hard part</div>
+  <div class="kicker">rind design · identity check</div>
   <h2>The identity check runs without a secret-dependent branch</h2>
   <p class="lede">A share equal to w0·M or w0·N makes X − w0·M or Y − w0·N the identity point, and the handshake must reject it. Testing for that with an ordinary <code>if</code> would branch on a value derived from the password.</p>
   <div class="cols">
@@ -435,80 +440,72 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
       <li>The "was identity" bit is declassified once, together with the tag check result.</li>
       <li>The maintainer refactored <code>complete_add</code> onto hash-to-curve's <code>sum</code>.</li>
     </ul></div>
-    <div class="card"><h3>Other limits and hygiene</h3><ul class="b sm">
+    <div class="card"><h3>Limits</h3><ul class="b sm">
       <li>Hostile input is bounded: context and identities at 1024 bytes, scalars at 128 bytes.</li>
       <li>Secrets are wiped on drop.</li>
       <li>Per-handshake state is consumed by <code>finish</code>, so it cannot be reused.</li>
       <li>One stored record (or one set of prover secrets) serves many handshakes.</li>
     </ul></div>
   </div>
-  <div class="foot"><span class="src">moq-dev/rind#689 (description, review decisions and maintainer commits)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a> · <a href="https://github.com/steelhead99x/rind/pull/68">fork #68</a></span>kixel-ai/rind#689 (description, review decisions and maintainer commits)</span><span class="num"></span></div>
 </section>
 <!-- ============ 9. PR JOURNEY ============ -->
 <section class="slide" data-section="Pull request">
-  <div class="kicker">The pull request · Nov 12, 2026 (times PST)</div>
-  <h2>Three earlier attempts led to moq-dev/rind#689; the maintainer added commits and a review bot approved it</h2>
+  <div class="kicker">The pull request · 12 to 13 Nov 2026 (times PST)</div>
+  <h2>#689 replaced three earlier attempts and merged on 13 November</h2>
   <div class="timeline t5" style="margin-top:18px">
     <div class="tl"><div class="ph">Before</div><h4>#616, #680, #685</h4>Earlier attempts, superseded by #689.</div>
-    <div class="tl"><div class="ph">Opened</div><h4>#689</h4>Opened by steelhead99x: "feat(spake2plus): add RFC 9383 and Matter PASE". 8 commits, +2061 / −20, 17 files.</div>
-    <div class="tl"><div class="ph">About 1:50 PM</div><h4>Labeled</h4>The maintainer labeled it <code>quest:active</code> and added a Decisions section.</div>
-    <div class="tl"><div class="ph">Then</div><h4>Maintainer commits</h4>Out of draft. <code>complete_add</code> moved onto <code>sum</code>; one record or set of secrets serves many handshakes; C and crates.io differentials left out of wasm; main merged in.</div>
-    <div class="tl"><div class="ph">3:12 PM</div><h4>Approved</h4>Pullfrog bot approved head <code>f3ccebb7</code>. The repo now requires an approving review.</div>
+    <div class="tl"><div class="ph">12 Nov</div><h4>#689 opened</h4>By steelhead99x: "feat(spake2plus): add RFC 9383 and Matter PASE". At opening: 8 commits, +2061 / −20, 17 files.</div>
+    <div class="tl"><div class="ph">12 Nov, from 1:50 PM</div><h4>Maintainer commits</h4>Labeled <code>quest:active</code>. <code>complete_add</code> moved onto <code>sum</code>; one record serves many handshakes.</div>
+    <div class="tl"><div class="ph">12 Nov, 3:12 PM</div><h4>Approved</h4>Pullfrog approved head <code>f3ccebb7</code>. Four unrelated fixes were split out into their own PRs.</div>
+    <div class="tl"><div class="ph">13 Nov, 10:39 AM</div><h4>Merged</h4>Merged by the maintainer. Final diff: +2,971 / −53 over 25 files. Deletes the quest file <code>quest/m4/protocols/spake2plus.md</code>.</div>
   </div>
-  <div class="card" style="margin-top:22px"><h3>Tests in the pull request</h3><ul class="b sm" style="columns:2;column-gap:36px">
-    <li>RFC 9383 test vectors</li>
-    <li>draft-bar-cfrg-spake2plus-01 test vectors</li>
-    <li>connectedhomeip (Matter) test vectors</li>
-    <li>Differential tests against pakery and matter-crypto</li>
-    <li>ctgrind constant-time checks</li>
-    <li>Tests that secrets are zeroed</li>
+  <div class="card" style="margin-top:22px"><h3>Tests in the merged PR</h3><ul class="b sm" style="columns:2;column-gap:36px">
+    <li>RFC 9383 appendix C vectors</li>
+    <li>draft-01 appendix B and all four connectedhomeip vectors, including empty identities</li>
+    <li>Handshakes against <code>pakery-spake2plus</code> 0.6.2 and <code>matter-crypto</code> 0.5.1</li>
+    <li><code>zero_residue_fails_closed</code>: zero <code>w0</code>, <code>w1</code> or both fail at confirmation</li>
+    <li>ctgrind constant-time checks, and wipe checks on drop</li>
+    <li>No benchmark: ECDH and ECDSA never reach the changed P-256 code</li>
   </ul></div>
-  <div class="foot"><span class="src">github.com/moq-dev/rind/pull/689 (timeline, commits, reviews)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a> · <a href="https://github.com/kixel-ai/rind/pull/616">rind #616</a> · <a href="https://github.com/kixel-ai/rind/pull/680">rind #680</a> · <a href="https://github.com/kixel-ai/rind/pull/685">rind #685</a></span>kixel-ai/rind#689 merged body (Problem, Approach, Testing, Validation) and timeline; PR state read 19 Nov 2026</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 10. STATUS BOARD ============ -->
+<!-- ============ 10. MERGED ============ -->
 <section class="slide" data-section="Status">
-  <div class="kicker">Status as of 4:22 PM PST, Nov 12, 2026</div>
-  <h2>#689 is approved and conflict-free; it waits on one running check and a maintainer merge</h2>
-  <div class="board" style="margin-top:18px">
-    <div class="cell"><div class="k">Mergeable</div><div class="v">Yes</div></div>
-    <div class="cell"><div class="k">Conflicts</div><div class="v">None</div></div>
-    <div class="cell"><div class="k">GitHub merge state</div><div class="v bad">Blocked</div></div>
-    <div class="cell"><div class="k">Review</div><div class="v">Approved</div></div>
+  <div class="kicker">Merged · 13 Nov 2026, 10:39 AM PST</div>
+  <h2>#689 is merged: <code style="font-size:.8em">just ci</code> passed with 1100 tests, and ctgrind found 0 errors</h2>
+  <div class="board" style="margin-top:16px">
+    <div class="cell"><div class="k">State</div><div class="v">Merged</div></div>
+    <div class="cell"><div class="k">Merged by</div><div class="v">Maintainer</div></div>
+    <div class="cell"><div class="k">Final diff</div><div class="v">+2,971 / −53</div></div>
+    <div class="cell"><div class="k">Files</div><div class="v">25</div></div>
   </div>
-  <div class="checks">
-    <div>
-      <div class="chart-title">Passed</div>
-      <div class="chk"><span>lean</span><span>neon</span><span>cosim</span><span>clippy-aarch64</span><span>binsec (portable)</span><span>binsec (x86_64)</span><span>binsec (aarch64)</span><span>build (ubuntu-latest, --release)</span><span>pullfrog</span></div>
-      <table class="t" style="margin-top:18px">
-        <tr><th style="width:24%">Check</th><th style="width:20%">State</th><th>Detail</th></tr>
-        <tr><td><code>check</code></td><td><span class="tag run">running</span></td><td>Started 3:54 PM</td></tr>
-        <tr><td><code>hol-light</code></td><td><span class="tag drop">cancelled</span></td><td>Ran 3:43 to 4:13 PM. Cause not confirmed.</td></tr>
-        <tr><td>Some matrix jobs</td><td><span class="tag skip">skipped</span></td><td>Several matrix entries did not run</td></tr>
-      </table>
-    </div>
-    <div class="callout" style="align-self:start"><b>Next actor: the maintainer.</b><br>The author is an outside contributor, so the maintainer has to merge.</div>
-  </div>
-  <div class="foot"><span class="src">github.com/moq-dev/rind/pull/689 (checks and merge state, read 4:22 PM PST)</span><span class="num"></span></div>
+  <table class="t" style="font-size:16px">
+    <tr><th style="width:36%">Check, from the merged body</th><th style="width:20%">Head</th><th>Result</th></tr>
+    <tr class="hl"><td><code>just ci origin/main</code></td><td><code>c5da7311</code></td><td>pass; nextest 1100 passed, 37 skipped</td></tr>
+    <tr><td><code>admin/ctgrind unit</code> (whole unit suite)</td><td><code>3e5d3651</code></td><td>0 errors</td></tr>
+    <tr><td><code>admin/ctgrind unit spake2plus</code></td><td><code>391da462</code></td><td>13 passed, 0 errors</td></tr>
+    <tr><td><code>cargo test --release --lib</code> spake2plus / mid::p256</td><td><code>391da462</code></td><td>13 passed / 24 passed</td></tr>
+    <tr><td><code>just portable</code>, <code>just armv7</code> (qemu), <code>just qemu s390x</code></td><td></td><td>pass, big-endian included</td></tr>
+    <tr><td><code>just wasm</code></td><td></td><td>lib, zeroing and <code>spake2plus_entry</code> pass; the full recipe fails on an ML-DSA wasm gate issue that also fails on main</td></tr>
+  </table>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a></span>kixel-ai/rind#689 merged body (Validation); merge time and merger from GitHub. The 12 Nov version of this slide showed the pre-merge check board.</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 11. NEXT ============ -->
-<section class="slide" data-section="Next">
-  <div class="kicker">What's next</div>
-  <h2>After the merge, six ready follow-up fixes get rebuilt on the merged code, and Ed25519 work continues in #709</h2>
-  <div class="cols3" style="margin-top:24px">
-    <div class="card"><h3>1. Merge #689</h3><ul class="b sm">
-      <li>Waiting on the maintainer.</li>
-    </ul></div>
-    <div class="card"><h3>2. Follow-up fixes</h3><ul class="b sm">
-      <li>Six fixes are ready on branch <code>spake2plus-followup-r1</code>, with 1029 tests passing.</li>
-      <li>They will be rebuilt on the merged result. Anything the maintainer already covered is dropped.</li>
-    </ul></div>
-    <div class="card"><h3>3. Ed25519</h3><ul class="b sm">
-      <li>Ed25519 work continues as moq-dev/rind#709.</li>
-    </ul></div>
-  </div>
-  <div class="foot"><span class="src">moq-dev/rind#689 · moq-dev/rind#709 · follow-up branch test run</span><span class="num"></span></div>
+<!-- ============ 11. SPLIT-OUT FIXES ============ -->
+<section class="slide" data-section="Follow-ups">
+  <div class="kicker">One contributor PR, five upstream merges</div>
+  <h2>Four fixes split out of #689, each merged on its own with authorship kept</h2>
+  <table class="t" style="margin-top:12px;font-size:15.5px">
+    <tr><th style="width:15%">PR</th><th style="width:19%">Merged (PST)</th><th>What it fixed</th></tr>
+    <tr><td>#724 docs</td><td>13 Nov, 11:26 AM</td><td>The aarch64 SHA-512 doc claimed the scalar build matched the proof. <code>admin/prove</code> builds only Linux targets, so the claim is now limited to Linux. +3 / −2</td></tr>
+    <tr><td>#722 VRF</td><td>13 Nov, 11:53 AM</td><td><code>prove</code> panicked after 256 failed candidates (about 2<sup>-256</sup>, no known input); it now returns <code>Error::Fault</code>. Docs require a dedicated VRF seed, since reusing the signing seed reveals the scalar. +122 / −18</td></tr>
+    <tr><td>#725 CI</td><td>14 Nov, 12:51 PM</td><td>cargo-mutants kept <code>..</code> in <code>#[path]</code> module names, so a campaign could select nothing and exit 0. +351 / −7</td></tr>
+    <tr class="hl"><td>#723 FIPS</td><td>14 Nov, 4:53 PM</td><td>The HMAC_DRBG self-test ran under a process-wide <code>Once</code>; after <code>fork</code> a child could wait forever. Now an <code>AtomicBool</code>. The maintainer measured about 9.6 µs per thread against about 19.6 µs to spawn one. +114 / −4</td></tr>
+  </table>
+  <p class="small">Each is a maintainer cherry-pick of a steelhead99x commit (#723, #724, #725 from fork #67). Ed25519 work went on in kixel-ai/rind#709, which closed, and landed as #797 on 18 Nov.</p>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/722">rind #722</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/kixel-ai/rind/pull/724">rind #724</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a> · <a href="https://github.com/steelhead99x/rind/pull/67">fork #67</a> · <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a></span>kixel-ai/rind#722, #723, #724, #725 merged bodies ("Split out of #689 ... keeps their authorship") · the #723 timing is the maintainer's, with no raw log in rind-results</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 12. BENCH SUMMARY ============ -->
@@ -579,17 +576,17 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 <!-- ============ 16. SOURCES ============ -->
 <section class="slide" data-section="Sources">
   <div class="kicker">Sources</div>
-  <h2>Every fact in this deck comes from one of these sources</h2>
+  <h2>Sources</h2>
   <table class="t" style="margin-top:14px;font-size:14px">
     <tr><th style="width:26%">Topic</th><th>Source</th></tr>
-    <tr><td>Pull request, checks, timeline</td><td><a href="https://github.com/moq-dev/rind/pull/689">github.com/moq-dev/rind/pull/689</a> · follow-on Ed25519 work: <a href="https://github.com/moq-dev/rind/pull/709">moq-dev/rind#709</a></td></tr>
+    <tr><td>Pull request, checks, timeline</td><td><a href="https://github.com/kixel-ai/rind/pull/689">github.com/kixel-ai/rind/pull/689</a> (merged body) · split-out fixes <a href="https://github.com/kixel-ai/rind/pull/722">#722</a>, <a href="https://github.com/kixel-ai/rind/pull/723">#723</a>, <a href="https://github.com/kixel-ai/rind/pull/724">#724</a>, <a href="https://github.com/kixel-ai/rind/pull/725">#725</a> · earlier attempts #616, #680, #685 · fork <a href="https://github.com/steelhead99x/rind/pull/67">#67</a>, <a href="https://github.com/steelhead99x/rind/pull/68">#68</a></td></tr>
     <tr><td>SPAKE2+ protocol</td><td><a href="https://www.rfc-editor.org/rfc/rfc9383">RFC 9383: SPAKE2+, an Augmented Password-Authenticated Key Exchange (PAKE) Protocol</a></td></tr>
     <tr><td>Matter PASE suite</td><td><a href="https://datatracker.ietf.org/doc/html/draft-bar-cfrg-spake2plus-01">draft-bar-cfrg-spake2plus-01</a> (appendix B test vectors) · connectedhomeip test vectors</td></tr>
     <tr><td>Pi 5 public-key results</td><td>steelhead99x/rind-results <code>results/pr33-pi5/README.md</code> (branch <code>results/m1pro-pi5-argon2-2026-11-12</code>) · <code>hosts/pi5/ab-narrow-mul/</code>, including <code>series2-layout/</code> (branch <code>results/pi5-lane-2026-11-12</code> @ 7e2e868)</td></tr>
     <tr><td>Argon2id results</td><td>steelhead99x/rind-results <code>results/argon2/RESULTS.md</code> (branch <code>results/m1pro-pi5-argon2-2026-11-12</code>) · <code>results/argon2-interleave/</code> and <code>results/argon2-scalar-rider/</code> (branch <code>results/argon2-a76-interleave</code>) · steelhead99x/rind commits <code>bd907631</code>, <code>4ad61ae3</code></td></tr>
     <tr><td>Pi 5 clock</td><td>steelhead99x/rind-results <code>hosts/pi5/NOTES.md</code> · the companion deck <code>presentations/rind-aarch64-perf</code> (branch <code>docs/perf-phases-deck</code>)</td></tr>
   </table>
-  <div class="foot"><span class="src">Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a> · <a href="https://github.com/kixel-ai/rind/pull/722">rind #722</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/kixel-ai/rind/pull/724">rind #724</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a></span>Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
 </section>
 
 </div>

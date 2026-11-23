@@ -9,6 +9,8 @@
 //! - an `x86-host-c`-style `summary.md` next to a schema-1 JSON
 //! - a `rind-results/ab-v1` JSON with its sibling markdown
 //! - aggregated criterion tables (`id | mode | runs | median | min | max | spread`)
+//! - a cycle-median tree (`medians.json`, `RUNS.md`, `RESULTS.md`); when
+//!   `raw/capture.log` is present, those medians are recomputed from it
 //! - a parent of those, including a compare-*.md over board subdirectories
 
 use super::{Report, check_board_at, check_host_at, check_summary, load_hw_map, med};
@@ -643,6 +645,9 @@ fn check_cycle_median(label: &str, dir: &Path, rep: &mut Report) {
         rep.bad(label, "medians.json has no clock_hz".into());
     }
     let ops = load_cycle_ops(&json, label, clock_hz, rep);
+    // The markdown below is checked against medians.json. The serial capture,
+    // when the tree still has one, is what the board printed.
+    crate::capture::check_capture(label, dir, &json, clock_hz, rep);
     if ops.is_empty() {
         return;
     }
@@ -2042,5 +2047,12 @@ Known-answer checks: board-1 1/1, board-2 1/1. Runs: 1 and 1. Rows: 1 in both.
         let mut rep = Report::default();
         assert!(verify_dir(&dir, &mut rep), "{}", rep.problems.join("\n"));
         assert!(rep.problems.is_empty(), "{}", rep.problems.join("\n"));
+        assert!(
+            rep.notes
+                .iter()
+                .any(|n| n.contains("raw/capture.log") && n.contains("BENCH")),
+            "the published capture was not recomputed: {:?}",
+            rep.notes
+        );
     }
 }

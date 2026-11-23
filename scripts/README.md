@@ -22,3 +22,13 @@ from the directory the command runs in, as the scripts took them.
 filesystem-safe host id in the results directory. A CPU slug such as
 `intel-core-ultra-9-275hx` is a normal host id. The four hosts published
 first stay first, and `box/` is still xeon-vm's directory.
+
+## Safe reuse
+
+These are historical run recipes, not a portable installer or a production
+automation interface. Read a recipe before reusing it, provide an isolated
+bench checkout, and check every path and external archive. Several recipes
+assume a working directory or intentionally replace build/output trees.
+Do not run them as root or against the only copy of published measurements.
+For maintained commands and the local release gate, see
+[CONTRIBUTING.md](../CONTRIBUTING.md). Historical results stay unchanged.

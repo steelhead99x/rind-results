@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rind tests that catch more, merged upstream, November 2026</title>
+<!--
+  Self-contained deck: no network access, no external libraries.
+  STYLE: the CSS and navigation of presentations/rind-hardware-today (itself from rind-rp2040).
+  SLIDES: one <section class="slide"> per slide. Every count names its PR or file in the footer.
+-->
+<style>
+:root{
+  --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
+  --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
+  --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
+  --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
+  --mono: "JetBrains Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.slide{position:absolute;width:1280px;height:720px;background:var(--bg);padding:52px 64px 56px;display:none;
+  transform-origin:center center;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden}
+.slide.active{display:block}
+.slide .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+.slide h2{font-size:34px;line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em;color:var(--navy)}
+.slide .lede{font-size:18px;color:var(--ink2);margin:0 0 22px;max-width:1080px;line-height:1.4}
+.slide .foot{position:absolute;left:64px;right:64px;bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;
+  font-size:11px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;gap:24px}
+.slide .foot .src{max-width:1000px;line-height:1.35}
+.slide .foot .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pi-note{position:absolute;left:64px;right:64px;bottom:50px;font-size:11px;color:var(--bad);line-height:1.35}
+.pi-note::before{content:"Note: ";font-weight:700}
+code,.mono{font-family:var(--mono);font-size:.88em}
+ul.b{margin:0;padding-left:20px;font-size:17px;line-height:1.45;color:var(--ink)}
+ul.b li{margin:0 0 8px}
+ul.b li::marker{color:var(--accent)}
+ul.b.sm{font-size:15px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.cols.c64{grid-template-columns:1.25fr 1fr}
+.cols.c46{grid-template-columns:1fr 1.3fr}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--navy)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{border-left:4px solid var(--accent);background:var(--panel);padding:14px 16px;border-radius:0 8px 8px 0}
+.kpi .v{font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-.01em;white-space:nowrap}
+.kpi .l{font-size:13.5px;font-weight:600;margin-top:4px}
+.kpi .d{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.35}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.t th{text-align:left;font-weight:600;color:var(--ink2);border-bottom:2px solid var(--navy);padding:6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+table.t td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.t td.n,table.t th.n{text-align:right}
+table.t tr.hl td{background:var(--good-bg);font-weight:600}
+table.t.compact th,table.t.compact td{padding:4px 8px}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.tag.win{background:var(--good-bg);color:var(--accent)}
+.tag.tooling{background:#e8f0fa;color:var(--accent2)}
+.tag.split{background:var(--split-bg);color:#4a5578}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.tag.drop{background:var(--bad-bg);color:var(--bad)}
+.tag.ok{background:var(--good-bg);color:var(--accent)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin:4px 0 8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+svg text{font-family:var(--sans)}
+svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.chart-title{font-size:14px;font-weight:600;color:var(--navy);margin:0 0 4px}
+.callout{border-left:4px solid var(--navy);padding:10px 14px;background:var(--panel);font-size:15px;line-height:1.45;border-radius:0 8px 8px 0}
+.callout.warn{border-color:var(--bad);background:var(--bad-bg)}
+/* title slide */
+.slide.title{background:var(--navy);color:#fff;padding:0}
+.slide.title .inner{position:absolute;left:80px;top:150px;right:80px}
+.slide.title .kicker{color:#7fd1c4}
+.slide.title h1{font-size:54px;line-height:1.08;margin:6px 0 18px;letter-spacing:-.02em;font-weight:700;max-width:1000px}
+.slide.title .sub{font-size:21px;color:#c8d3e0;max-width:960px;line-height:1.4}
+.slide.title .meta{position:absolute;left:80px;bottom:64px;font-size:14px;color:#9fb0c4;line-height:1.6}
+.slide.title .bar{position:absolute;left:80px;top:118px;width:72px;height:4px;background:#2bb5a0}
+.slide.title .foot{border-top-color:#2a3d55;color:#7f93ab}
+.slide.section-start .kicker::after{content:""}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px}
+.tl{border-top:4px solid var(--accent);background:var(--panel);padding:12px 12px 14px;border-radius:0 0 8px 8px;font-size:13px;line-height:1.4}
+.tl.argon{border-top-color:var(--accent2)}
+.tl .ph{font-size:11px;font-weight:700;color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.tl h4{margin:4px 0 6px;font-size:15px;color:var(--navy)}
+.tl .when{font-size:12px;color:var(--ink2);margin-bottom:6px}
+#hud{position:fixed;right:14px;bottom:10px;color:#9aa6b6;font:12px var(--sans);user-select:none}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  html,body{background:#fff;height:auto}
+  #deck{position:static;display:block}
+  .slide{display:block!important;position:relative;transform:none!important;box-shadow:none;page-break-after:always;break-after:page}
+  #hud{display:none}
+}
+/* SPAKE2+ deck additions (reused) */
+.flow text{font-family:var(--sans)}
+.flow .st{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--mute)}
+.flow .t1{font-size:15px;fill:var(--ink)}
+.flow .t2{font-size:12.5px;fill:var(--ink2)}
+.flow .m{font-family:var(--mono);font-size:12px;fill:var(--navy)}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.board.b2{grid-template-columns:1fr 1fr}
+.board .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.board .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);font-weight:700}
+.board .cell .v{font-size:22px;font-weight:700;color:var(--navy);margin-top:2px}
+.board .cell .v.bad{color:var(--bad)}
+.chk{display:flex;flex-wrap:wrap;gap:8px}
+.chk span{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border-radius:6px;background:var(--good-bg);color:var(--accent);font-weight:600}
+/* RP2040 deck additions */
+p.small{font-size:14px;line-height:1.45;color:var(--ink2);margin:8px 0 0}
+.err{background:var(--bad-bg);border-left:4px solid var(--bad);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px;color:var(--bad)}
+.cons{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.con{position:relative;background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--bad);border-radius:0 0 10px 10px;padding:16px 14px 64px;min-height:330px}
+.con .ix{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.con .ck{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:12px}
+.con .cv{font-size:26px;font-weight:700;color:var(--navy);margin:4px 0 10px;white-space:nowrap}
+.con .cw{font-size:13.5px;line-height:1.45;color:var(--ink)}
+.con .cf{position:absolute;left:14px;right:14px;bottom:14px;font-size:12.5px;font-weight:600;color:var(--accent);background:var(--good-bg);border-radius:6px;padding:6px 8px;line-height:1.3}
+.card.fix{border-top:4px solid var(--accent)}
+.card.fix.warnc{border-top-color:#c9a227}
+.card .pn{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+.card.warnc .pn{color:#8a6d0b}
+table.grid th.c,table.grid td.c{text-align:center}
+table.grid th span{font-size:10px;color:var(--mute);text-transform:none;letter-spacing:0}
+table.grid td{padding:5px 8px}
+table.grid td.r{font-size:12.5px;color:var(--ink2)}
+i.dot{display:inline-block;font-style:normal;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+i.dot.y{background:var(--good-bg);color:var(--accent)}
+i.dot.n{background:var(--bad-bg);color:var(--bad)}
+table.sv{font-size:12.5px}
+table.sv td.bad{color:var(--bad);font-weight:700}
+.timeline.t6{grid-template-columns:repeat(6,1fr)}
+.tl.done{border-top-color:var(--mute);background:#eef0f3}
+.pendbar{background:var(--pend-bg);border-left:4px solid #c9a227;padding:9px 14px;border-radius:0 8px 8px 0;font-size:14.5px;color:#5c4a08}
+.tag.pending{background:var(--pend-bg);color:#8a6d0b}
+.sub2{font-size:11px;color:var(--mute)}
+.mut{color:var(--mute);font-style:italic}
+a{color:var(--accent2);text-decoration:none}
+table.sv td:first-child{white-space:nowrap}
+/* keep the nav hint below the slide */
+#deck{bottom:26px}
+#hud{bottom:6px}
+@media print{#deck{bottom:auto}}
+/* pass 3: contrast and spacing */
+:root{--mute:#5d6878}
+.card.tall{min-height:250px}
+.card.tall ul.b li{margin-bottom:12px}
+.cols3.fixes .card{min-height:330px}
+.cols3.fixes ul.b.sm{font-size:16px}
+/* new-deck spacing (2026-11-17): larger type so tables and cards fill the slide */
+.slide table.t{font-size:16px !important}
+.slide table.t td{padding:9px 10px}
+.slide table.t th{font-size:12.5px;padding:7px 10px}
+.slide ul.b.sm{font-size:16.5px}
+.slide ul.b.sm li{margin-bottom:11px}
+.slide .card{padding:18px 20px}
+.slide p.small{font-size:15px}
+.slide .chart-title{font-size:15px;margin-bottom:8px}
+.slide .callout{font-size:16.5px}
+/* PR links (2026-11-19): one muted "PRs:" line at the top of each footer */
+.slide .foot .src .prs{display:block;margin-bottom:3px;color:var(--ink2);font-weight:600}
+.slide .foot .src .prs a{color:var(--ink2);border-bottom:1px solid #c3ccd7;font-weight:600}
+.slide .foot .src .prs a:hover{color:var(--accent2)}
+.slide.title .foot .src .prs,.slide.title .foot .src .prs a{color:#c8d3e0;border-color:#3d5573}
+</style>
+</head>
+<body>
+<div id="deck">
+<!-- ============ 1. TITLE ============ -->
+<section class="slide title" data-section="Title">
+  <div class="bar"></div>
+  <div class="inner">
+    <div class="kicker">rind · tests and checks · merged upstream</div>
+    <h1>Seven test and CI changes merged into kixel-ai/rind, 14 to 19 November</h1>
+    <div class="sub">#797 wasm and Ed25519, #792 adapter mutants, #791 hash-to-curve sums, #798 HPKE edge vectors, #796 CI alerts, #876 dev shell, #725 mutation tool. All from the fork.</div>
+  </div>
+  <div class="meta">steelhead99x/rind · kixel-ai/rind · steelhead99x/rind-results<br>Refreshed 19 November 2026 from the merged PR bodies · times are America/Los_Angeles (PST)</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a> · <a href="https://github.com/kixel-ai/rind/pull/792">rind #792</a> · <a href="https://github.com/kixel-ai/rind/pull/798">rind #798</a> · <a href="https://github.com/kixel-ai/rind/pull/791">rind #791</a> · <a href="https://github.com/kixel-ai/rind/pull/796">rind #796</a> · <a href="https://github.com/kixel-ai/rind/pull/876">rind #876</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a></span>Every count is as stated in the merged PR body on kixel-ai/rind, not a rind-results raw log, unless the slide says so.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 2. SUMMARY ============ -->
+<section class="slide" data-section="Summary">
+  <div class="kicker">Summary</div>
+  <h2>Merged upstream, with merge times</h2>
+  <table class="t compact" style="margin-top:10px">
+    <tr><th style="width:22%">Change</th><th>What it now catches</th><th style="width:22%">Merged (PST)</th></tr>
+    <tr class="hl"><td>wasm and Ed25519 (#797)</td><td>Ed25519 edge cases and wipe checks on wasm, where aws-lc cannot build</td><td><span class="tag ok">merged</span> 18 Nov, 9:45 PM</td></tr>
+    <tr><td>Adapter mutants (#792)</td><td>Adapter code that tests did not cover, hidden by mutation exclusions</td><td><span class="tag ok">merged</span> 19 Nov, 6:49 AM</td></tr>
+    <tr><td>HPKE edge vectors (#798)</td><td>The IETF revision's edge-case vectors, including a key that needs a second try</td><td><span class="tag ok">merged</span> 19 Nov, 8:07 AM</td></tr>
+    <tr><td>Hash-to-curve (#791)</td><td>A sum that lands on the identity point, on all three NIST curves</td><td><span class="tag ok">merged</span> 19 Nov, 8:35 AM</td></tr>
+    <tr><td>CI alerts (#796)</td><td>A run cancelled at its time limit, told apart from a hand cancel</td><td><span class="tag ok">merged</span> 18 Nov, 8:55 PM</td></tr>
+    <tr><td>Dev shell (#876)</td><td>Host rustup shims that ran the wrong rustfmt and clippy inside <code>nix develop</code></td><td><span class="tag ok">merged</span> 19 Nov, 5:52 AM</td></tr>
+    <tr><td>Mutation tool (#725)</td><td>A mutation run that selected nothing and still exited 0</td><td><span class="tag ok">merged</span> 14 Nov, 12:51 PM</td></tr>
+    <tr><td>Fork sync (fork #134)</td><td>29 upstream commits merged into the fork</td><td>fork only, 17 Nov</td></tr>
+  </table>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a> · <a href="https://github.com/kixel-ai/rind/pull/792">rind #792</a> · <a href="https://github.com/kixel-ai/rind/pull/798">rind #798</a> · <a href="https://github.com/kixel-ai/rind/pull/791">rind #791</a> · <a href="https://github.com/kixel-ai/rind/pull/796">rind #796</a> · <a href="https://github.com/kixel-ai/rind/pull/876">rind #876</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a> · <a href="https://github.com/steelhead99x/rind/pull/134">fork #134</a></span>Merge times from GitHub for kixel-ai/rind#725, #791, #792, #796, #797, #798, #876 and steelhead99x/rind#134, read 19 Nov 2026 evening PST</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 3. WASM ============ -->
+<section class="slide" data-section="wasm">
+  <div class="kicker">wasm and Ed25519 · kixel-ai/rind#797 · merged 18 Nov</div>
+  <h2>914 Ed25519 CCTV vectors and the wipe checks now run on wasm</h2>
+  <div class="cols c46" style="margin-top:12px">
+    <div><ul class="b">
+      <li>aws-lc does not build on wasm. A file now records aws-lc's accept or reject for each of the 914 CCTV Ed25519 vectors, and every target checks rind against it.</li>
+      <li>The wipe checks panicked on purpose, and wasm aborts on a panic. They now return a result and assert on it.</li>
+      <li><code>just ci</code> clippy-checks both test binaries for wasm. The nightly <code>just wasm</code> runs them. Running them in every gate was rejected.</li>
+    </ul></div>
+    <div>
+      <div class="chart-title">Merged body, Validation, on <code>d00812be5</code> (x86_64 Linux)</div>
+      <table class="t">
+        <tr><th>Run</th><th class="n">Passed</th></tr>
+        <tr><td>Native <code>cctv</code></td><td class="n">2</td></tr>
+        <tr><td>Native <code>heap_scratch</code></td><td class="n">18</td></tr>
+        <tr class="hl"><td>wasm <code>cctv</code> (wasmtime)</td><td class="n">1</td></tr>
+        <tr class="hl"><td>wasm <code>heap_scratch</code> (wasmtime)</td><td class="n">15</td></tr>
+      </table>
+      <p class="small">Negative control on wasm: flipping vector 5's verdict to reject fails <code>ed25519_edge_cases</code>. The 17 Nov deck showed 14 for wasm <code>heap_scratch</code>, from an earlier head; the merged body says 15.</p>
+    </div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a> · <a href="https://github.com/steelhead99x/rind/pull/64">fork #64</a></span>kixel-ai/rind#797 merged body (Problem, Approach, Decisions, Validation). Ported from fork #64; replaces the closed kixel-ai/rind#709.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 4. ADAPTERS ============ -->
+<section class="slide" data-section="Adapters">
+  <div class="kicker">Adapter mutants · kixel-ai/rind#792 · merged 19 Nov</div>
+  <h2>0 missed mutants in ring and rustls, 1 in dimpl and str0m, after removing the exclusions</h2>
+  <div class="cols c64" style="margin-top:10px">
+    <div>
+      <div class="chart-title"><code>admin/mutants --file</code> over every file whose exclusions the PR drops</div>
+      <div class="legend"><span><i style="background:#0f766e"></i>caught</span><span><i style="background:#2b6cb0"></i>timeout (caught)</span><span><i style="background:#a8b3c1"></i>unviable</span><span><i style="background:#b4532a"></i>missed</span></div>
+      <svg width="680" height="98" viewBox="0 0 680 98"><text x="0" y="27" font-size="13" fill="#16202e" font-weight="600">ring + rustls</text><rect x="120.0" y="10" width="342.8" height="26" fill="#0f766e"/><rect x="462.8" y="10" width="127.2" height="26" fill="#a8b3c1"/><text x="598.0" y="27" font-size="13" fill="#465467">499 mutants</text><text x="0" y="71" font-size="13" fill="#16202e" font-weight="600">dimpl + str0m</text><rect x="120.0" y="54" width="102.7" height="26" fill="#0f766e"/><rect x="222.7" y="54" width="2.0" height="26" fill="#2b6cb0"/><rect x="224.7" y="54" width="16.0" height="26" fill="#a8b3c1"/><rect x="240.7" y="54" width="2.0" height="26" fill="#b4532a"/><text x="250.7" y="71" font-size="13" fill="#465467">128 mutants</text></svg>
+      <table class="t compact" style="margin-top:6px">
+        <tr><th>Group</th><th class="n">Mutants</th><th class="n">Caught</th><th class="n">Unviable</th><th class="n">Missed</th></tr>
+        <tr class="hl"><td>ring and rustls</td><td class="n">499</td><td class="n">364</td><td class="n">135</td><td class="n">0</td></tr>
+        <tr><td>dimpl and str0m</td><td class="n">128</td><td class="n">109 + 1 timeout</td><td class="n">17</td><td class="n">1</td></tr>
+        <tr><td>str0m <code>dtls.rs</code> re-run</td><td class="n">25</td><td class="n">20</td><td class="n">5</td><td class="n">0</td></tr>
+      </table>
+    </div>
+    <div class="card"><h3>Notes</h3><ul class="b sm">
+      <li>A mutation test changes a line and checks that some test fails. Excluded lines were never checked.</li>
+      <li>The one miss was str0m's <code>Dtls</code> <code>Debug</code>, now excluded with the other <code>Debug</code> impls.</li>
+      <li>Tests: 233 passed on the five crates with all features; 184 with default features on ring, rustls and rcgen.</li>
+      <li>rind-rcgen's run was partial: 40 of 104 mutants, 0 missed.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/792">rind #792</a> · <a href="https://github.com/steelhead99x/rind/pull/23">fork #23</a></span>kixel-ai/rind#792 merged body (Approach, Validation). Port of fork #23. The 17 Nov deck showed per-crate test counts from the PR as opened; these are the merged body's mutant tallies.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 5. H2C AND HPKE ============ -->
+<section class="slide" data-section="Edge cases">
+  <div class="kicker">Edge cases · kixel-ai/rind#791 and #798 · merged 19 Nov</div>
+  <h2>New tests for identity-point sums (#791) and the HPKE edge vectors (#798)</h2>
+  <div class="cols" style="margin-top:14px">
+    <div class="card tall"><h3>Hash-to-curve sums (#791)</h3><ul class="b sm">
+      <li>main already refused a sum at infinity. The PR proves it and tightens the tests; no production behavior change.</li>
+      <li>Opposite-point sums go through P-256, P-384 and P-521, and through OPRF and VOPRF blinding and evaluation. Empty DSTs are refused.</li>
+      <li><b>52 tests passed</b> (<code>hash_to_curve oprf::</code>). Replacing the refusal with <code>Ok(affine(point))</code> fails all six new identity tests.</li>
+      <li>CI on <code>11296db88</code>: 44 checks pass.</li>
+    </ul></div>
+    <div class="card tall"><h3>HPKE edge vectors (#798)</h3><ul class="b sm">
+      <li>The IETF revision of RFC 9180 added edge-case vectors as a Markdown appendix, so the vector sync tool could not fetch them.</li>
+      <li>All 46 hex literals appear verbatim in the appendix (hpkewg/hpke <code>e298f94</code>), checked by a script.</li>
+      <li>CI on <code>374202449</code>: <code>check (Haswell)</code> ran the two new tests, both pass; 42 checks pass.</li>
+      <li>Tests and docs only.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/791">rind #791</a> · <a href="https://github.com/kixel-ai/rind/pull/798">rind #798</a></span>kixel-ai/rind#791 and #798 merged bodies (Problem, Approach, Validation). The 17 Nov deck said "9 tests passed" for #791; the merged body says 52.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 6. CONSTANT TIME ============ -->
+<section class="slide" data-section="Constant time">
+  <div class="kicker">Constant-time checks</div>
+  <h2>ctgrind found 0 errors on two speed changes; <code style="font-size:.8em">ct-vartime</code> now refuses vsha512</h2>
+  <table class="t" style="margin-top:14px">
+    <tr><th style="width:24%">Where</th><th>Check</th><th style="width:28%">Result</th></tr>
+    <tr><td>ML-DSA reorder (fork #126)</td><td><code>admin/ctgrind unit --release -- mldsa</code>, plus a planted bug to prove the tool notices</td><td>27 passed, 0 errors; the planted bug fails as it should</td></tr>
+    <tr><td>P-256 swap (fork #79)</td><td>ctgrind on ECDH and ECDSA, x86_64 and portable backends</td><td>27 passed, 0 errors, both backends</td></tr>
+    <tr class="hl"><td>SHA-512 on Intel (#821)</td><td><code>admin/ct-vartime</code> now refuses <code>vsha512*</code> on x86; HMAC-SHA384 and HMAC-SHA512 are covered by ctgrind</td><td><span class="tag ok">merged</span> 19 Nov, 2:48 PM</td></tr>
+  </table>
+  <div class="callout" style="margin-top:18px">ctgrind runs the code under Valgrind with secrets marked, and fails if a branch or memory address depends on a secret. Fork #126 was closed for the maintainer's kixel-ai/rind#863, which made the same reorder; the ctgrind run here is the fork's.</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a> · <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a></span>fork #126 body (Validation: ctgrind and negative control) · fork #79 body (Validation: ctgrind at f5419ff5) · kixel-ai/rind#821 merged body (Approach)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 7. CI ALERTS AND DEV SHELL ============ -->
+<section class="slide" data-section="CI">
+  <div class="kicker">CI and dev shell · kixel-ai/rind#796 and #876</div>
+  <h2>Alerts fire only on a time-limit cancel; the dev shell runs the flake's rustfmt and clippy</h2>
+  <div class="cols" style="margin-top:14px">
+    <div class="card tall"><h3>CI alerts (#796, merged 18 Nov)</h3><ul class="b sm">
+      <li>A job past its time limit ends "cancelled", not "timed out". Every scheduled cancel posted (14 in the week before), and a hung Release or Site deploy posted nothing.</li>
+      <li>Now one rule: post when a cancelled job carries GitHub's "exceeded the maximum execution time" annotation. If it cannot tell, it says so.</li>
+      <li>Checked on real runs: yes for fuzz, miri and mutants time-limit kills; no for a repository transfer and two Site deploys. <code>sh/alert.sh check</code> over 19 workflows.</li>
+    </ul></div>
+    <div class="card tall"><h3>Dev shell cargo shims (#876, merged 19 Nov)</h3><ul class="b sm">
+      <li>Inside <code>nix develop</code>, Cargo ran <code>cargo-fmt</code> and <code>cargo-clippy</code> from a host rustup's <code>$CARGO_HOME/bin</code>. wasm clippy failed and rustfmt flagged untouched files.</li>
+      <li>Every dev shell now appends that directory to <code>PATH</code>, so the flake's tools win.</li>
+      <li>Control on main's flake prints <code>SHIM fmt --version</code>; the fixed head prints <code>rustfmt 1.9.0-stable</code>. CI: 27 checks pass, 11 skipped.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/796">rind #796</a> · <a href="https://github.com/kixel-ai/rind/pull/876">rind #876</a></span>#796 and #876 merged bodies (Problem, Approach or Fix, Validation). The 17 Nov deck said 18 workflows; the merged body says 19. #876 replaces fork #148.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 8. MUTANTS TOOL AND FORK SYNC ============ -->
+<section class="slide" data-section="CI">
+  <div class="kicker">Mutation tool and fork sync · kixel-ai/rind#725 and fork #134</div>
+  <h2>cargo-mutants could select nothing and exit 0; the fork synced 29 upstream commits</h2>
+  <div class="cols" style="margin-top:14px">
+    <div class="card tall"><h3>Mutation tool (#725, merged 14 Nov)</h3><ul class="b sm">
+      <li>cargo-mutants 27.1.0 names a module included through <code>#[path = "../generic/aes_nohw.rs"]</code> with a literal <code>..</code>, so <code>--in-diff</code> matched nothing.</li>
+      <li>An empty selection exited 0, so a campaign over shared generic code could report success.</li>
+      <li><code>admin/mutants</code> now rewrites the diff onto those names, and <code>--expand-diff-self-test</code> checks it. +351 / −7. Split out of #689 with its authorship kept.</li>
+    </ul></div>
+    <div class="card tall"><h3>Fork sync (fork #134, merged 17 Nov)</h3><ul class="b sm">
+      <li>Brings 29 upstream commits to the fork, including one CI job per Intel CPU model and the cargo-deny waiver for two unmaintained-crate notices (#840).</li>
+      <li>A follow-up commit fixes the HPKE row in TESTING.md that broke <code>admin/testing</code>.</li>
+      <li>Dart CI passed on all 8 jobs; <code>dart-ios</code> ran 25 of 25 integration tests.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a> · <a href="https://github.com/steelhead99x/rind/pull/67">fork #67</a> · <a href="https://github.com/steelhead99x/rind/pull/134">fork #134</a></span>#725 merged body (fork commit 98e5a47c from fork #67) · fork #134 body, commits 3d5520b9 and f1c59f5e, Dart comment 6964107098 (17 Nov 15:30 PST)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 9. XEON VM ============ -->
+<section class="slide" data-section="Xeon VM">
+  <div class="kicker">Correctness run · rind-results notes, 15 November · before these PRs merged</div>
+  <h2>91 of 91 known-answer checks and 912 library tests passed on a shared Xeon VM</h2>
+  <div class="kpis" style="margin-top:14px">
+    <div class="kpi"><div class="v">91 / 91</div><div class="l">known-answer checks</div><div class="d">20 vectors, 9 libraries, 0 failed</div></div>
+    <div class="kpi"><div class="v">912</div><div class="l">rind library tests passed</div><div class="d">0 failed, 40 ignored, fork main 3fc24bd1</div></div>
+    <div class="kpi"><div class="v">18 + 12</div><div class="l">wipe tests passed</div><div class="d">zeroing and heap-scratch</div></div>
+    <div class="kpi"><div class="v">115</div><div class="l">rind-results gate tests</div><div class="d"><code>cargo xtask ci</code>, cargo-deny ok</div></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3>Scope</h3><ul class="b sm">
+      <li>Correctness only. No timing was measured and no board was touched.</li>
+      <li>Intel Xeon, 8 vCPUs, Debian 13, rustc 1.100.0, shared with other agents.</li>
+    </ul></div>
+    <div class="card"><h3>Not run there</h3><ul class="b sm">
+      <li>SLOW_TESTS, ctgrind and the other constant-time tools, fuzzing, <code>just</code> recipes.</li>
+      <li>Firmware lints: the ESP toolchain is not installed on that VM.</li>
+    </ul></div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind-results/pull/36">rind-results #36</a></span>notes/checks-2026-11-15-xeon-box.md and notes/raw/host-kat-2026-11-15-xeon-box.ndjson (rind-results main, PR #36) · run on fork main 3fc24bd1, before any PR in this deck merged, so it is a "before" only</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 10. NOT RUN ============ -->
+<section class="slide" data-section="Gaps">
+  <div class="kicker">What was and was not run</div>
+  <h2>Not run, or partial</h2>
+  <table class="t" style="margin-top:12px">
+    <tr><th style="width:18%">PR</th><th>Not run, or partial</th></tr>
+    <tr><td>#796</td><td>The 120-second <code>timeout</code> path did not run. It takes the same branch as the 404 case, which did.</td></tr>
+    <tr><td>#792</td><td>rind-rcgen's mutation run was cut off at 40 of 104 mutants.</td></tr>
+    <tr><td>#797</td><td>The merge gate only clippy-checks the wasm test binaries; the wasm tests themselves run nightly.</td></tr>
+    <tr><td>#798</td><td>At the last head, <code>b9ceb529</code>, the <code>check (Haswell)</code> log was not read; the two new tests were last seen running on <code>374202449</code>.</td></tr>
+    <tr><td>#876</td><td>rind-results has no run at the merged head; open rind-results #76 holds a <code>just ci</code> log for the earlier fork head <code>bdae2ad6</code>.</td></tr>
+    <tr class="hl"><td>All</td><td>No before-and-after mutation score for the whole workspace exists. Every count is as stated in a PR body.</td></tr>
+  </table>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/792">rind #792</a> · <a href="https://github.com/kixel-ai/rind/pull/796">rind #796</a> · <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a> · <a href="https://github.com/kixel-ai/rind/pull/798">rind #798</a> · <a href="https://github.com/kixel-ai/rind/pull/876">rind #876</a> · <a href="https://github.com/steelhead99x/rind-results/pull/76">rind-results #76</a></span>kixel-ai/rind#792, #796, #797, #798 and #876 merged bodies (Validation, Decisions) · steelhead99x/rind-results#76 (open)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 11. SOURCES ============ -->
+<section class="slide" data-section="Sources">
+  <div class="kicker">Sources</div>
+  <h2>Sources</h2>
+  <table class="t compact" style="margin-top:12px">
+    <tr><th style="width:26%">Slide</th><th>Source</th></tr>
+    <tr><td>wasm and Ed25519</td><td>kixel-ai/rind#797 merged body; fork #64</td></tr>
+    <tr><td>Adapters</td><td>kixel-ai/rind#792 merged body; fork #23</td></tr>
+    <tr><td>Edge cases</td><td>kixel-ai/rind#791 and #798 merged bodies</td></tr>
+    <tr><td>Constant time</td><td>fork #126 and #79 bodies; kixel-ai/rind#821 merged body</td></tr>
+    <tr><td>CI alerts, dev shell</td><td>kixel-ai/rind#796 and #876 merged bodies</td></tr>
+    <tr><td>Mutation tool, fork sync</td><td>kixel-ai/rind#725 merged body; fork #134</td></tr>
+    <tr><td>Xeon VM</td><td>rind-results notes/checks-2026-11-15-xeon-box.md (rind-results #36)</td></tr>
+    <tr><td>Merge times</td><td>GitHub PR state, read 19 Nov 2026 evening PST</td></tr>
+  </table>
+  <div class="foot"><span class="src">github.com/kixel-ai/rind · github.com/steelhead99x/rind · github.com/steelhead99x/rind-results · refreshed 19 Nov 2026 evening PST</span><span class="num"></span></div>
+</section>
+
+</div>
+<div id="hud"></div>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const slides=[...document.querySelectorAll('.slide')], N=slides.length;
+  slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
+  let cur=0;
+  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
+  addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
+  $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
+  addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
+  fit(); show((parseInt(location.hash.slice(1))||1)-1);
+})();
+</script>
+</body>
+</html>

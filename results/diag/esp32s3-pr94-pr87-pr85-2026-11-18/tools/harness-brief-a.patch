@@ -1,0 +1,457 @@
+--- a/esp32/src/kat.rs
++++ b/esp32/src/kat.rs
+@@ -0,0 +1,154 @@
++// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
++
++//! Local known-answer checks for the ESP32-S3 validation of #94 and #87. Not pushed.
++
++extern crate alloc;
++use alloc::{format, string::String, vec, vec::Vec};
++
++#[allow(unused_imports)]
++use crate::vectors::{hex, report};
++
++pub fn run(f: &mut Vec<(String, String)>) {
++    let _ = &f;
++    #[cfg(feature = "sha2")]
++    sha_fips(f);
++    #[cfg(feature = "poly1305")]
++    poly_diff(f);
++}
++
++#[cfg(feature = "sha2")]
++fn sha_fips(f: &mut Vec<(String, String)>) {
++    use rind::digest::{self, Context};
++    let p = ["kat/"];
++    let long = b"abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu";
++    let sha512 = [
++        ("empty", &b""[..], "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"),
++        ("abc", &b"abc"[..], "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"),
++        ("896bit", &long[..], "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909"),
++    ];
++    for (name, msg, want) in sha512 {
++        let want = hex(want);
++        let got = digest::digest(&digest::SHA512, msg);
++        report(f, &format!("sha512/fips180-4/{name}"), &p, "rind", got.as_ref() == &want[..]);
++        // Every message word at byte offsets 1, 2 and 3 (unaligned l32i).
++        for off in 1..4usize {
++            let mut buf = vec![0xeeu8; msg.len() + 8];
++            buf[off..off + msg.len()].copy_from_slice(msg);
++            let got = digest::digest(&digest::SHA512, &buf[off..off + msg.len()]);
++            report(f, &format!("sha512/fips180-4/{name}/offset{off}"), &p, "rind", got.as_ref() == &want[..]);
++        }
++        // One byte at a time through the streaming context.
++        let mut c = Context::new(&digest::SHA512);
++        for b in msg {
++            c.update(core::slice::from_ref(b));
++        }
++        report(f, &format!("sha512/fips180-4/{name}/bytewise"), &p, "rind", c.finish().as_ref() == &want[..]);
++    }
++    // FIPS 180-4's one-million-'a' message, 1000 B at a time.
++    let mut c = Context::new(&digest::SHA512);
++    let chunk = [b'a'; 1000];
++    for _ in 0..1000 {
++        c.update(&chunk);
++    }
++    let want = hex("e718483d0ce769644e2e42c7bc15b4638e1f98b13b2044285632a803afa973ebde0ff244877ea60a4cb0432ce577c31beb009c5c2c49aa2e4eadb217ad8cc09b");
++    report(f, "sha512/fips180-4/million-a", &p, "rind", c.finish().as_ref() == &want[..]);
++    let want = hex("cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7");
++    report(f, "sha384/fips180-4/abc", &p, "rind", digest::digest(&digest::SHA384, b"abc").as_ref() == &want[..]);
++    let want = hex("53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23");
++    report(f, "sha512-256/fips180-4/abc", &p, "rind", digest::digest(&digest::SHA512_256, b"abc").as_ref() == &want[..]);
++    for (name, key, msg, want) in [
++        ("rfc4231-tc1", vec![0x0bu8; 20], &b"Hi There"[..], "afd03944d84895626b0825f4ab46907f15f9dadbe4101ec682aa034c7cebc59cfaea9ea9076ede7f4af152e8b2fa9cb6"),
++        ("rfc4231-tc2", b"Jefe".to_vec(), &b"what do ya want for nothing?"[..], "af45d2e376484031617f78d2b58a6b1b9c7ef464f5a01b47e42ec3736322445e8e2240ca5e69e2c78b3239ecfab21649"),
++    ] {
++        let want = hex(want);
++        let k = rind::hmac::Key::new(&rind::hmac::HMAC_SHA384, &key);
++        report(f, &format!("hmac-sha384/{name}"), &p, "rind", rind::hmac::sign(&k, msg).as_ref() == &want[..]);
++    }
++}
++
++/// One library's ChaCha20-Poly1305 tag, sealing in `buf` (a reused buffer), so that no more
++/// than one copy of a 16 KB message is live: 0 rind, 1 ring, 2 RustCrypto, 3 libcrux.
++#[cfg(feature = "poly1305")]
++fn tag_of(lib: usize, key: &[u8; 32], nonce: &[u8; 12], aad: &[u8], pt: &[u8], buf: &mut Vec<u8>) -> [u8; 16] {
++    buf.clear();
++    buf.extend_from_slice(pt);
++    let mut out = [0u8; 16];
++    match lib {
++        0 => {
++            let k = rind::aead::Key::new(&rind::aead::CHACHA20_POLY1305, key).unwrap();
++            let t = k
++                .seal_in_place_separate_tag(rind::aead::Nonce::assume_unique_for_key(*nonce), aad, buf)
++                .unwrap();
++            out.copy_from_slice(t.as_ref());
++        }
++        1 => {
++            let k = ring::aead::LessSafeKey::new(
++                ring::aead::UnboundKey::new(&ring::aead::CHACHA20_POLY1305, key).unwrap(),
++            );
++            let t = k
++                .seal_in_place_separate_tag(
++                    ring::aead::Nonce::assume_unique_for_key(*nonce),
++                    ring::aead::Aad::from(aad),
++                    buf,
++                )
++                .unwrap();
++            out.copy_from_slice(t.as_ref());
++        }
++        2 => {
++            use chacha20poly1305::{AeadInOut, KeyInit};
++            let k = chacha20poly1305::ChaCha20Poly1305::new_from_slice(key).unwrap();
++            let t = k
++                .encrypt_inout_detached(nonce.into(), aad, buf.as_mut_slice().into())
++                .unwrap();
++            out.copy_from_slice(t.as_slice());
++        }
++        _ => {
++            let mut ct = vec![0u8; pt.len()];
++            libcrux_chacha20poly1305::encrypt_detached(key, pt, &mut ct, &mut out, aad, nonce).unwrap();
++            buf.clear();
++            buf.extend_from_slice(&ct);
++        }
++    }
++    out
++}
++
++/// rind's ChaCha20-Poly1305 against ring (C Poly1305), RustCrypto and libcrux over every
++/// length up to 300 B and 1200, 1350, 8192 and 16384 B, as a MAC over the AAD alone (empty
++/// message) and as a seal. The tag covers the ciphertext, so equal tags mean equal output.
++#[cfg(feature = "poly1305")]
++fn poly_diff(f: &mut Vec<(String, String)>) {
++    let p = ["kat/"];
++    let mut s = 0x9e3779b97f4a7c15u64;
++    let mut next = move || {
++        s ^= s << 13;
++        s ^= s >> 7;
++        s ^= s << 17;
++        s
++    };
++    let mut bad = [[0u32; 2]; 3]; // ring, rustcrypto, libcrux x (mac-only, seal)
++    let mut cases = 0u32;
++    let mut buf = Vec::new();
++    for n in (0..=300usize).chain([1200, 1350, 8192, 16384]) {
++        let mut key = [0u8; 32];
++        let mut nonce = [0u8; 12];
++        for b in key.iter_mut().chain(nonce.iter_mut()) {
++            *b = next() as u8;
++        }
++        let msg: Vec<u8> = (0..n).map(|_| next() as u8).collect();
++        for (mode, (aad, pt)) in [(&msg[..], &[][..]), (&msg[..n.min(13)], &msg[..])].into_iter().enumerate() {
++            let want = tag_of(0, &key, &nonce, aad, pt, &mut buf);
++            let want_ct = buf.clone();
++            cases += 1;
++            for lib in 1..4 {
++                let got = tag_of(lib, &key, &nonce, aad, pt, &mut buf);
++                if got != want || buf != want_ct {
++                    bad[lib - 1][mode] += 1;
++                }
++            }
++        }
++    }
++    for (i, lib) in ["ring", "rustcrypto", "libcrux"].into_iter().enumerate() {
++        report(f, &format!("poly1305/aad-only-vs-rind/{}-cases", cases / 2), &p, lib, bad[i][0] == 0);
++        report(f, &format!("poly1305/seal-vs-rind/{}-cases", cases / 2), &p, lib, bad[i][1] == 0);
++    }
++}
+--- a/esp32/src/main.rs
++++ b/esp32/src/main.rs
+@@ -34,6 +34,8 @@
+ #[cfg(feature = "sha2")]
+ #[path = "../../rind/rind-bench/benches/sha2.rs"]
+ mod sha2;
++#[cfg(feature = "poly1305")]
++mod polybench;
+ #[cfg(feature = "sha3")]
+ #[path = "../../rind/rind-bench/benches/sha3.rs"]
+ mod sha3;
+@@ -62,6 +64,8 @@
+     ("ed25519", ed25519::benches),
+     #[cfg(feature = "sha2")]
+     ("sha2", sha2::benches),
++    #[cfg(feature = "poly1305")]
++    ("poly1305", polybench::benches),
+     #[cfg(feature = "sha3")]
+     ("sha3", sha3::benches),
+     #[cfg(feature = "hmac")]
+@@ -73,6 +77,7 @@
+ ];
+ 
+ mod hw;
++mod kat;
+ mod pad;
+ #[cfg(any(feature = "rng-diag", feature = "seeded-rng"))]
+ mod rng;
+--- a/esp32/src/polybench.rs
++++ b/esp32/src/polybench.rs
+@@ -0,0 +1,139 @@
++// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
++
++//! Board-local Poly1305 and ChaCha20-Poly1305 check and timing for rind PR 87.
++//! Not part of any PR: it calls a bench-only `rind::__board_bench` shim.
++
++use std::hint::black_box;
++
++fn ccount() -> u32 {
++    // SAFETY: reads a special register; no memory is touched.
++    unsafe { esp_idf_svc::sys::xthal_get_ccount() }
++}
++
++fn pat(n: usize) -> Vec<u8> {
++    (0..n as u32)
++        .map(|i| (i.wrapping_mul(0x9e3779b9) >> 24) as u8)
++        .collect()
++}
++
++fn hex(s: &str) -> Vec<u8> {
++    s.as_bytes()
++        .chunks(2)
++        .map(|p| u8::from_str_radix(core::str::from_utf8(p).unwrap(), 16).unwrap())
++        .collect()
++}
++
++const PAT: &[(usize, &str)] = &[
++    (0, "7548af82e1c4db3e1d7057aa89ecc326"),
++    (1, "7aed6722e494104a2bbcf73194e4a05a"),
++    (15, "d271b44f4b08e99ac7aa19569b97a830"),
++    (16, "ee20db63d8c220ed5f3bc2be2fa4780e"),
++    (17, "c85da0d5cd81c824af612d5476023066"),
++    (31, "8455860d357eb52f8ca14af73e9e7446"),
++    (32, "bee64dad8722f0bcb17d7540c9d26372"),
++    (33, "c617428995af7a281c2f03f3f7aa8d05"),
++    (63, "01b55583df45b1c186d5206f19611c0b"),
++    (64, "e5f8a941c34d9135aefa86bc997a1280"),
++    (65, "7a1365f91573b5b826c497606e97c06e"),
++    (1200, "504baefa1b2cbe26feecd79441219f05"),
++    (16384, "09ef83bd815c0c8ca586e84ba81077f0"),
++];
++const FF: &[(usize, &str)] = &[
++    (16, "fbffff17faffff17faffff17faffff17"),
++    (17, "7cfe7ff768f81f2763f8bf565df85f86"),
++    (32, "5400801f3f00204f3900c07e330060ae"),
++    (33, "86fa6a437bf4ec24a274504dc37495bc"),
++    (64, "900fe32bc15fa8d7bca8efe4c7e37eb1"),
++    (1200, "e9cddd12328a3534bc81d7edfe7f4e52"),
++];
++
++fn kat() -> usize {
++    let mut failed = 0;
++    let mut one = |name: String, key: &[u8; 32], msg: &[u8], want: &str| {
++        let got = rind::__board_bench::poly1305(key, msg);
++        let ok = got[..] == hex(want)[..];
++        if !ok {
++            failed += 1;
++        }
++        criterion::emit(&format!(
++            "{{\"type\":\"poly-kat\",\"check\":\"{name}\",\"pass\":{ok}}}"
++        ));
++    };
++    // RFC 8439 section 2.5.2.
++    let key: [u8; 32] = hex("85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b")
++        .try_into()
++        .unwrap();
++    one(
++        "rfc8439-2.5.2".into(),
++        &key,
++        b"Cryptographic Forum Research Group",
++        "a8061dc1305136c6c22b8baf0c0127a9",
++    );
++    // Tags from OpenSSL (python cryptography) for a fixed key and pattern.
++    let key: [u8; 32] = core::array::from_fn(|i| 0xa5 ^ (i as u8).wrapping_mul(29));
++    for (len, want) in PAT {
++        one(format!("openssl-pat/{len}"), &key, &pat(*len), want);
++    }
++    // All-ones key and message: the accumulator's largest values.
++    for (len, want) in FF {
++        one(format!("openssl-ff/{len}"), &[0xff; 32], &vec![0xff; *len], want);
++    }
++    failed
++}
++
++fn median_min(mut v: Vec<u32>) -> (u32, u32, u32) {
++    v.sort_unstable();
++    (v[v.len() / 2], v[0], v[v.len() - 1])
++}
++
++fn row(id: &str, iters: u32, mut f: impl FnMut()) {
++    for _ in 0..2 {
++        f();
++    }
++    let mut samples = Vec::new();
++    for _ in 0..31 {
++        let t0 = ccount();
++        for _ in 0..iters {
++            f();
++        }
++        samples.push(ccount().wrapping_sub(t0) / iters);
++    }
++    let (med, min, max) = median_min(samples);
++    criterion::emit(&format!(
++        "{{\"type\":\"pb\",\"id\":\"{id}\",\"median\":{med},\"min\":{min},\"max\":{max},\"iters\":{iters}}}"
++    ));
++}
++
++pub fn benches() {
++    let failed = kat();
++    // The AEAD's own known-answer check (RFC 8439 section 2.8.2) runs in checks.
++    criterion::emit(&format!(
++        "{{\"type\":\"poly-kat-done\",\"failed\":{failed}}}"
++    ));
++    let key: [u8; 32] = core::array::from_fn(|i| 0xa5 ^ (i as u8).wrapping_mul(29));
++    for (size, iters) in [(64usize, 200u32), (1200, 20), (16384, 2)] {
++        let msg = pat(size);
++        let mut acc = 0u8;
++        row(&format!("poly1305/{size}B"), iters, || {
++            acc ^= rind::__board_bench::poly1305(black_box(&key), black_box(&msg))[0];
++        });
++        black_box(acc);
++    }
++    let aead = rind::aead::Key::new(&rind::aead::CHACHA20_POLY1305, &[0u8; 32]).unwrap();
++    for (size, iters) in [(32usize, 50u32), (64, 50), (1200, 5), (16384, 1)] {
++        let mut buf = vec![0u8; size];
++        let aad = [0u8; 32];
++        let mut acc = 0u8;
++        row(&format!("chacha20poly1305-seal/{size}B"), iters, || {
++            let tag = aead
++                .seal_in_place_separate_tag(
++                    rind::aead::Nonce::assume_unique_for_key([0u8; 12]),
++                    black_box(&aad),
++                    black_box(&mut buf),
++                )
++                .unwrap();
++            acc ^= tag.as_ref()[0];
++        });
++        black_box(acc);
++    }
++}
+--- a/esp32/src/vectors.rs
++++ b/esp32/src/vectors.rs
+@@ -36,7 +36,7 @@
+     }
+ }
+ 
+-fn hex(s: &str) -> Vec<u8> {
++pub(crate) fn hex(s: &str) -> Vec<u8> {
+     let s: Vec<u8> = s.bytes().filter(|b| !b.is_ascii_whitespace()).collect();
+     s.chunks(2)
+         .map(|p| u8::from_str_radix(core::str::from_utf8(p).unwrap(), 16).unwrap())
+@@ -44,7 +44,7 @@
+ }
+ 
+ /// One check's outcome: printed, and the library excluded on failure.
+-fn report(failed: &mut Vec<(String, String)>, check: &str, prefixes: &[&str], lib: &str, ok: bool) {
++pub(crate) fn report(failed: &mut Vec<(String, String)>, check: &str, prefixes: &[&str], lib: &str, ok: bool) {
+     criterion::emit(&format!(
+         "{{\"type\":\"check\",\"check\":\"{check}\",\"library\":\"{lib}\",\"pass\":{ok}}}"
+     ));
+@@ -124,7 +124,7 @@
+     out
+ }
+ 
+-fn chacha_all(
++pub(crate) fn chacha_all(
+     key: &[u8; 32],
+     nonce: &[u8; 12],
+     aad: &[u8],
+@@ -310,7 +310,8 @@
+     #[cfg(any(
+         feature = "chacha20poly1305",
+         feature = "xchacha20poly1305",
+-        feature = "cipher"
++        feature = "cipher",
++        feature = "poly1305"
+     ))]
+     {
+         // ChaCha20-Poly1305: RFC 8439 section 2.8.2.
+@@ -660,6 +661,8 @@
+         }
+     }
+ 
++    crate::kat::run(f);
++
+     criterion::emit(&format!(
+         "{{\"type\":\"checks-done\",\"failed\":{}}}",
+         failed.len()
+--- a/esp32/Cargo.toml
++++ b/esp32/Cargo.toml
+@@ -72,6 +72,7 @@
+ p256 = []
+ ed25519 = []
+ sha2 = []
++poly1305 = []
+ sha3 = []
+ hmac = []
+ hkdf = []
+--- a/esp32/poly-expose.patch.sh
++++ b/esp32/poly-expose.patch.sh
+@@ -0,0 +1,24 @@
++#!/usr/bin/env bash
++# bench-only: appends rind::__board_bench::poly1305 (via low::board_poly1305) (not for any PR)
++set -euo pipefail
++cat >> "$1/rind/src/low/mod.rs" <<'RS'
++
++/// Board-local bench shim (never committed to a PR).
++#[cfg(rind_backend = "portable")]
++pub(crate) fn board_poly1305(key: &[u8; 32], msg: &[u8]) -> [u8; 16] {
++    let mut p = portable::poly1305::Poly1305::new(key);
++    p.add_bytes(msg);
++    p.finish()
++}
++RS
++cat >> "$1/rind/src/lib.rs" <<'RS'
++
++/// Board-local bench shim (never committed to a PR).
++#[doc(hidden)]
++#[allow(missing_docs, unreachable_pub)]
++pub mod __board_bench {
++    pub fn poly1305(key: &[u8; 32], msg: &[u8]) -> [u8; 16] {
++        crate::low::board_poly1305(key, msg)
++    }
++}
++RS
+--- a/patches/0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch
++++ b/patches/0002-feat-bench-leave-aws-lc-rs-rows-out-on-Xtensa-and-ba.patch
+@@ -444,42 +444,6 @@
+          &rind::hmac::HMAC_SHA384,
+          &[0xff; 48],
+          &sha384,
+-diff --git a/rind-bench/benches/mlkem768.rs b/rind-bench/benches/mlkem768.rs
+-index 939b5d4c..539ce65e 100644
+---- a/rind-bench/benches/mlkem768.rs
+-+++ b/rind-bench/benches/mlkem768.rs
+-@@ -109,6 +109,7 @@ fn mlkem768_keygen(c: &mut Criterion) {
+-         });
+-     }
+- 
+-+    #[cfg(not(any(target_arch = "xtensa", target_os = "none")))]
+-     group.bench_function("aws-lc-rs", |b| {
+-         use aws_lc_rs::kem;
+- 
+-@@ -179,6 +180,7 @@ fn mlkem768_encaps(c: &mut Criterion) {
+-         });
+-     }
+- 
+-+    #[cfg(not(any(target_arch = "xtensa", target_os = "none")))]
+-     group.bench_function("aws-lc-rs", |b| {
+-         use aws_lc_rs::kem;
+- 
+-@@ -266,6 +268,7 @@ fn mlkem768_decaps(c: &mut Criterion) {
+-         });
+-     }
+- 
+-+    #[cfg(not(any(target_arch = "xtensa", target_os = "none")))]
+-     group.bench_function("aws-lc-rs", |b| {
+-         use aws_lc_rs::kem;
+- 
+-@@ -361,6 +364,7 @@ fn mlkem768_combined(c: &mut Criterion) {
+-         });
+-     }
+- 
+-+    #[cfg(not(any(target_arch = "xtensa", target_os = "none")))]
+-     group.bench_function("aws-lc-rs", |b| {
+-         use aws_lc_rs::kem;
+- 
+ diff --git a/rind-bench/benches/p256.rs b/rind-bench/benches/p256.rs
+ index d4df1cec..9c38101a 100644
+ --- a/rind-bench/benches/p256.rs
