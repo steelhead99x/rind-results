@@ -219,28 +219,6 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src">rind-results main: results/diag/esp32s3-icache32-80mhz-98568332/README.md and ratios.md, as shown in the rind-hardware-today deck (32 KB icache slide)</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 4. THE FIX ============ -->
-<section class="slide" data-section="Fix">
-  <div class="kicker">The change · kixel-ai/rind#793</div>
-  <h2>Rolled loops on 32-bit microcontrollers; SHA-256 in internal RAM on ESP-IDF Xtensa</h2>
-  <div class="cols3" style="margin-top:14px">
-    <div class="card fix"><div class="pn">SHA-384 / SHA-512</div><ul class="b sm">
-      <li>A rolled 80-round loop over a 16-word window, <code>low/generic/sha512.rs</code>.</li>
-      <li>Only on 32-bit microcontrollers: <code>target_os</code> <code>espidf</code> or <code>none</code>. Hosted targets keep HACL*.</li>
-    </ul></div>
-    <div class="card fix"><div class="pn">HChaCha20</div><ul class="b sm">
-      <li>Ten calls to one double round instead of the unrolled body, on 32-bit portable.</li>
-      <li>Same speed on i686 and about 5 KiB smaller.</li>
-    </ul></div>
-    <div class="card fix"><div class="pn">SHA-256 on ESP-IDF Xtensa</div><ul class="b sm">
-      <li>rind's own FIPS 180-4 compression in <code>.iram1</code>, with <code>K</code> in <code>.dram1</code>.</li>
-      <li>Rotates and the block load are Xtensa <code>asm!</code>.</li>
-    </ul></div>
-  </div>
-  <div class="callout" style="margin-top:18px">New CI check <code>admin/esp32s3-sha256-layout</code> builds the body with esp rustc and checks placement, internal-RAM addresses, no call from the block, and the exact <code>ssai</code> sequences. <code>link_section</code> and outlining into flash fail silently without it.</div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>kixel-ai/rind#793 merged body (Approach, Decisions)</span><span class="num"></span></div>
-</section>
-
 <!-- ============ 5. BOARD RESULT ============ -->
 <section class="slide" data-section="Board">
   <div class="kicker">Board result · fork runs, not the merged head</div>
@@ -251,14 +229,9 @@ table.sv td:first-child{white-space:nowrap}
       <svg width="760" height="142" viewBox="0 0 760 142"><line x1="570.0" y1="0" x2="570.0" y2="122" stroke="#7b8797" stroke-dasharray="4 3"/><text x="0" y="26" font-size="13.5" fill="#16202e">SHA-256, 32 B</text><rect x="170" y="10" width="126.0" height="24" rx="2" fill="#0f766e"/><text x="304.0" y="27" font-size="13.5" font-weight="700" fill="#0e2238">0.315×</text><text x="0" y="64" font-size="13.5" fill="#16202e">SHA-256, 16 KB</text><rect x="170" y="48" width="296.4" height="24" rx="2" fill="#0f766e"/><text x="474.4" y="65" font-size="13.5" font-weight="700" fill="#0e2238">0.741×</text><text x="0" y="102" font-size="13.5" fill="#16202e">SHA-512</text><rect x="170" y="86" width="13.2" height="24" rx="2" fill="#0f766e"/><text x="191.2" y="103" font-size="13.5" font-weight="700" fill="#0e2238">0.033×</text><text x="574.0" y="134" font-size="11.5" fill="#5d6878">1.0× = main's time</text></svg>
       <p class="small">From the fork report that #793 cites (fork #98, image <code>3aaa3c6a</code>, zero known-answer failures).</p>
     </div>
-    <div class="card"><h3>The same SHA-512 fix on the fork, 12 Nov</h3><ul class="b sm">
-      <li>64 B: 3.34 ms to 111.15 µs; 32.58× to 1.08× ring.</li>
-      <li>16 KB: 409.17 ms to 13.46 ms; 32.95× to 1.08× ring.</li>
-      <li>Fork branch <code>6aba8055</code> plus five patches, 3 runs. Not on rind-results main.</li>
-    </ul></div>
   </div>
   <div class="callout warn" style="margin-top:10px">These are fork measurements. #793's body says the ESP toolchain and the board were not run for the upstream PR. No board run of the merged head exists yet.</div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/98">fork #98</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>kixel-ai/rind#793 merged body (Validation), citing fork #98 comment 6883757723 · rind-hardware-today deck, rolled SHA-512 slide (unpublished run at fork 6aba8055)</span><span class="num"></span></div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/98">fork #98</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>kixel-ai/rind#793 merged body (Validation), citing fork #98 comment 6883757723</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 6. I686 ============ -->
@@ -322,20 +295,6 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/kixel-ai/rind/pull/794">rind #794</a></span>kixel-ai/rind#793 merged body (Impact, Decisions, Overlap, Follow-ups)</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 9. SOURCES ============ -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources</div>
-  <h2>Sources</h2>
-  <table class="t compact" style="margin-top:12px">
-    <tr><th style="width:26%">Slide</th><th>Source</th><th style="width:20%">Kind</th></tr>
-    <tr><td>Problem, fix, i686, costs</td><td>kixel-ai/rind#793 merged body</td><td>PR body</td></tr>
-    <tr><td>Board ratios 0.315× to 0.741×, 0.033×</td><td>fork #98 comment 6883757723, cited in #793</td><td>fork run</td></tr>
-    <tr><td>SHA-512 3.34 ms to 111.15 µs</td><td>rind-hardware-today deck; fork branch 6aba8055</td><td>fork run, unpublished</td></tr>
-    <tr><td>32 KB cache check</td><td>results/diag/esp32s3-icache32-80mhz-98568332/</td><td>rind-results main</td></tr>
-    <tr><td>Fork #94 cycles</td><td>results/diag/esp32s3-pr94-pr87-pr85-2026-11-18/</td><td>rind-results main, raw logs</td></tr>
-  </table>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a> · <a href="https://github.com/steelhead99x/rind/pull/98">fork #98</a> · <a href="https://github.com/steelhead99x/rind/pull/94">fork #94</a> · <a href="https://github.com/steelhead99x/rind-results/pull/79">rind-results #79</a></span>github.com/kixel-ai/rind · github.com/steelhead99x/rind · github.com/steelhead99x/rind-results · checked 19 Nov 2026 evening PST</span><span class="num"></span></div>
-</section>
 </div>
 <div id="hud"></div>
 <script>

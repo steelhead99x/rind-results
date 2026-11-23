@@ -1,21 +1,14 @@
 # SysTick and timing across the hardware we bench on: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 15 slides at 1280×720.
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 5 slides at 1280×720.
+Cut on 23 November (rind-results #34) to the counter tables and the harness fixes: the SysTick textbook,
+the wrap chart, the read sketches, the recommendations and the sources slides are gone.
 
 1. Title
 2. The eight targets rind is benched on and what times each one's published runs
-3. How SysTick works: the 24-bit down counter, SYST_CSR / RVR / CVR / CALIB, CLKSOURCE, COUNTFLAG
-4. Wrap time: 2^bits ÷ clock (134.2 ms at 125 MHz), with a log-scale chart for each counter
-5. Extending SysTick to 32 or 64 bits in software, as the RP2040 images do, and the COUNTFLAG wrap-count bug found on the first Pico run (rind-hardware a9d057a)
-6. Pitfalls: torn reads, interrupts, flash stalls, clock changes
-7. Counters on the microcontrollers (RP2040, EFR32MG24, nRF52840, ESP32-S3)
-8. Counters on the application processors (Raspberry Pi 5, Apple M1, Pixel 9 Pro, Xeon VM)
-9. A safe read sequence for each counter (sketches)
-10. Recommendations per chip
-11. Recommendations for every chip (methodology)
-12. Harness fixes found on 12 November: the ESP32-S3 flash clock (40 → 80 MHz), the nRF52840 leftover watchdog, and code layout (relinks, 32 KB icache)
-13. Values that still have to be read on the boards
-14. and 15. Sources
+3. Counters on the microcontrollers (RP2040, EFR32MG24, nRF52840, ESP32-S3)
+4. Counters on the application processors (Raspberry Pi 5, Apple M1, Pixel 9 Pro, Xeon VM)
+5. Harness fixes found on 12 November: the ESP32-S3 flash clock (40 → 80 MHz), the nRF52840 leftover watchdog, and code layout (relinks, 32 KB icache)
 
 ## Opening it
 

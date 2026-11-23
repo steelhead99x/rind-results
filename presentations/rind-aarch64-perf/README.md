@@ -10,9 +10,11 @@ rind aarch64 performance work from the starting point on 2026-11-11 to the state
 4. Argon2id SHA3 `umlal`
 5. The Argon2id two-round interleave, with the PMU root cause, and the scalar rider rounds
 
-It also covers verification status, what was dropped, the current state, next steps, a status slide that says which
-sources are on rind-results main (all of them, as of the 17 November check),
-an update slide with the ML-DSA signing A/B on the NVIDIA Jetson Orin Nano (17 November), and an appendix of branches and data files.
+It ends with the ML-DSA signing A/B on the NVIDIA Jetson Orin Nano (17 November). 12 slides.
+
+Cut on 23 November (rind-results #34) to sourced tables and charts: the starting-point, method, clock and
+phase-overview slides, verification status (its notes were not in this repository), the dropped ideas, the
+state and next-steps slides, the sources-status slide and the appendix are gone. Every slide names its files.
 
 ## Opening it
 

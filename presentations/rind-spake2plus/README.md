@@ -1,18 +1,18 @@
 # SPAKE2+ comes to rind: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 16 slides at 1280×720.
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 4 slides at 1280×720.
 Written 12 November 2026; the pull request slides were updated on 19 November after the merge. kixel-ai/rind
 was named moq-dev/rind when the deck was written; links now point at kixel-ai/rind. Times are PST.
 
-It covers:
+Cut on 23 November (rind-results #34) to sourced tables: the protocol explanation, the earlier-attempts history,
+the copied Pi 5 performance slides (they are in rind-aarch64-perf) and the sources slide are gone.
 
-1. What SPAKE2+ (RFC 9383) does, with a one-page flow of prover and verifier
-2. How rind implements it: the RFC 9383 and Matter PASE suites, and the constant-time identity check
-3. The pull request kixel-ai/rind#689: earlier attempts, the merge on 13 November at 10:39 AM, and its
-   Validation (`just ci` 1100 passed / 37 skipped on `c5da7311`, ctgrind 0 errors, 13 SPAKE2+ tests)
+1. Title
+2. The RFC 9383 and Matter PASE suites in rind, and how the type system keeps them apart
+3. kixel-ai/rind#689's Validation: merged 13 November 10:39 AM, `just ci` 1100 passed / 37 skipped on `c5da7311`,
+   ctgrind 0 errors, 13 SPAKE2+ tests
 4. The four fixes split out of #689 with authorship kept: #724 (13 Nov 11:26 AM), #722 (13 Nov 11:53 AM),
    #725 (14 Nov 12:51 PM), #723 (14 Nov 4:53 PM)
-5. A summary of the aarch64 performance work from 2026-11-11 to 2026-11-12, and the Raspberry Pi 5 follow-up branches
 
 There is no SPAKE2+ speed chart: #689 says no benchmark applies, since ECDH and ECDSA never reach the changed
 P-256 code. The #723 timing (about 9.6 µs per thread against about 19.6 µs to spawn one) is the maintainer's,

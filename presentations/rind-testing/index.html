@@ -283,44 +283,6 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/steelhead99x/rind/pull/126">fork #126</a> · <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a></span>fork #126 body (Validation: ctgrind and negative control) · fork #79 body (Validation: ctgrind at f5419ff5) · kixel-ai/rind#821 merged body (Approach)</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 7. CI ALERTS AND DEV SHELL ============ -->
-<section class="slide" data-section="CI">
-  <div class="kicker">CI and dev shell · kixel-ai/rind#796 and #876</div>
-  <h2>Alerts fire only on a time-limit cancel; the dev shell runs the flake's rustfmt and clippy</h2>
-  <div class="cols" style="margin-top:14px">
-    <div class="card tall"><h3>CI alerts (#796, merged 18 Nov)</h3><ul class="b sm">
-      <li>A job past its time limit ends "cancelled", not "timed out". Every scheduled cancel posted (14 in the week before), and a hung Release or Site deploy posted nothing.</li>
-      <li>Now one rule: post when a cancelled job carries GitHub's "exceeded the maximum execution time" annotation. If it cannot tell, it says so.</li>
-      <li>Checked on real runs: yes for fuzz, miri and mutants time-limit kills; no for a repository transfer and two Site deploys. <code>sh/alert.sh check</code> over 19 workflows.</li>
-    </ul></div>
-    <div class="card tall"><h3>Dev shell cargo shims (#876, merged 19 Nov)</h3><ul class="b sm">
-      <li>Inside <code>nix develop</code>, Cargo ran <code>cargo-fmt</code> and <code>cargo-clippy</code> from a host rustup's <code>$CARGO_HOME/bin</code>. wasm clippy failed and rustfmt flagged untouched files.</li>
-      <li>Every dev shell now appends that directory to <code>PATH</code>, so the flake's tools win.</li>
-      <li>Control on main's flake prints <code>SHIM fmt --version</code>; the fixed head prints <code>rustfmt 1.9.0-stable</code>. CI: 27 checks pass, 11 skipped.</li>
-    </ul></div>
-  </div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/796">rind #796</a> · <a href="https://github.com/kixel-ai/rind/pull/876">rind #876</a></span>#796 and #876 merged bodies (Problem, Approach or Fix, Validation). The 17 Nov deck said 18 workflows; the merged body says 19. #876 replaces fork #148.</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 8. MUTANTS TOOL AND FORK SYNC ============ -->
-<section class="slide" data-section="CI">
-  <div class="kicker">Mutation tool and fork sync · kixel-ai/rind#725 and fork #134</div>
-  <h2>cargo-mutants could select nothing and exit 0; the fork synced 29 upstream commits</h2>
-  <div class="cols" style="margin-top:14px">
-    <div class="card tall"><h3>Mutation tool (#725, merged 14 Nov)</h3><ul class="b sm">
-      <li>cargo-mutants 27.1.0 names a module included through <code>#[path = "../generic/aes_nohw.rs"]</code> with a literal <code>..</code>, so <code>--in-diff</code> matched nothing.</li>
-      <li>An empty selection exited 0, so a campaign over shared generic code could report success.</li>
-      <li><code>admin/mutants</code> now rewrites the diff onto those names, and <code>--expand-diff-self-test</code> checks it. +351 / −7. Split out of #689 with its authorship kept.</li>
-    </ul></div>
-    <div class="card tall"><h3>Fork sync (fork #134, merged 17 Nov)</h3><ul class="b sm">
-      <li>Brings 29 upstream commits to the fork, including one CI job per Intel CPU model and the cargo-deny waiver for two unmaintained-crate notices (#840).</li>
-      <li>A follow-up commit fixes the HPKE row in TESTING.md that broke <code>admin/testing</code>.</li>
-      <li>Dart CI passed on all 8 jobs; <code>dart-ios</code> ran 25 of 25 integration tests.</li>
-    </ul></div>
-  </div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a> · <a href="https://github.com/steelhead99x/rind/pull/67">fork #67</a> · <a href="https://github.com/steelhead99x/rind/pull/134">fork #134</a></span>#725 merged body (fork commit 98e5a47c from fork #67) · fork #134 body, commits 3d5520b9 and f1c59f5e, Dart comment 6964107098 (17 Nov 15:30 PST)</span><span class="num"></span></div>
-</section>
-
 <!-- ============ 9. XEON VM ============ -->
 <section class="slide" data-section="Xeon VM">
   <div class="kicker">Correctness run · rind-results notes, 15 November · before these PRs merged</div>
@@ -342,40 +304,6 @@ table.sv td:first-child{white-space:nowrap}
     </ul></div>
   </div>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind-results/pull/36">rind-results #36</a></span>notes/checks-2026-11-15-xeon-box.md and notes/raw/host-kat-2026-11-15-xeon-box.ndjson (rind-results main, PR #36) · run on fork main 3fc24bd1, before any PR in this deck merged, so it is a "before" only</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 10. NOT RUN ============ -->
-<section class="slide" data-section="Gaps">
-  <div class="kicker">What was and was not run</div>
-  <h2>Not run, or partial</h2>
-  <table class="t" style="margin-top:12px">
-    <tr><th style="width:18%">PR</th><th>Not run, or partial</th></tr>
-    <tr><td>#796</td><td>The 120-second <code>timeout</code> path did not run. It takes the same branch as the 404 case, which did.</td></tr>
-    <tr><td>#792</td><td>rind-rcgen's mutation run was cut off at 40 of 104 mutants.</td></tr>
-    <tr><td>#797</td><td>The merge gate only clippy-checks the wasm test binaries; the wasm tests themselves run nightly.</td></tr>
-    <tr><td>#798</td><td>At the last head, <code>b9ceb529</code>, the <code>check (Haswell)</code> log was not read; the two new tests were last seen running on <code>374202449</code>.</td></tr>
-    <tr><td>#876</td><td>rind-results has no run at the merged head; open rind-results #76 holds a <code>just ci</code> log for the earlier fork head <code>bdae2ad6</code>.</td></tr>
-    <tr class="hl"><td>All</td><td>No before-and-after mutation score for the whole workspace exists. Every count is as stated in a PR body.</td></tr>
-  </table>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/792">rind #792</a> · <a href="https://github.com/kixel-ai/rind/pull/796">rind #796</a> · <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a> · <a href="https://github.com/kixel-ai/rind/pull/798">rind #798</a> · <a href="https://github.com/kixel-ai/rind/pull/876">rind #876</a> · <a href="https://github.com/steelhead99x/rind-results/pull/76">rind-results #76</a></span>kixel-ai/rind#792, #796, #797, #798 and #876 merged bodies (Validation, Decisions) · steelhead99x/rind-results#76 (open)</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 11. SOURCES ============ -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources</div>
-  <h2>Sources</h2>
-  <table class="t compact" style="margin-top:12px">
-    <tr><th style="width:26%">Slide</th><th>Source</th></tr>
-    <tr><td>wasm and Ed25519</td><td>kixel-ai/rind#797 merged body; fork #64</td></tr>
-    <tr><td>Adapters</td><td>kixel-ai/rind#792 merged body; fork #23</td></tr>
-    <tr><td>Edge cases</td><td>kixel-ai/rind#791 and #798 merged bodies</td></tr>
-    <tr><td>Constant time</td><td>fork #126 and #79 bodies; kixel-ai/rind#821 merged body</td></tr>
-    <tr><td>CI alerts, dev shell</td><td>kixel-ai/rind#796 and #876 merged bodies</td></tr>
-    <tr><td>Mutation tool, fork sync</td><td>kixel-ai/rind#725 merged body; fork #134</td></tr>
-    <tr><td>Xeon VM</td><td>rind-results notes/checks-2026-11-15-xeon-box.md (rind-results #36)</td></tr>
-    <tr><td>Merge times</td><td>GitHub PR state, read 19 Nov 2026 evening PST</td></tr>
-  </table>
-  <div class="foot"><span class="src">github.com/kixel-ai/rind · github.com/steelhead99x/rind · github.com/steelhead99x/rind-results · refreshed 19 Nov 2026 evening PST</span><span class="num"></span></div>
 </section>
 
 </div>

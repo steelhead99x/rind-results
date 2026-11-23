@@ -284,7 +284,6 @@ table.src td{font-size:14px;padding:7px 8px}
 </head>
 <body>
 <div id="deck">
-
 <!-- 1. TITLE -->
 <section class="slide title" data-section="Title">
   <div class="bar"></div>
@@ -294,7 +293,7 @@ table.src td{font-size:14px;padding:7px 8px}
     <div class="sub">How SysTick works, which counters each chip offers, what goes wrong when timing short operations, and what we recommend for each board.</div>
   </div>
   <div class="meta">steelhead99x/rind-results<br><span data-k="meta.date"></span></div>
-  <div class="foot"><span class="src">Sources are listed on the last slide and in each slide's footer. Recommendations are labelled as recommendations.</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Each slide's footer names its sources. Recommendations are labelled as recommendations.</span><span class="num"></span></div>
 </section>
 
 <!-- 2. HARDWARE -->
@@ -304,94 +303,6 @@ table.src td{font-size:14px;padding:7px 8px}
   <table class="t" id="tb-hosts" style="margin-top:16px"></table>
   <p class="small">The four microcontrollers run with no OS or a small RTOS and are timed in CPU cycles. The four application processors run a full OS and are timed in wall-clock time through criterion. "Not recorded": the host notes do not give a clock.</p>
   <div class="foot"><span class="src">rind-results: hosts/*/NOTES.md, results/RESULTS.md, results/nrf52840/RESULTS.md, baremetal/mg24/README.md, hosts/rp2040/NOTES.md (2cb88c3); pi5 cap: branch results/pi5-lane-2026-11-12</span><span class="num"></span></div>
-</section>
-
-<!-- 3. SYSTICK MECHANICS -->
-<section class="slide" data-section="SysTick">
-  <div class="kicker">How SysTick works</div>
-  <h2>SysTick is a 24-bit counter that counts down to zero, reloads, and sets a flag each time it wraps</h2>
-  <div class="cols c46" style="margin-top:14px">
-    <svg class="flow" id="st-diag" viewBox="0 0 470 330" width="470" height="330" role="img" aria-label="SysTick counts down from the reload value to zero, sets COUNTFLAG, reloads from SYST_RVR, and can raise an interrupt if TICKINT is set"></svg>
-    <div>
-      <table class="t" id="tb-regs" style="font-size:13px"></table>
-      <p class="small">SysTick is required in ARMv7-M and optional in ARMv6-M. The RP2040 (ARMv6-M) and the EFR32MG24 (Armv8-M) both include it. On the RP2040 the other clock choice is a 1 µs tick from the watchdog block.</p>
-    </div>
-  </div>
-  <div class="foot"><span class="src">RP2040 datasheet 2.4.5.1.1, Tables 88-91 · ARMv7-M ARM DDI 0403D B3.3 · ARMv6-M ARM DDI 0419E D3.6.3 · EFR32xG24 RM 3.2</span><span class="num"></span></div>
-</section>
-
-<!-- 4. WRAP MATH -->
-<section class="slide" data-section="Wrap">
-  <div class="kicker">Wrap time</div>
-  <h2>At 125 MHz SysTick wraps every 134 ms, so one raw reading can only time short operations</h2>
-  <div class="cols c64" style="margin-top:14px">
-    <div>
-      <div class="chart-title">Time until each counter wraps (log scale)</div>
-      <div id="ch-wrap"></div>
-    </div>
-    <div>
-      <div class="card"><h3>The arithmetic</h3><ul class="b sm">
-        <li>Wrap time = 2<sup>bits</sup> ÷ clock. Resolution = 1 ÷ clock.</li>
-        <li>SysTick counts down, so elapsed = (start − end) mod 2<sup>24</sup>. That is only right if less than one wrap passed.</li>
-        <li>An up-counter (CYCCNT, CCOUNT) gives elapsed = end − start in unsigned 32-bit arithmetic, with the same one-wrap limit.</li>
-      </ul></div>
-      <p class="small">Bits and clocks come from the sources in the footer. Values marked "computed" are this arithmetic, not measurements. The RP2040 figures match hosts/rp2040/NOTES.md.</p>
-    </div>
-  </div>
-  <div class="foot"><span class="src">hosts/rp2040/NOTES.md (2cb88c3) · EFR32xG24 RM 3.2 · AN0004.2 2.2 · Cortex-M33 TRM DWT · ARMv7-M ARM C1.8.3 · ESP-IDF esp_cpu.h · results/nrf52840/RESULTS.md · results/RESULTS.md</span><span class="num"></span></div>
-</section>
-
-<!-- 5. SOFTWARE EXTENSION -->
-<section class="slide" data-section="Extension">
-  <div class="kicker">Going past 24 bits</div>
-  <h2>Counting wraps in software stretches SysTick to 32 or 64 bits, which is what the RP2040 images do</h2>
-  <div class="cols" style="margin-top:16px">
-    <div>
-      <div class="callout">The RP2040 images run SysTick at the processor clock (1 count = 1 cycle) and extend it in software to 32 bits (wraps every 34.4 s at 125 MHz). The first Pico run showed a COUNTFLAG double-count: the handler never read SYST_CSR, so the next cycles() call added a second 2<sup>24</sup> cycles (134 ms) whenever a sample crossed a wrap. The handler now reads CSR. The 1 MHz TIMER cross-check lasts 300 ms, at least two wraps: 37,500,815 cycles against 300,021 µs (125.0 MHz). (rind-hardware a9d057a; wrap time from NOTES.md at 2cb88c3)</div>
-      <div class="chart-title" style="margin-top:16px">Recommendation: one way to extend it</div>
-      <ol class="b sm">
-        <li>Set RELOAD = 0xFFFFFF, CLKSOURCE = 1, TICKINT = 1, ENABLE = 1.</li>
-        <li>The SysTick handler adds 1 to a wrap count <code>hi</code>.</li>
-        <li>To read: take <code>hi</code>, then CVR, then <code>hi</code> again. If <code>hi</code> changed, read again.</li>
-        <li>Time = <code>hi</code> × 2<sup>24</sup> + (0xFFFFFF − CVR). A 64-bit <code>hi</code> gives a 64-bit count.</li>
-      </ol>
-    </div>
-    <div>
-      <div class="card"><h3>Things to watch</h3><ul class="b sm">
-        <li>Reading SYST_CSR clears COUNTFLAG. Code that polls COUNTFLAG and an interrupt handler that relies on it will steal the flag from each other; pick one. That is what happened on the first Pico run, before the handler was changed to read CSR.</li>
-        <li>Writing SYST_CVR clears the count and COUNTFLAG. Do not write it while timing.</li>
-        <li>The wrap interrupt runs inside timed regions. Its cost lands in the samples; long samples make it a small share.</li>
-        <li>When a wrap lands while cycles() has interrupts masked, the harness counts it, clears the pending SysTick (ICSR.PENDSTCLR), and re-reads CVR so the handler does not count it again. (rind-hardware a9d057a)</li>
-      </ul></div>
-    </div>
-  </div>
-  <div class="foot"><span class="src">hosts/rp2040/NOTES.md (2cb88c3) · rind-hardware a9d057a · RP2040 datasheet Tables 88-91 · ARMv7-M ARM B3.3 · extension steps: recommendation</span><span class="num"></span></div>
-</section>
-
-<!-- 6. PITFALLS -->
-<section class="slide" data-section="Pitfalls">
-  <div class="kicker">Pitfalls</div>
-  <h2>Torn reads, interrupts, flash stalls and clock changes can each spoil a timing without any error</h2>
-  <div class="cols" style="margin-top:14px;gap:22px">
-    <div class="card pit"><h3>Torn reads</h3><ul class="b sm">
-      <li>A 64-bit value read as two 32-bit halves can mix two moments. The RP2040's TIMELR read latches TIMEHR, which breaks when two cores read it; the datasheet's SDK code reads TIMERAWH, TIMERAWL, TIMERAWH and repeats if the high half changed.</li>
-      <li>On aarch64, reads of CNTVCT_EL0 can be speculative and out of order; Arm's examples put an ISB before the read.</li>
-    </ul></div>
-    <div class="card pit"><h3>Interrupts</h3><ul class="b sm">
-      <li>Any handler that runs inside a timed region adds its whole cost to that sample, including SysTick's own wrap interrupt when TICKINT = 1.</li>
-      <li>The median of several samples keeps a rare interrupt from setting the result.</li>
-    </ul></div>
-    <div class="card pit"><h3>Flash stalls</h3><ul class="b sm">
-      <li>RP2040 code runs from external flash through a 16 kB, two-way cache with 1-cycle hits; a miss waits on the QSPI flash.</li>
-      <li>On the ESP32-S3, instruction-cache misses with ESP-IDF's default 16 KB cache explain several published gaps (SHA-256, HMAC, HKDF, XChaCha20-Poly1305).</li>
-    </ul></div>
-    <div class="card pit"><h3>Clock changes</h3><ul class="b sm">
-      <li>The Pi 5 in these results is capped at 1.5 GHz (rated 2.4 GHz, governor ondemand), so its times are 1.5 GHz times.</li>
-      <li>The generic timer runs at a fixed frequency, not the CPU clock, so its ticks are wall time, not cycles.</li>
-      <li>The EFR32MG24 starts on a 20 MHz oscillator after reset.</li>
-    </ul></div>
-  </div>
-  <div class="foot"><span class="src">RP2040 datasheet 4.6.2, 2.6.3.1 · Arm ARM DDI 0487 D12.2.2, D12.1.2 · results/RESULTS.md (ESP32-S3 gaps) · hosts/pi5/ab-narrow-mul/README.md (branch results/pi5-lane-2026-11-12) · AN0004.2 2.2</span><span class="num"></span></div>
 </section>
 
 <!-- 7. MCU COUNTERS -->
@@ -414,57 +325,6 @@ table.src td{font-size:14px;padding:7px 8px}
     <li>Armv8.6 and later fix the generic timer at 1 GHz; earlier cores use a fixed rate, typically 1 to 50 MHz, given in CNTFRQ_EL0.</li>
   </ul>
   <div class="foot"><span class="src">Arm ARM DDI 0487 D12.1.2, D12.2.2, D13.11.3 · Hetterich and Schwarz, DIMVA 2022 · Rust std::time::Instant docs · criterion WallTime docs · hosts/*/NOTES.md</span><span class="num"></span></div>
-</section>
-
-<!-- 9. SAFE READS -->
-<section class="slide" data-section="Reads">
-  <div class="kicker">Reading each counter</div>
-  <h2>Each counter has one safe way to read it, and the 64-bit ones need a retry or a barrier</h2>
-  <div class="cols" style="margin-top:14px;gap:22px">
-    <div class="card code"><h3>SysTick (RP2040, MG24)</h3><pre>// counts down; 24 bits
-uint32_t a = SYST_CVR;
-work();
-uint32_t b = SYST_CVR;
-cycles = (a - b) &amp; 0xFFFFFF;  // &lt; 1 wrap</pre></div>
-    <div class="card code"><h3>RP2040 TIMER, 1 µs, 64 bits</h3><pre>hi = TIMERAWH;
-do {
-  lo = TIMERAWL;
-  hi2 = TIMERAWH;
-  if (hi == hi2) break;
-  hi = hi2;
-} while (1);
-us = ((uint64_t)hi &lt;&lt; 32) | lo;</pre></div>
-    <div class="card code"><h3>DWT CYCCNT (M33, M4)</h3><pre>DEMCR |= TRCENA;          // bit 24
-// check DWT_CTRL.NOCYCCNT == 0
-DWT_CYCCNT = 0;
-DWT_CTRL |= CYCCNTENA;    // bit 0
-a = DWT_CYCCNT; work(); b = DWT_CYCCNT;
-cycles = b - a;           // u32, &lt; 1 wrap</pre></div>
-    <div class="card code"><h3>aarch64 generic timer</h3><pre>isb
-mrs x0, cntvct_el0     // start
-...
-isb
-mrs x1, cntvct_el0     // end
-mrs x2, cntfrq_el0     // ticks per second
-ns = (x1 - x0) * 1e9 / x2</pre></div>
-  </div>
-  <div class="foot"><span class="src">RP2040 datasheet Tables 88-91, 4.6.2 (SDK timer_time_us_64) · ARMv7-M ARM C1.8.3, DEMCR bit 24 TRCENA, DWT_CTRL bit 0 CYCCNTENA · Cortex-M33 TRM DWT · Arm ARM DDI 0487 D12.2.2 (ISB before CNTVCT_EL0) · sketches, not copied from the harness</span><span class="num"></span></div>
-</section>
-
-<!-- 10. RECOMMENDATIONS PER CHIP -->
-<section class="slide" data-section="Recommendations">
-  <div class="kicker">Recommendations per chip</div>
-  <h2>Recommendation: time short operations in cycles on microcontrollers, and in batched wall time on application processors</h2>
-  <table class="t" id="tb-recs" style="margin-top:12px;font-size:14px"></table>
-  <div class="foot"><span class="src">Recommendations, based on the sources on slides 3 to 9 · hosts/rp2040/NOTES.md (boot cross-check) · AN0004.2 2.2 · EFR32xG24 RM 6.6.6.6 · results/RESULTS.md (counter check) · Hetterich and Schwarz 2022</span><span class="num"></span></div>
-</section>
-
-<!-- 11. METHODOLOGY -->
-<section class="slide" data-section="Method">
-  <div class="kicker">Recommendations for every chip</div>
-  <h2>Recommendation: long samples, the median of at least five, checked answers, and no comparisons across chip classes</h2>
-  <div class="method" id="method" style="margin-top:16px"></div>
-  <div class="foot"><span class="src">firmware team measurement plan, 2026-11-12 · results/RESULTS.md (ESP32-S3 harness checks) · results/nrf52840/RESULTS.md · tools/xtask/src/report.rs (2 ms samples, 11-51 per benchmark)</span><span class="num"></span></div>
 </section>
 
 <!-- 11b. TODAY'S HARNESS FIXES (added 2026-11-12 evening) -->
@@ -492,37 +352,11 @@ ns = (x1 - x0) * 1e9 / x2</pre></div>
   <div class="foot"><span class="src">rind-results main 95300f2: results/diag/flash-80mhz/README.md · results/diag/nrf52840-watchdog-2026-11-12/README.md · results/diag/esp32s3-relink-fixed-98568332/README.md · results/diag/esp32s3-icache32-80mhz-98568332/ratios.md · results/RESULTS.md</span><span class="num"></span></div>
 </section>
 
-<!-- 12. OPEN -->
-<section class="slide" data-section="Open">
-  <div class="kicker">Not yet known</div>
-  <h2>Some values have to be read on the board before they can go in a results table</h2>
-  <table class="t" id="tb-open" style="margin-top:16px;font-size:14.5px"></table>
-  <p class="small" style="margin-top:14px">Until these are read, the deck leaves them blank rather than assume a value.</p>
-  <div class="foot"><span class="src">Arm ARM DDI 0487 D12.1.2 · Hetterich and Schwarz 2022 · Linux arch/arm64/boot/dts/broadcom/bcm2712.dtsi · ARMv7-M ARM C1.8.3 · hosts/*/NOTES.md</span><span class="num"></span></div>
-</section>
-
-<!-- 13. SOURCES: DOCUMENTS -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources (1 of 2)</div>
-  <h2>Hardware facts come from Arm, Raspberry Pi, Silicon Labs and Espressif documents, plus one paper</h2>
-  <table class="t src" id="tb-src1" style="margin-top:10px"></table>
-  <div class="foot"><span class="src">Links checked 2026-11-12. The EFR32xG24 reference manual blocked automated download; its sections were read from an extracted-text copy of rev 1.1.</span><span class="num"></span></div>
-</section>
-
-<!-- 14. SOURCES: REPO -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources (2 of 2)</div>
-  <h2>Facts about our boards and runs come from these rind-results files</h2>
-  <table class="t src" id="tb-src2" style="margin-top:10px"></table>
-  <p class="small" style="margin-top:12px">All branches of rind-results (<code>main</code>, <code>results/*</code>, <code>docs/*</code>) were checked on 2026-11-12. The Pi 5 clock cap is only on <code>results/pi5-lane-2026-11-12</code>.</p>
-  <div class="foot"><span class="src">Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
-</section>
-
 </div>
 <div id="hud"></div>
 <script>
 (function(){
-  const D = DATA, $ = (s,r=document)=>r.querySelector(s), NS="http://www.w3.org/2000/svg";
+  const D = DATA, $ = (s,r=document)=>r.querySelector(s)||document.createElement("div") /* a cut slide's element: writes go nowhere */, NS="http://www.w3.org/2000/svg";
   const get = p => p.split('.').reduce((o,k)=>o&&o[k], D);
   document.querySelectorAll('[data-k]').forEach(e=>{ e.textContent = get(e.dataset.k); });
   function el(tag, attrs, parent, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; if(parent) parent.appendChild(e); return e; }

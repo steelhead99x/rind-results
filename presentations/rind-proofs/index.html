@@ -179,26 +179,6 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>Sources are PR bodies, PR comments and CI job results, named on each slide. None of this is a rind-results set except the Pi 5 Lean log under hosts/pi5/ab-narrow-mul/table-align/.</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 2. WHAT IS CHECKED ============ -->
-<section class="slide" data-section="Background">
-  <div class="kicker">What "proven" means here</div>
-  <h2>rind has two kinds of proofs, and CI rebuilds both on every change that touches them</h2>
-  <div class="cols" style="margin-top:16px">
-    <div class="card tall"><h3>Lean, over rind's own Rust</h3><ul class="b sm">
-      <li>Tools translate rind's Rust into Lean, and Lean proofs say what the code computes.</li>
-      <li><code>admin/prove lean</code> rebuilds every proof. CI runs it as the <code>lean</code> job.</li>
-      <li>When the Rust changes, a proof can stop matching and the build fails.</li>
-    </ul></div>
-    <div class="card tall"><h3>HOL Light, over imported assembly</h3><ul class="b sm">
-      <li>Assembly from s2n-bignum and aws-lc comes with HOL Light proofs of what each routine does.</li>
-      <li>CI runs them per CPU family: <code>hol-light-x86_64</code>, <code>hol-light-aarch64</code>, <code>hol-light-armv7</code>.</li>
-      <li>Lean then uses those results as named assumptions (axioms), so the two connect.</li>
-    </ul></div>
-  </div>
-  <div class="callout" style="margin-top:18px">A proof covers the code that runs. New code needs its own proof.</div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>steelhead99x/rind#79 body (Approach, Validation: Lean, Axioms.lean, HOL Light proofs) and its CI job list on head c2b8f5ca · kixel-ai/rind#793 body (Impact)</span><span class="num"></span></div>
-</section>
-
 <!-- ============ 3. P-256 SWAP ============ -->
 <section class="slide" data-section="P-256">
   <div class="kicker">P-256 on x86_64 · steelhead99x/rind#79</div>
@@ -258,27 +238,6 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/790">rind #790</a> · <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a></span>hosts/pi5/ab-narrow-mul/table-align/README.md, Lean section (rind-results main 88cbf85) · steelhead99x/rind#79 comment 6859469361 (CI job 131976848524) · kixel-ai/rind#790 body (Approach, Checks, Follow-ups) · #79 review finding on proofs/Rind/X86_64/P384Table.lean:83 (low)</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 6. GAINED AND LOST ============ -->
-<section class="slide" data-section="Trade-offs">
-  <div class="kicker">Two other changes that touch proofs</div>
-  <h2>#821 moves newer Intel CPUs onto proven SHA-512 code; #793 drops the proof on small chips. Both merged 19 Nov</h2>
-  <div class="cols" style="margin-top:16px">
-    <div class="card tall" style="border-top:4px solid var(--accent)"><h3>Gained: SHA-512 on Arrow Lake and later · #821, merged 19 Nov</h3><ul class="b sm">
-      <li>These CPUs used OpenSSL's SHA512-extension routine, which had no proof and uses instructions missing from Intel's fixed-timing list.</li>
-      <li>They now run OpenSSL's AVX2 routine, which "already has rind's HOL Light proof", so x86_64 SHA-512 is proven on every AVX2 CPU.</li>
-      <li>The quest to prove the old routine is retired, since rind no longer runs it.</li>
-      <li>Cost, measured by the maintainer on a Core Ultra 7 270K Plus: 2.0× the old time at 64 B and 4.2–4.6× from 1200 B, still 0.82–0.86× aws-lc-rs's time. Details in the rind-speed-vs-guarantees deck.</li>
-    </ul></div>
-    <div class="card tall" style="border-top:4px solid var(--bad)"><h3>Lost: SHA-256 on ESP-IDF Xtensa · #793, merged 19 Nov</h3><ul class="b sm">
-      <li>The fast ESP32-S3 SHA-256 is rind's own code placed in internal RAM, not the proven HACL* code.</li>
-      <li>SHA-256 on ESP-IDF Xtensa and SHA-512 on 32-bit microcontrollers "no longer run formally verified code". Every target the bench report measures runs the same code as before.</li>
-      <li>The maintainer merged it with a follow-up quest to prove the rolled loops.</li>
-      <li>Speed results: rind-esp32-sha2-cache deck.</li>
-    </ul></div>
-  </div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/steelhead99x/rind/pull/69">fork #69</a></span>kixel-ai/rind#821 merged body (Approach, Impact, Validation) · kixel-ai/rind#793 merged body (Impact, Decisions, Follow-ups), a port of fork #69 · checked 19 Nov 2026</span><span class="num"></span></div>
-</section>
-
 <!-- ============ 7. STATUS ============ -->
 <section class="slide" data-section="Status">
   <div class="kicker">Where each one stands</div>
@@ -291,23 +250,6 @@ table.sv td:first-child{white-space:nowrap}
     <tr class="hl"><td><a href="https://github.com/kixel-ai/rind/pull/793">kixel-ai/rind#793</a></td><td>SHA-256 on ESP-IDF Xtensa and SHA-512 on 32-bit microcontrollers leave proven code; proof quest to follow</td><td><span class="tag ok">merged</span> 19 Nov, 9:51 AM</td></tr>
   </table>
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/79">fork #79</a> · <a href="https://github.com/kixel-ai/rind/pull/790">rind #790</a> · <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>GitHub PR state for steelhead99x/rind#79 and kixel-ai/rind#790, #793, #821, checked 19 Nov 2026 evening PST</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 8. SOURCES ============ -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources</div>
-  <h2>Sources</h2>
-  <table class="t" style="margin-top:14px">
-    <tr><th style="width:24%">Topic</th><th>Source</th></tr>
-    <tr><td>P-256 swap and axioms</td><td>steelhead99x/rind#79 body: Approach, correctness argument, Validation (Lean), Waiting</td></tr>
-    <tr><td>Lean job counts</td><td>#79 body (3,705, after a7fa0414) · comment 6964936428 · comment 6900182949 (3,646 at 35ccb42a)</td></tr>
-    <tr><td>CI results</td><td>steelhead99x/rind#79 checks on head c2b8f5ca: lean, hol-light-*, cosim</td></tr>
-    <tr><td>Pi 5 Lean build</td><td>rind-results <code>hosts/pi5/ab-narrow-mul/table-align/README.md</code> and <code>lean-build.log</code></td></tr>
-    <tr><td>Alignment port</td><td>kixel-ai/rind#790 body</td></tr>
-    <tr><td>SHA-512 on Intel</td><td>kixel-ai/rind#821 merged body; the quest file it deletes, quest/m2/confidence/intel-vsha512.md</td></tr>
-    <tr><td>SHA-256 on ESP32</td><td>kixel-ai/rind#793 merged body; fork #69 body</td></tr>
-  </table>
-  <div class="foot"><span class="src">github.com/steelhead99x/rind · github.com/kixel-ai/rind · github.com/steelhead99x/rind-results</span><span class="num"></span></div>
 </section>
 
 </div>

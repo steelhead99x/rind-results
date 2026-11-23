@@ -1,18 +1,15 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # Keeping rind's proven code proven: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 8 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 5 slides at 1280×720,
 with the CSS and navigation of `presentations/rind-hardware-today`. It covers the proof side of the November
 2026 work, as of 17 November 2026, with PR status refreshed on 19 November. All times are America/Los_Angeles (PST).
 
 1. Title
-2. What "proven" means here: Lean over rind's Rust, HOL Light over imported assembly
-3. P-256 on x86_64 (steelhead99x/rind#79): the point addition moves to s2n-bignum's routine, proven on every x86_64 OS
-4. The Lean fix: 3,705 jobs build locally; CI's `lean`, HOL Light and `cosim` jobs pass on `c2b8f5ca`
-5. Table alignment (kixel-ai/rind#790) and its proofs: the Pi 5 build, the fork CI run, and what is left open
-6. Gained and lost: SHA-512 on newer Intel moves onto proven code (#821); SHA-256 on ESP-IDF Xtensa leaves it (#793)
-7. Where each PR stands: #821 merged 19 Nov 2:48 PM, #793 merged 19 Nov 9:51 AM, #790 closed unmerged 18 Nov, fork #79 open
-8. Sources
+2. P-256 on x86_64 (steelhead99x/rind#79): the point addition moves to s2n-bignum's routine, proven on every x86_64 OS
+3. The Lean fix: 3,705 jobs build locally; CI's `lean`, HOL Light and `cosim` jobs pass on `c2b8f5ca`
+4. Table alignment (kixel-ai/rind#790) and its proofs: the Pi 5 build, the fork CI run, and what is left open
+5. Where each PR stands: #821 merged 19 Nov 2:48 PM, #793 merged 19 Nov 9:51 AM, #790 closed unmerged 18 Nov, fork #79 open
 
 ## Sources
 

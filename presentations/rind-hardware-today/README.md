@@ -1,34 +1,22 @@
 # rind on the boards, 12 November 2026: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 19 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 8 slides at 1280×720,
 with the CSS of `presentations/rind-rp2040`. It covers what changed on the microcontroller benchmarks on
-12 November 2026 and a timeline built from git history. All times are America/Los_Angeles (PST).
+12 November 2026, and the I-cache fix that later merged on the fork. All times are America/Los_Angeles (PST).
 
-Slides after the published Poly1305 A/B and the original timeline add an unpublished
-ESP32-S3 perf-branch run at steelhead99x/rind `6aba8055` plus five patches: the I-cache
-root cause, SHA-512, HMAC/HKDF and the SHA-256 64 B spread, ChaCha20-Poly1305 and
-XChaCha, and a late-evening timeline. Those figures are not on rind-results main.
+Cut on 23 November (rind-results #34) to sourced tables only: the timelines, the RP2040 and hosts pointers,
+the caveats and sources slides, and the unpublished 12 November evening run at steelhead99x/rind `6aba8055`
+are gone. The 17 November slides carry the board run of the fix that merged.
 
 1. Title
-2. Summary of today's changes and their status, including a row for the unpublished evening I-cache run
+2. Summary of the 12 November changes and their status
 3. Poly1305 32-bit patch A/B on the ESP32-S3 and nRF52840, with the libcrux layout-shift flag (published, rind 98568332)
 4. ESP32-S3 relinks at three alignments (pad0, pad1031, pad1039) and their controls
 5. The 32 KB instruction-cache diagnostics at 80 MHz (a diagnostic build, not the published setup)
 6. The flash-clock fix (40 → 80 MHz) and the nRF52840 watchdog fix
-7. The RP2040 port and the move to the public rind-hardware repository
-8. Hosts: Jetson Orin Nano results are on main; today's Pi 5 lane is still on branches (not on main)
-9. Timeline, overnight to midday
-10. Timeline, afternoon to evening
-11. Root cause of the remaining ESP32-S3 gaps: I-cache thrash from unrolled HACL* code (unpublished)
-12. SHA-512: 32.95× ring → 1.08× after a rolled 1,290-byte compress (unpublished)
-13. HMAC-SHA256, HKDF-SHA256, and the SHA-256 64 B 25.7% spread (unpublished)
-14. ChaCha20-Poly1305 and XChaCha: 32-bit-limb Poly1305 and rolled HChaCha (unpublished)
-15. Timeline, late evening on the perf branch
-16. Update, 17 Nov: the fix that merged on the fork (steelhead99x/rind#69) and its board run against upstream main
-17. Update, 17 Nov, status refreshed 19 Nov: where the ESP32 and Xtensa work stands (#69 merged on the fork,
+7. Update, 17 Nov: the fix that merged on the fork (steelhead99x/rind#69) and its board run against upstream main
+8. Update, 17 Nov, status refreshed 19 Nov: where the ESP32 and Xtensa work stands (#69 merged on the fork,
     kixel-ai/rind#793 merged upstream 19 Nov, steelhead99x/rind#85 closed, #94 open with raw logs on main from rind-results #79)
-18. Caveats: noise, layout, and work that is not on main, including these evening figures
-19. Sources, with a separate row for the unpublished raw jsonl and one for the 17 Nov update
 
 ## Sources
 

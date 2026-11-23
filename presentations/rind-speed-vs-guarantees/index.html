@@ -202,29 +202,6 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/353">rind #353</a></span>kixel-ai/rind#821 merged body (Problem, Validation: Intel's list read live on 2026-11-18). Caused by kixel-ai/rind#353.</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 3. WHAT RIND DID ============ -->
-<section class="slide" data-section="The change">
-  <div class="kicker">What rind did · kixel-ai/rind#821 · merged 19 Nov, 2:48 PM</div>
-  <h2>x86_64 drops VSHA512 and uses OpenSSL's AVX2 routine, which has rind's HOL Light proof</h2>
-  <div class="cols3" style="margin-top:14px">
-    <div class="card fix"><div class="pn">code</div><ul class="b sm">
-      <li>SHA-384, SHA-512 and SHA-512/256 use the AVX2 routine, as aws-lc does.</li>
-      <li>Every mnemonic in it is on Intel's list.</li>
-      <li>No API or wire change; digests unchanged.</li>
-    </ul></div>
-    <div class="card fix"><div class="pn">checks</div><ul class="b sm">
-      <li><code>admin/ct-vartime</code> now refuses <code>vsha512*</code> on x86.</li>
-      <li>HMAC-SHA384 and HMAC-SHA512 now run only what valgrind models, so ctgrind covers them.</li>
-    </ul></div>
-    <div class="card fix"><div class="pn">proofs</div><ul class="b sm">
-      <li>The AVX2 routine has rind's HOL Light proof, so x86_64 SHA-512 is proven on every AVX2 CPU.</li>
-      <li>The proof quest for the removed routine is retired.</li>
-    </ul></div>
-  </div>
-  <div class="callout" style="margin-top:18px">CI on the merged head <code>e8b72339</code>: 47 checks pass, 25 skipped, none failed, including the SDE CPU rows up to Diamond Rapids, <code>cosim</code>, <code>lean</code> and binsec.</div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a></span>kixel-ai/rind#821 merged body (Summary, Approach, Decisions, Validation)</span><span class="num"></span></div>
-</section>
-
 <!-- ============ 4. THE PRICE ============ -->
 <section class="slide" data-section="The price">
   <div class="kicker">The price, measured by the maintainer · Core Ultra 7 270K Plus (Arrow Lake), one core</div>
@@ -310,50 +287,6 @@ table.sv td:first-child{white-space:nowrap}
   <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a></span>kixel-ai/rind#821 and #793 merged bodies (Impact, Decisions, Follow-ups). #793's board numbers are from the fork's run, cited in its body.</span><span class="num"></span></div>
 </section>
 
-<!-- ============ 8. TRIED AND DROPPED ============ -->
-<section class="slide" data-section="Tried">
-  <div class="kicker">Fork PRs, and #723</div>
-  <h2>Fork #136 kept VSHA512 for Ed25519 verify only; the gain was within noise and it was closed</h2>
-  <div class="cols3" style="margin-top:14px">
-    <div class="card"><h3>fork #131, merged on the fork</h3><ul class="b sm">
-      <li>The fork's mirror of #821, with review fixes. Merged into fork main 19 Nov, 7:47 AM.</li>
-      <li>It keeps the sha512-x86-ext quest as a revisit quest; upstream deleted it.</li>
-    </ul></div>
-    <div class="card"><h3>fork #136, closed</h3><ul class="b sm">
-      <li>Would have kept VSHA512 for Ed25519 verification only.</li>
-      <li>Measured verify gain within noise: 1.8% slower on a CPU without VSHA512, 0.5% to 1.8% at best with it.</li>
-    </ul></div>
-    <div class="card"><h3>#723, merged 14 Nov</h3><ul class="b sm">
-      <li>The FIPS DRBG self-test could hang a forked child. A per-thread test was about 9.6 µs per thread against about 19.6 µs to spawn one.</li>
-      <li>The shipped once-per-process flag costs one run. Maintainer's timing.</li>
-    </ul></div>
-  </div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/steelhead99x/rind/pull/131">fork #131</a> · <a href="https://github.com/steelhead99x/rind/pull/136">fork #136</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a></span>kixel-ai/rind#821 merged body (Fork PRs) · kixel-ai/rind#723 merged body (Decisions)</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 9. GAPS AND SOURCES ============ -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Gaps, and sources</div>
-  <h2>Missing data</h2>
-  <div class="cols c46" style="margin-top:12px">
-    <div class="card fix warnc"><div class="pn">gaps</div><ul class="b sm">
-      <li>No "after" for #821 on the Core Ultra 9 275HX in rind-results; rerun at the merged commit, saving both CPUID detection and <code>/proc/cpuinfo</code> flags.</li>
-      <li>No data for CPUs without the extension beyond fork #136's percentages.</li>
-      <li>No board run of the merged #793 head.</li>
-    </ul></div>
-    <table class="t compact">
-      <tr><th style="width:34%">Topic</th><th>Source</th></tr>
-      <tr><td>Intel list, change, price</td><td>kixel-ai/rind#821 merged body</td></tr>
-      <tr><td>275HX before</td><td>rind-results results/intel-core-ultra-9-275hx/d6ca9a75.../RESULTS.md</td></tr>
-      <tr><td>275HX after (ratios only)</td><td>#821 commit a674bc6e</td></tr>
-      <tr><td>275HX OS and flags</td><td>read-only check on the Alienware, 19 Nov</td></tr>
-      <tr><td>Small chips</td><td>kixel-ai/rind#793 merged body</td></tr>
-      <tr><td>Fork PRs</td><td>fork #131, #136, as described in #821</td></tr>
-      <tr><td>DRBG self-test</td><td>kixel-ai/rind#723 merged body</td></tr>
-    </table>
-  </div>
-  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/821">rind #821</a> · <a href="https://github.com/kixel-ai/rind/pull/793">rind #793</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/steelhead99x/rind/pull/131">fork #131</a> · <a href="https://github.com/steelhead99x/rind/pull/136">fork #136</a></span>github.com/kixel-ai/rind · github.com/steelhead99x/rind · github.com/steelhead99x/rind-results · checked 19 Nov 2026 evening PST</span><span class="num"></span></div>
-</section>
 </div>
 <div id="hud"></div>
 <script>

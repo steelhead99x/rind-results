@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # rind on a Fire TV Stick (AFTSSS): slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 9 slides at
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 7 slides at
 1280×720, with the CSS and navigation of `presentations/rind-speed-vs-guarantees`. It covers the bench
 run of rind on an Amazon Fire TV Stick, model `AFTSSS` (MediaTek MT8695, 4x Cortex-A53, 32-bit
 userland), on 19 November 2026, 9:38 to 10:12 AM PST, the same-day repeats, and where the fork's
@@ -13,9 +13,7 @@ fixes stand. All times are America/Los_Angeles (PST).
 4. Results, public key: chart of the fastest other library's time over rind's; P-256 0.83× to 0.91× of OpenSSL
 5. First run against the repeat on fork main `847a3e3c`: the AES-GCM open gap did not repeat
 6. Rows the first run skipped, rind only, with peak RSS (9.1 to 70.3 MB)
-7. What it shows: the measured causes of the ChaCha20-Poly1305, small-message and P-256 gaps
-8. Status: done, pending, failing
-9. Next steps
+7. Status: done, pending, failing
 
 ## Which numbers come from where
 

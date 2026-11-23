@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # Tests that catch more: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 11 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 7 slides at 1280×720,
 with the CSS and navigation of `presentations/rind-hardware-today`. It covers the test and CI changes from the
 fork that were merged into kixel-ai/rind between 14 and 19 November 2026. Written 17 November, refreshed
 19 November from the merged PR bodies. All times are America/Los_Angeles (PST).
@@ -12,11 +12,7 @@ fork that were merged into kixel-ai/rind between 14 and 19 November 2026. Writte
 4. Adapter mutants (kixel-ai/rind#792, merged 19 Nov 6:49 AM): mutant tallies per crate group
 5. Edge cases: hash-to-curve sums (#791, merged 19 Nov 8:35 AM) and HPKE edge vectors (#798, merged 19 Nov 8:07 AM)
 6. Constant-time checks: ctgrind on fork #126 and #79, and `ct-vartime` refusing VSHA512 (#821, merged 19 Nov 2:48 PM)
-7. CI alerts (#796, merged 18 Nov 8:55 PM) and dev-shell cargo shims (#876, merged 19 Nov 5:52 AM)
-8. The mutation tool fix (#725, merged 14 Nov 12:51 PM) and the fork sync (steelhead99x/rind#134)
-9. The 15 November Xeon VM correctness run (rind-results PR #36), a "before" for these PRs
-10. What was and was not run
-11. Sources
+7. The 15 November Xeon VM correctness run (rind-results PR #36), a "before" for these PRs
 
 ## Changes on 19 November
 

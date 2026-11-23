@@ -1,19 +1,17 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # rind on the ESP32-S3: fitting SHA-2 into a 16 KiB cache
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 9 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 7 slides at 1280×720,
 with the CSS and navigation of `presentations/rind-testing`. It covers kixel-ai/rind#793, merged
 19 November 2026 at 9:51 AM PST, a port of steelhead99x/rind#69. All times are America/Los_Angeles (PST).
 
 1. Title
 2. The problem in numbers: about 47 KiB unrolled SHA-512, about 12 KiB SHA-256, a 16 KiB cache, about 33× slower than ring
 3. Evidence that it is the cache: the 32 KB cache check (XChaCha20-Poly1305 32 B, 7.50× to 1.10× RustCrypto)
-4. The fix: rolled SHA-512 and HChaCha20 on 32-bit microcontrollers, SHA-256 in IRAM on ESP-IDF Xtensa, and the layout CI check
-5. Board result, fork runs: SHA-512 0.033×, SHA-256 0.315× (32 B) to 0.741× (16 KB) of main
-6. Side check on i686: main, PR as opened, merged head (why the rolled SHA-512 is limited to microcontrollers)
-7. Raw board data on rind-results main for fork #94 (SHA-512 in IRAM, 0.911× to 0.918× of fork main), a different design
-8. What it costs: +4,516 B IRAM, −4,608 B heap, no formal proof on these targets; what is next
-9. Sources
+4. Board result, fork runs: SHA-512 0.033×, SHA-256 0.315× (32 B) to 0.741× (16 KB) of main
+5. Side check on i686: main, PR as opened, merged head (why the rolled SHA-512 is limited to microcontrollers)
+6. Raw board data on rind-results main for fork #94 (SHA-512 in IRAM, 0.911× to 0.918× of fork main), a different design
+7. What it costs: +4,516 B IRAM, −4,608 B heap, no formal proof on these targets; what is next
 
 ## Which numbers come from where
 

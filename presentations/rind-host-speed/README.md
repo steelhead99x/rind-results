@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # rind host speed-ups: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 10 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 8 slides at 1280×720,
 with the CSS and navigation of `presentations/rind-hardware-today`. It covers four speed changes that
 steelhead99x sent for review, as of 17 November 2026. PR status refreshed on 19 November: fork #126 closed for the
 maintainer's kixel-ai/rind#863 (same reorder, merged 17 Nov 9:40 PM; the maintainer's PR, not this fork's),
@@ -15,8 +15,6 @@ kixel-ai/rind#780 and #790 closed without a merge on 18 Nov 10:07 PM, fork #79 s
 6. P-256 on x86_64: end-to-end criterion run, and the noise floor
 7. Portable big-number multiply: four products before the carry
 8. Generator tables on a 64-byte line: neutral or a removed loss, by where the linker put them
-9. What is not measured or not published yet
-10. Sources
 
 ## Sources
 

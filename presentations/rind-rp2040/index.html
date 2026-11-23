@@ -409,7 +409,6 @@ table.t.sv code{font-size:11.5px}
 </head>
 <body>
 <div id="deck">
-
 <!-- ============ 1. TITLE ============ -->
 <section class="slide title" data-section="Title">
   <div class="bar"></div>
@@ -419,37 +418,7 @@ table.t.sv code{font-size:11.5px}
     <div class="sub"><span data-k="chip.mhz"></span> MHz Cortex-M0+, no operating system. How a Rust cryptography library was made to build for this chip, what the first on-device runs measured, and what was changed because of them.</div>
   </div>
   <div class="meta">steelhead99x/rind-results<br><span data-k="meta.date"></span></div>
-  <div class="foot"><span class="src">Sources are listed on the last slide. Anything without a source is left out or marked pending.</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 2. BOARD ============ -->
-<section class="slide" data-section="Board">
-  <div class="kicker">The board</div>
-  <h2>Two RP2040 boards: the first was backed up and left alone, and the runs used a Raspberry Pi Pico, backed up first</h2>
-  <div class="board" id="board-cells" style="margin-top:22px"></div>
-  <div class="cols c64" style="margin-top:8px">
-    <div class="card tall"><h3>The chip</h3><ul class="b">
-      <li>The RP2040 is the chip on the Raspberry Pi Pico. The first board's chip is silicon revision <span data-k="chip.rev"></span>.</li>
-      <li>Rust calls this target <code>thumbv6m-none-eabi</code>: the ARMv6-M instruction set, with no operating system underneath.</li>
-      <li>Code runs from the <span data-k="chip.flashMiB"></span> MiB external flash (XIP, "execute in place") or from on-chip SRAM.</li>
-    </ul></div>
-    <div class="card tall"><h3>What was done to the boards</h3><ul class="b sm">
-      <li><b>First board:</b> an Arduino (Mbed OS) sketch of about <span data-k="chip.stockKiB"></span> KiB. Flash read <span data-k="chip.backupReads"></span> times with picotool <span data-k="chip.picotool"></span>, all copies matched, never written.</li>
-      <li><b>Run board:</b> a <span data-k="pico.board"></span> running <span data-k="pico.fw" style="white-space:nowrap"></span>. Its full 2 MiB was read <span data-k="pico.reads"></span> times before anything was flashed; the copies are identical.</li>
-      <li>Neither backup is in this repository. Restoring the Pico is one <code>picotool load</code>.</li>
-    </ul></div>
-  </div>
-  <div class="callout" style="margin-top:22px">The target survey lists the RP2040 as "the floor" of its suggested benchmark chips.</div>
-  <div class="foot"><span class="src">baremetal/rp2040/README.md · hosts/rp2040/DEVICE.md · hosts/rp2040/NOTES.md (commit 2cb88c3) · baremetal/rp2040/TARGET-SURVEY.md · Pico: RP2040 bench lane STATUS (16:44 backup)</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 3. CONSTRAINTS ============ -->
-<section class="slide" data-section="Constraints">
-  <div class="kicker">Why it is hard</div>
-  <h2>rind has to work within five limits on this chip that desktop targets do not have</h2>
-  <div class="cons" id="cons" style="margin-top:22px"></div>
-  <div class="callout" style="margin-top:20px">Other microcontrollers share some or all of these limits (slide 17).</div>
-  <div class="foot"><span class="src">baremetal/rp2040/TARGET-SURVEY.md · baremetal/rp2040/COMPETITOR-BUILDS.md (Notes)</span><span class="num"></span></div>
+  <div class="foot"><span class="src">Each slide names its sources. Anything without a source in this repository is left out.</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 4. STARTING POINT ============ -->
@@ -466,7 +435,6 @@ table.t.sv code{font-size:11.5px}
       <div class="err"><code>error[E0463]: can't find crate for `std`</code></div>
       <p class="small">rind had no <code>#![no_std]</code>, so the compiler looked for the standard library (<code>std</code>), which this target does not have. Without the custom-backend option, getrandom 0.4.3 fails first with "target is not supported".</p>
       <p class="small">Command: <code>cargo build -p rind --release --target thumbv6m-none-eabi</code> with <code>--cfg getrandom_backend="custom"</code>, rustc <span data-k="meta.rustc"></span>.</p>
-      <p class="small"><b>Update, 2026-11-12:</b> upstream rind at c333c59e gave 1,739 errors with rustc 1.98.1, and a std / alloc feature split takes that to 0 (slide 15).</p>
       <p class="small">About the label: FEASIBILITY.md calls a4759c48 a rind commit. COMPETITOR-BUILDS.md takes its versions, including rind 0.3.2, from <code>rind-bench/Cargo.toml</code> at a4759c48.</p>
     </div>
     <div>
@@ -482,261 +450,7 @@ table.t.sv code{font-size:11.5px}
       <p class="small" style="margin-top:10px">* DIT: data-independent timing, an Arm CPU mode that keeps instruction timing from depending on data values. The portable backend is rind's code path for CPUs without a dedicated backend; patch 0003 uses it on M-profile chips.</p>
     </div>
   </div>
-  <div class="foot"><span class="src">hosts/rp2040/FEASIBILITY.md (a4759c48 section) · baremetal/rp2040/COMPETITOR-BUILDS.md · hosts/rp2040/NOTES.md · update: no_std lane STATUS</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 5. FIXES ============ -->
-<section class="slide" data-section="Fixes">
-  <div class="kicker">The fixes</div>
-  <h2>Patches 0003 and 0005 remove rind's need for std and CAS, and the images use a placeholder random source</h2>
-  <div class="cols3 fixes" style="margin-top:22px">
-    <div class="card fix"><div class="pn">patch 0003</div><h3>no_std on bare metal</h3><ul class="b sm">
-      <li>rind builds as <code>no_std</code> when <code>target_os = "none"</code>, that is, with no operating system.</li>
-      <li>On Arm M-profile chips (Arm's microcontroller cores) it uses the portable backend.</li>
-    </ul></div>
-    <div class="card fix"><div class="pn">patch 0005</div><h3>ReuseCache without CAS</h3><ul class="b sm">
-      <li><code>ReuseCache</code> used compare-and-swap. On targets where <code>target_has_atomic = "ptr"</code> is not set, the same state machine now runs in a <code>Cell</code>.</li>
-      <li>No new dependency. This matches rind's existing assumption of one execution context on bare metal; a critical-section or portable-atomic crate would have added a dependency without changing that.</li>
-    </ul></div>
-    <div class="card fix warnc"><div class="pn">getrandom</div><h3>Custom backend, not real entropy</h3><ul class="b sm">
-      <li>The chip has no hardware random number generator, so the bench images plug a seeded SplitMix64 generator into getrandom's custom-backend hook.</li>
-      <li>It is not a source of entropy.</li>
-    </ul></div>
-  </div>
-  <div class="callout" style="margin-top:20px">rind itself takes no position on randomness: the program that uses it supplies getrandom's backend. The RP2040's ring-oscillator bit is not a vetted source.</div>
-  <div class="foot"><span class="src">hosts/rp2040/FEASIBILITY.md · hosts/rp2040/NOTES.md · commits 2cb88c3, f4e0b1d · baremetal/rp2040/TARGET-SURVEY.md (randomness)</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 6. NOW ============ -->
-<section class="slide" data-section="Now">
-  <div class="kicker">Where it stands</div>
-  <h2>The 12 bench images were rebuilt with a timer fix and run on a Raspberry Pi Pico, with no known-answer failures</h2>
-  <svg class="flow" id="pipe" viewBox="0 0 1152 150" width="1152" height="150" role="img" aria-label="Build pipeline: source, build, output, on the chip"></svg>
-  <div class="cols" style="margin-top:14px">
-    <div>
-      <div class="chart-title">The <span data-k="images.count"></span> SysTick-fixed images (one per bench file)</div>
-      <div class="chk" id="img-list"></div>
-      <p class="small" style="margin-top:10px">Each image is loaded over USB with <code>picotool load</code> (a 1200-baud touch on the serial port puts the chip in BOOTSEL mode), and results come back over USB serial as JSON.</p>
-    </div>
-    <div>
-      <ul class="b sm">
-        <li>Libraries in the images: rind, RustCrypto, dalek, libcrux. <b>ring <span data-k="images.ringVer"></span> is left out</b> (its Arm assembly uses NEON), and so is aws-lc-rs (it needs an OS).</li>
-        <li>Known-answer checks run before the timed rows. All <span data-k="pico.runs"></span> runs in the snapshot report 0 failures.</li>
-        <li>Variant images, each changing one thing: <code>sha512</code>, <code>ghash</code>, <code>opt</code> (the final cfg), <code>probe</code> and padded builds (code-placement controls), <code>p256mul</code> (queued).</li>
-        <li>The images built before the timer fix are not used for results: their timer is wrong (slide 8).</li>
-      </ul>
-    </div>
-  </div>
-  <div class="foot"><span class="src">RP2040 bench lane: STATUS notes, round logs, raw run JSON (snapshot <span data-k="snap.asOf"></span>) · hosts/rp2040/images.json (image list)</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 7. RUNS ============ -->
-<section class="slide" data-section="Runs">
-  <div class="kicker">On-device runs</div>
-  <h2>The board's flash was saved first; then one image at a time is flashed, checked, timed and recorded, and the original goes back at the end</h2>
-  <div class="timeline t6" id="plan" style="margin-top:22px"></div>
-  <div class="cols" style="margin-top:22px">
-    <div class="card"><h3>Run setup, from each run's start record</h3><ul class="b sm">
-      <li><span data-k="pico.board"></span>, <span data-k="chip.mhz"></span> MHz, XIP cache on, portable backend, release profile, <span data-k="pico.heap"></span>-byte heap.</li>
-      <li>Timer: SysTick at 1-cycle resolution. Random source: SplitMix64, a seeded placeholder (slide 5).</li>
-      <li>The board is shared with other benchmark work, so every run takes a lock and yields between runs.</li>
-    </ul></div>
-    <div class="card"><h3>What's next after the numbers</h3><ul class="b sm">
-      <li>Finish the planned <span data-k="snap.planned"></span> rounds, then publish the raw results and tables in this repository and in this deck (slide 10).</li>
-      <li>Upstream pull requests are being prepared but none has been opened (slide 18).</li>
-    </ul></div>
-  </div>
-  <div class="foot"><span class="src">RP2040 bench lane: STATUS notes (16:44 backup, 18:33 lock change), round logs, raw run JSON start records</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 8. SYSTICK BUG ============ -->
-<section class="slide" data-section="Timer bug">
-  <div class="kicker">What the first run found</div>
-  <h2>The first run exposed a timer bug in the harness: samples that crossed a SysTick wrap gained 2<sup>24</sup> cycles</h2>
-  <div class="board" style="margin-top:20px">
-    <div class="cell"><div class="k">boot check, before the fix</div><div class="v bad"><span data-k="systick.beforeCycles"></span> cycles</div><div class="sub2">in <span data-k="systick.beforeUs"></span> µs of the 1 MHz timer</div></div>
-    <div class="cell"><div class="k">boot check, after the fix</div><div class="v"><span data-k="systick.afterCycles"></span> cycles</div><div class="sub2">in <span data-k="systick.afterUs"></span> µs of the 1 MHz timer</div></div>
-    <div class="cell"><div class="k">SHA-512 8 KiB, rind, before</div><div class="v bad"><span data-k="systick.sha512Before"></span> cycles</div><div class="sub2">first smoke run</div></div>
-    <div class="cell"><div class="k">SHA-512 8 KiB, rind, after</div><div class="v"><span data-k="systick.sha512After"></span> cycles</div><div class="sub2">SysTick-fixed image</div></div>
-  </div>
-  <div class="cols" style="margin-top:6px">
-    <div class="card tall"><h3>The bug</h3><ul class="b sm">
-      <li>SysTick is a 24-bit counter at the core clock, so it wraps about every 134 ms. The harness extends it to 32 bits in software.</li>
-      <li>The wrap handler never cleared SysTick's <code>COUNTFLAG</code>, so a sample that spanned a wrap gained <span data-k="systick.wrapN"></span> (2<sup>24</sup>) cycles.</li>
-      <li>The two SHA-512 numbers differ by 16.78 M cycles, the size of one wrap.</li>
-    </ul></div>
-    <div class="card tall"><h3>The fix and how it was checked</h3><ul class="b sm">
-      <li>Fixed on harness branch <code data-k="systick.branch"></code>, since pushed as <code><span data-k="systick.pushed"></span></code> (<span data-k="systick.pushedAt"></span>).</li>
-      <li>Checked on the board: the boot cross-check now agrees with the 1 MHz timer at about 125 cycles per µs, and the outliers are gone.</li>
-      <li>Every number in this deck comes from images built after the fix. The SysTick deck (<code>presentations/rind-systick</code>) covers the timer in detail.</li>
-    </ul></div>
-  </div>
-  <div class="callout warn" style="margin-top:18px">The images built before the fix are not re-run. Their numbers are kept only as evidence of the bug, never as results.</div>
-  <div class="foot"><span class="src">RP2040 bench lane: STATUS notes (16:46 smoke run, 16:50 fix), raw run JSON start records (check_cycles, check_us)</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 9. METHODS ============ -->
-<section class="slide" data-section="Methods">
-  <div class="kicker">How it was measured</div>
-  <h2>Every row is timed in CPU cycles with SysTick, and each number is the median of per-round medians</h2>
-  <div class="cols" style="margin-top:16px">
-    <div>
-      <div class="chart-title">Two clocks, because the M0+ has no cycle counter</div>
-      <table class="t" id="tb-timers"></table>
-      <p class="small">The M0+ has no DWT cycle counter. The 1 MHz timer is read as RAWH, RAWL, RAWH, repeating if the high half changed, to avoid a torn read.</p>
-      <div class="chart-title" style="margin-top:12px">Each reported number</div>
-      <ul class="b sm" id="m-sample"></ul>
-    </div>
-    <div>
-      <div class="chart-title">What makes a comparison fair</div>
-      <ul class="b sm">
-        <li>Same algorithm, same clock, same memory placement. All hot crypto code examined runs from XIP flash with the cache on, for every library.</li>
-        <li>Every run checks known answers on the device before it times anything.</li>
-        <li>Competitors are the builds listed in COMPETITOR-BUILDS.md (slide 16). ring is excluded.</li>
-        <li>Code placement alone can move a short row by tens of percent (slide 11), so a changed image is compared with probe or padded images that move code without changing it.</li>
-        <li>No comparisons against desktop numbers.</li>
-      </ul>
-    </div>
-  </div>
-  <div class="foot"><span class="src">RP2040 bench lane: STATUS notes, summarize.py, raw run JSON · M0+ static-analysis REPORT (code placement) · measurement plan from the firmware team, 2026-11-12</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 10. LIVE RESULTS ============ -->
-<section class="slide" data-section="Results">
-  <div class="kicker">Live results</div>
-  <h2 id="live-title">On-device results are pending and will be filled in as runs land</h2>
-  <div class="pendbar" id="live-status"></div>
-  <div class="cols c64" style="margin-top:10px;grid-template-columns:1.5fr 1fr;gap:24px">
-    <table class="t live" id="tb-live"></table>
-    <div>
-      <div class="chart-title">rind time relative to the fastest other library (lower is better)</div>
-      <div id="ch-live"></div>
-    </div>
-  </div>
-  <div class="foot"><span class="src">RP2040 bench lane: summarize.py over the SysTick-fixed rounds (snapshot 2026-11-12 18:35 PST); not yet published in this repository. Update instructions: presentations/rind-rp2040/README.md</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 11. SHA-512 ============ -->
-<section class="slide" data-section="SHA-512">
-  <div class="kicker">Finding 1 · SHA-512</div>
-  <h2>SHA-512 ran at about 2,200 cycles per byte in every library, because its unrolled code is bigger than the 16 KB flash cache</h2>
-  <div class="cols c46" style="margin-top:14px">
-    <div>
-      <div class="chart-title">Compression-function size vs the RP2040's 16,384-byte XIP cache</div>
-      <div id="ch-sha512"></div>
-      <p class="small">At 16 KiB, rind went from <span data-k="sha512.cpbBefore"></span> to <span data-k="sha512.cpbAfter"></span> cycles per byte; libcrux stays at <span data-k="sha512.cpbLibcrux"></span> and rind's SHA-256 runs at <span data-k="sha512.cpbSha256"></span>. <b>Estimate, not measured:</b> refetching about 80 cycles per 8-byte QSPI line gives about 276k cycles per 128-byte block, which matches.</p>
-    </div>
-    <div>
-      <div class="chart-title">rind, SysTick-fixed image → rolled SHA-512 image (cycles, 3 of 3 rounds)</div>
-      <table class="t" id="tb-sha512"></table>
-      <p class="small">The rolled loop replaces HACL*'s SHA-512 only on Arm without CAS (ARMv6-M), where it is 1,724 bytes. Every index and branch depends only on the round number. A test checks it against the backend's own SHA-512 over 1 to 9 blocks.</p>
-      <div class="chart-title" style="margin-top:10px">Side effect seen in the same images: code placement</div>
-      <table class="t" id="tb-layout"></table>
-      <p class="small">A probe image with the old code but <code>memcpy</code> moved to the new address reproduces the SHA-256 and HMAC rows, so those are placement, not the SHA-512 change. The HKDF row is not reproduced yet.</p>
-    </div>
-  </div>
-  <div class="foot"><span class="src">RP2040 bench lane: summarize.py on the fix, sha512 and probe rounds; STATUS (17:05, 17:58–18:05); SHA-512 commit message draft · sizes: M0+ static-analysis REPORT</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 12. GHASH ============ -->
-<section class="slide" data-section="AES-GCM">
-  <div class="kicker">Finding 2 · AES-GCM</div>
-  <h2>rind's AES-GCM ran 2.1 to 2.3× RustCrypto's time on long messages, because GHASH called __aeabi_lmul for every 64-bit product</h2>
-  <div class="cols c64" style="margin-top:14px">
-    <div>
-      <div class="chart-title">rind AES-GCM, SysTick-fixed image → muls-only GHASH image (cycles, 3 of 3 rounds)</div>
-      <table class="t" id="tb-ghash"></table>
-      <div class="board b2" style="margin-top:14px">
-        <div class="cell"><div class="k">before: <code data-k="ghash.before.fn"></code></div><div class="v bad"><span data-k="ghash.before.bytes"></span> B · <span data-k="ghash.before.lmul"></span> lmul calls</div></div>
-        <div class="cell"><div class="k">after: <code data-k="ghash.after.fn"></code></div><div class="v"><span data-k="ghash.after.bytes"></span> B · <span data-k="ghash.after.lmul"></span> lmul calls</div></div>
-      </div>
-    </div>
-    <div>
-      <div class="card"><h3>The change</h3><ul class="b sm">
-        <li>The 32-bit GHASH took <span data-k="ghash.perBlock"></span> 32×32→64 multiplies per block. ARMv6-M has no <code>umull</code>, so each one was a call to <code>__aeabi_lmul</code>.</li>
-        <li>The new path uses 32-bit <code>muls</code> alone, as BearSSL's <code>ghash_ctmul32</code> does: the high word comes from the bit-reversed operands. Its timing still does not depend on the key or the data.</li>
-        <li>Tested against the widening product on <span data-k="ghash.pairs"></span> pseudo-random pairs and edge values.</li>
-      </ul></div>
-      <div class="card fix warnc" style="margin-top:12px"><div class="pn">cfg bug, caught and fixed</div><ul class="b sm">
-        <li>The first gate was <code>not(target_feature = "thumb2")</code>. Stable Rust does not expose <code>thumb2</code> on any Arm target, so it was also true on ARMv7 and thumbv7em.</li>
-        <li>Now <code>all(target_arch = "arm", not(target_has_atomic = "ptr"))</code>: ARMv6-M plus tier-3 ARMv4T/ARMv5TE bare metal. The rebuilt aes_gcm and hmac code is byte-identical.</li>
-      </ul></div>
-    </div>
-  </div>
-  <div class="foot"><span class="src">RP2040 bench lane: summarize.py on the fix and ghash rounds; STATUS (17:16, 17:35); GHASH commit message draft · function sizes: M0+ static-analysis REPORT</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 13. STATIC SCAN ============ -->
-<section class="slide" data-section="Static scan">
-  <div class="kicker">Static scan of the M0+ images</div>
-  <h2>A scan of the built images ranks what is left: dalek's X25519/Ed25519 multiplies first, then P-256/P-384, then Poly1305</h2>
-  <div class="cols c64" style="margin-top:12px">
-    <div>
-      <table class="t sv" id="tb-m0"></table>
-      <p class="small">lmul: static <code>bl __aeabi_lmul</code> call sites in the function. cond: conditional branches. * source count, no P-384 image. † public round and length loops, not secret data. All sizes fit the 16 KB cache; every hot symbol examined is in XIP flash, none in SRAM.</p>
-    </div>
-    <div>
-      <div class="card"><h3>Ranked candidates</h3><ul class="b sm">
-        <li><b>1. X25519 / Ed25519 (dalek u32):</b> the most multiplies at run time, about <span data-k="m0.x25519Est"></span> lmul calls per X25519 (<b>estimate</b>). The code is in curve25519-dalek, not rind.</li>
-        <li><b>2. P-256 / P-384 <code>mul_add</code>:</b> in rind, already tested against fiat-crypto. Prototyped (slide 14).</li>
-        <li><b>3. Poly1305:</b> HACL* in libcrux, 52 lmul per update.</li>
-      </ul></div>
-      <div class="card" style="margin-top:12px"><h3>Constant-time findings</h3><ul class="b sm">
-        <li>Field multiply and square: no data-dependent branches or table lookups in the codegen. Lookup-table selects scan every entry.</li>
-        <li>libcrux P-256 <code>point_add</code> / <code>point_double</code> have 251 / 138 conditional branches: a concern in that comparison library, not in rind.</li>
-        <li><code>__aeabi_lmul</code> itself: <span data-k="m0.lmulFn.bytes"></span> B, <span data-k="m0.lmulFn.insns"></span> instructions, <span data-k="m0.lmulFn.muls"></span> <code>muls</code>.</li>
-      </ul></div>
-    </div>
-  </div>
-  <div class="foot"><span class="src">M0+ static-analysis lane: REPORT.md (llvm-nm / llvm-objdump on the SysTick-fixed images, rustc 1.98.1) and STATUS.md</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 14. P-256 PROTOTYPE ============ -->
-<section class="slide" data-section="P-256">
-  <div class="kicker">Prototype · not timed yet</div>
-  <h2>A muls-only 32×32→64 helper removes every __aeabi_lmul from P‑256's field multiply and square, and passes 80 tests</h2>
-  <div class="kpis" id="kpi-p256" style="margin-top:20px"></div>
-  <div class="cols">
-    <div class="card"><h3>The change</h3><ul class="b sm">
-      <li>On ARMv6-M, each 32×32→64 product in <code>p256_mul32</code> and <code>p384_mul32</code> is four 16-bit <code>muls</code> and adds. Arm cores with <code>umull</code> keep the widening multiply. Same cfg as the GHASH change.</li>
-      <li>In the P-256 bench image, <code>mul_wide</code> has <span data-k="p256.mulsInMulWide"></span> <code>muls</code> and <code>sqr_wide</code> <span data-k="p256.mulsInSqrWide"></span>: and 0 lmul, the check required before timing.</li>
-      <li>P-384 <code>mul_wide</code> / <code>sqr_wide</code> also have 0 lmul in a release library build (576 / 300 <code>muls</code>).</li>
-    </ul></div>
-    <div class="card"><h3>Still to do</h3><ul class="b sm">
-      <li><b>Timing, queued:</b> <span data-k="p256.rounds"></span> interleaved rounds against the SysTick-fixed image. Baseline rind P-256 ECDH: <span data-k="p256.baseEcdh"></span> cycles (<span data-k="p256.baseRounds"></span> rounds).</li>
-      <li>Still calling lmul in that image, via fiat: <span id="p256-left"></span>.</li>
-      <li><b>In progress:</b> the same removal for dalek's X25519 / Ed25519 multiplies and for Poly1305. Started; no prototype yet.</li>
-    </ul></div>
-  </div>
-  <div class="callout warn" style="margin-top:16px">No speed claim yet: the prototype has not been timed on the board.</div>
-  <div class="foot"><span class="src">M0+ static-analysis REPORT (prototype, native tests) · RP2040 bench lane STATUS (18:21–18:23, bench-image disassembly) · X25519/Ed25519/Poly1305 lane STATUS</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 15. NO_STD ============ -->
-<section class="slide" data-section="no_std">
-  <div class="kicker">Upstreamable no_std</div>
-  <h2>A std / alloc feature split makes upstream rind build for thumbv6m with 0 errors, and leaves desktop code unchanged</h2>
-  <div class="board" style="margin-top:20px">
-    <div class="cell"><div class="k">thumbv6m build errors</div><div class="v"><span class="bad" data-k="nostd.errBefore"></span> → <span data-k="nostd.errAfter"></span></div></div>
-    <div class="cell"><div class="k">x86_64 lib tests</div><div class="v"><span data-k="nostd.x86Lib"></span> passed</div></div>
-    <div class="cell"><div class="k">portable lib tests</div><div class="v"><span data-k="nostd.portLib"></span> passed</div></div>
-    <div class="cell"><div class="k">thumbv6m link test</div><div class="v"><span data-k="nostd.linkKB"></span> KB text</div></div>
-  </div>
-  <div class="cols c64" style="margin-top:6px">
-    <div class="card"><h3>On upstream c333c59e, fork branch <code data-k="nostd.branch"></code> (<span data-k="nostd.commit"></span>)</h3><ul class="b sm">
-      <li>Features <code>std</code> (default) and <code>alloc</code>; <code>no_std</code> when <code>std</code> is off. Thread-locals sit behind <code>std</code>.</li>
-      <li><code>ReuseCache</code> uses <code>portable-atomic</code> with a critical section where the target has no 8-bit atomics. This replaces the harness's patches 0003 and 0005.</li>
-      <li>The x86_64 and aarch64 backends detect CPU features through std, so they stop with a clear <code>compile_error</code> without it.</li>
-      <li>Link test: a no_std binary calling P-256 ECDH and SHA-256 links with no undefined symbols. <b>Not run on a board.</b></li>
-    </ul></div>
-    <div>
-      <div class="chart-title">Per-function disassembly, before vs after (codegen-units = 1)</div>
-      <table class="t" id="tb-codegen"></table>
-      <p class="small">Functions identical. clippy <code>-D warnings</code> is clean on native, portable and thumbv6m (release and debug); MSRV <span data-k="nostd.msrv"></span> checks. On the Mac, fmt passes; aarch64 clippy, tests and the thumbv6m build are still pending.</p>
-    </div>
-  </div>
-  <div class="callout" style="margin-top:16px">Overlap: fork branch <code>rp2040/armv6m-no-std</code> carries the harness's patches 0003 and 0005. This branch replaces them, and the SHA-512 and GHASH commits are to be rebased onto it.</div>
-  <div class="foot"><span class="src">no_std lane: STATUS.md and gates log (thumbv6m errors with rustc 1.98.1)</span><span class="num"></span></div>
+  <div class="foot"><span class="src">hosts/rp2040/FEASIBILITY.md (a4759c48 section) · baremetal/rp2040/COMPETITOR-BUILDS.md · hosts/rp2040/NOTES.md</span><span class="num"></span></div>
 </section>
 
 <!-- ============ 16. COMPETITORS ============ -->
@@ -745,55 +459,15 @@ table.t.sv code{font-size:11.5px}
   <h2>The RustCrypto and dalek crates compile for every target tested, while ring, aws-lc-rs and rustls do not compile for the RP2040</h2>
   <div class="legend" style="margin-top:14px"><span><i style="background:var(--accent)"></i>compiles</span><span><i style="background:var(--bad)"></i>fails</span><span>Compile only: no link, nothing run, and most crates are only re-exported, so generic code is not instantiated. rustc <span data-k="meta.rustc"></span>, 2026-11-12, default features off.</span></div>
   <table class="t grid" id="tb-comp"></table>
-  <p class="small" style="margin-top:8px">The rind row is unpatched rind 0.3.2 (a4759c48). With patches 0003 and 0005 the bench images now build and run on the chip (slide 6); the other columns were not re-checked with the patches.</p>
+  <p class="small" style="margin-top:8px">The rind row is unpatched rind 0.3.2 (a4759c48). With patches 0003 and 0005 the bench images now build and run on the chip; the other columns were not re-checked with the patches.</p>
   <div class="foot"><span class="src">baremetal/rp2040/COMPETITOR-BUILDS.md · baremetal/rp2040/builds/README.md</span><span class="num"></span></div>
 </section>
-
-<!-- ============ 17. SURVEY ============ -->
-<section class="slide" data-section="Survey">
-  <div class="kicker">Other chips</div>
-  <h2>Other Cortex-M and RISC-V chips share some of these limits, and the EFR32MG24 adds a crypto engine to compare against</h2>
-  <div class="cols c64" style="margin-top:12px">
-    <table class="t sv" id="tb-survey"></table>
-    <div>
-      <div class="card"><h3>EFR32MG24 board</h3><ul class="b sm" id="mg24"></ul></div>
-      <p class="small" style="margin-top:10px">On every surveyed target that was compiled, unpatched rind 0.3.2 fails on <code>std</code> while its dependencies build. CAS "no" also means no atomic <code>Arc</code>. MSP430 and AVR are out of scope (16-bit and 8-bit, too little RAM).</p>
-    </div>
-  </div>
-  <div class="foot"><span class="src">baremetal/rp2040/TARGET-SURVEY.md · baremetal/mg24/README.md · baremetal/rp2040/COMPETITOR-BUILDS.md (Notes)</span><span class="num"></span></div>
-</section>
-
-<!-- ============ 18. STATUS ============ -->
-<section class="slide" data-section="Status">
-  <div class="kicker">Status and next steps</div>
-  <h2>What is verified, what still needs timing, and the pull requests being prepared, none of them opened yet</h2>
-  <div class="cols3 st3" style="margin-top:16px">
-    <div class="card fix"><div class="pn">verified</div><ul class="b sm" id="st-ver"></ul></div>
-    <div class="card fix warnc"><div class="pn">pending or in progress</div><ul class="b sm" id="st-pend"></ul></div>
-    <div class="card fix"><div class="pn">being prepared · not opened</div><ul class="b sm" id="st-pr"></ul></div>
-  </div>
-  <div class="callout" style="margin-top:12px">No pull request has been opened upstream. The branches above are on steelhead99x forks and repositories; patches stay there until a pull request is approved.</div>
-  <div class="foot"><span class="src">RP2040 bench lane STATUS · M0+ static-analysis STATUS · no_std lane STATUS and gates log · X25519/Ed25519/Poly1305 lane STATUS · snapshot <span data-k="snap.asOf"></span></span><span class="num"></span></div>
-</section>
-
-<!-- ============ 19. SOURCES ============ -->
-<section class="slide" data-section="Sources">
-  <div class="kicker">Sources</div>
-  <h2>Facts come from these files in steelhead99x/rind-results and, for the 2026-11-12 runs, from the working notes listed below</h2>
-  <table class="t" id="tb-src" style="margin-top:10px;font-size:13.5px"></table>
-  <div class="cols" style="margin-top:20px">
-    <div class="card"><h3>Not yet in this repository</h3><table class="t" id="tb-notes" style="font-size:12.5px"></table></div>
-    <div class="card"><h3>Not in this deck</h3><p class="small" style="margin:0">Flash backup hashes, board serial numbers, local paths, and links into the benchmark harness repositories. The on-device numbers are a snapshot from <span data-k="snap.asOf"></span>, with rounds still running.</p></div>
-  </div>
-  <div class="foot"><span class="src">Repository: github.com/steelhead99x/rind-results</span><span class="num"></span></div>
-</section>
-
 
 </div>
 <div id="hud"></div>
 <script>
 (function(){
-  const D = DATA, $ = (s,r=document)=>r.querySelector(s), NS="http://www.w3.org/2000/svg";
+  const D = DATA, $ = (s,r=document)=>r.querySelector(s)||document.createElement("div") /* a cut slide's element: writes go nowhere */, NS="http://www.w3.org/2000/svg";
   const get = p => p.split('.').reduce((o,k)=>o&&o[k], D);
   document.querySelectorAll('[data-k]').forEach(e=>{ e.textContent = get(e.dataset.k); });
   function el(tag, attrs, parent, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; if(parent) parent.appendChild(e); return e; }

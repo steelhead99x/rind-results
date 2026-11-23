@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
 # rind speed versus guarantees: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 9 slides at 1280×720,
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 6 slides at 1280×720,
 with the CSS and navigation of `presentations/rind-testing`. It covers two PRs merged into kixel-ai/rind on
 19 November 2026 that each trade one thing for another and say so: #821 (SHA-512 on x86_64 runs no VSHA512
 instruction, merged 2:48 PM PST; fork mirror #131) and #793 (SHA-2 on 32-bit microcontrollers, merged 9:51 AM PST).
@@ -9,14 +9,11 @@ It extends the "Gained and lost" slide of the rind-proofs deck. All times are Am
 
 1. Title
 2. Intel's fixed-timing instruction list: SHA-1 and SHA-256 instructions yes, VSHA512 no
-3. What #821 does: AVX2 routine, `ct-vartime` refuses `vsha512*`, the AVX2 routine is proven
-4. The price, measured by the maintainer on a Core Ultra 7 270K Plus: 2.0× at 64 B, 4.2× to 4.6× from 1200 B, 0.82× to 0.86× aws-lc-rs
-5. Kyle's Core Ultra 9 275HX: the published "before" at rind d6ca9a75 ran the SHA512 path; the "after" is pending a rerun
-6. The OS can hide a CPU feature: Oracle Linux's `/proc/cpuinfo` lists `sha_ni` but not `sha512` on this chip,
+3. The price, measured by the maintainer on a Core Ultra 7 270K Plus: 2.0× at 64 B, 4.2× to 4.6× from 1200 B, 0.82× to 0.86× aws-lc-rs
+4. Kyle's Core Ultra 9 275HX: the published "before" at rind d6ca9a75 ran the SHA512 path; the "after" is pending a rerun
+5. The OS can hide a CPU feature: Oracle Linux's `/proc/cpuinfo` lists `sha_ni` but not `sha512` on this chip,
    while rind's CPUID detection found `sha512`
-7. #821 and #793 side by side: what each gives up and gains
-8. What the fork tried and dropped (fork #131, #136) and the fork-safe DRBG self-test (#723)
-9. Gaps and sources
+6. #821 and #793 side by side: what each gives up and gains
 
 ## Which numbers come from where
 

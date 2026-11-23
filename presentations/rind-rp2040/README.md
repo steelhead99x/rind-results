@@ -1,27 +1,11 @@
 # rind on the RP2040: slide deck
 
-`index.html` is a self-contained HTML deck (no network access, no external libraries), 19 slides at 1280×720.
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 3 slides at 1280×720.
 It covers:
 
 1. Title
-2. The boards: the first RP2040 board (rev B2, backed up, never written) and the Raspberry Pi Pico the runs used (backed up twice first)
-3. The five limits: no OS, no compare-and-swap (CAS), a 32×32→32 multiplier, no hardware RNG, 264 KiB of SRAM
-4. Where rind started: 1672 errors at a4759c48 (see the note on that label below), plus the 2026-11-12 upstream count (1,739 → 0)
-5. Patches 0003 (no_std) and 0005 (ReuseCache without CAS), and the placeholder getrandom backend
-6. Where it stands: the 12 SysTick-fixed images run on the Pico, 0 known-answer failures, and the variant images
-7. The on-device run procedure (backup, flash, check, time, rounds, restore) and the run setup
-8. The SysTick wrap bug the first run found (COUNTFLAG never cleared, +2^24 cycles) and its fix
-9. How it was measured: SysTick cycles, median of per-round medians, fairness rules
-10. Live results: baseline for all 12 benches from the SysTick-fixed images (partial: 2 or 3 of 5 planned rounds)
-11. Finding 1, SHA-512: ~2,200 cycles/byte in every library (unrolled code > 16 KB XIP cache) and the rolled variant; the code-placement side effect
-12. Finding 2, AES-GCM: GHASH's __aeabi_lmul calls, the muls-only GHASH, and the cfg bug caught on the way
-13. Static scan of the M0+ images: code size and __aeabi_lmul counts per primitive, constant-time findings, ranked candidates
-14. The P-256 muls-only prototype (0 lmul, 80 native tests, not timed yet) and the X25519/Ed25519/Poly1305 work in progress
-15. The upstreamable std / alloc feature split for no_std (thumbv6m 1,739 → 0 errors, identical desktop codegen)
-16. Which other Rust crypto libraries compile for this and nearby targets (compile only)
-17. Other chips with the same limits, including the EFR32MG24
-18. Status and next steps: verified, pending timing, and the pull requests being prepared (none opened)
-19. Sources
+2. Where rind started: 1672 errors at a4759c48 (see the note on that label below), plus the 2026-11-12 upstream count (1,739 → 0)
+3. Which other Rust crypto libraries compile for this and nearby targets (compile only)
 
 ## Opening it
 
