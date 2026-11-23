@@ -174,5 +174,5 @@ Each operation where another library is more than 10% faster than rind, by rind'
 
 | Operations | rind over the fastest | Reason |
 |---|---|---|
-| `rustls-bulk/chacha20poly1305`, `chacha20poly1305/16KB` | 1.19× OpenSSL; 1.33× OpenSSL | Measured on this host only: OpenSSL is 1.33x faster than rind on chacha20poly1305 16KB and 1.19x on rustls-bulk chacha20poly1305. This Zen 5 host reports AVX-512 (rind-cpuid) and no diagnosis of the gap was run here. |
+| `rustls-bulk/chacha20poly1305`, `chacha20poly1305/16KB` | 1.19× OpenSSL; 1.33× OpenSSL | Measured on this host only: OpenSSL is 1.33x faster than rind on chacha20poly1305 16KB and 1.19x on rustls-bulk chacha20poly1305. This Zen 4 host reports AVX-512 (rind-cpuid) and no diagnosis of the gap was run here. |
 | `mlkem768-keygen`, `mlkem768-encaps` | 1.14× graviola; 1.11× graviola | Measured on this host only: graviola is 1.11x faster than rind on ML-KEM-768 encaps and 1.14x on keygen. No diagnosis was run here. |
