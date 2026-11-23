@@ -25,7 +25,7 @@ Each one calls rind's `admin/bench-report` and does not edit that file.
 ## `admin/bench-report` hosts (rind `b6651423`)
 
 Raw JSON, a trimmed log, and notes are in each folder. The top-level
-[README.md](../README.md) tables are rendered from these JSON files.
+[REPORT-2026-11-12.md](../REPORT-2026-11-12.md) tables are rendered from these JSON files.
 
 | Host | Hardware | Results |
 |---|---|---|
@@ -80,7 +80,7 @@ These sit beside the published sets. None of them changes a gap verdict on the p
 | Poly1305-32 A/B | Optional 32-bit-limb Poly1305 is faster than rind's previous HACL* code at every size on the ESP32-S3 and the T1000-E (21/21 known-answer checks). Gain is against rind's previous code, not against ring. | [ESP32-S3](../results/esp32s3/diag/poly1305-32/README.md), [T1000-E](../results/nrf52840/diag/poly1305-32/README.md) |
 | Three-alignment relinks | Moving code by 1 KB without changing alignment does nothing; a different alignment moves some short-input rows by up to 0.3×. SHA-256 64B is 2.36×–3.07× libcrux (2.79× from the medians). An earlier relink that only moved the harness is labelled as such. | [esp32s3-relink-fixed-98568332](../results/diag/esp32s3-relink-fixed-98568332/README.md) |
 | 32 KB icache at 80 MHz | Confirms the 40 MHz diagnostic at the published pin and clock: the XChaCha gap is cache misses (7.50× → 1.10× RustCrypto at 32B). The ChaCha gap stays put (Poly1305 compute). | [esp32s3-icache32-80mhz-98568332](../results/diag/esp32s3-icache32-80mhz-98568332/README.md) |
-| Legacy provenance map | Images built from the archived private `rind-bench` history record that SHA in `legacy_rind_bench`, and map it onto public `rind-hardware` (`8d9c1bb`, or `ancestor of 8d9c1bb…`). | [tools/legacy-rind-bench-map.json](../tools/legacy-rind-bench-map.json) |
+| Legacy provenance map | Images built from the history of an earlier private firmware repository (archived) record that SHA in `legacy_rind_bench`, and map it onto public `rind-hardware` (`8d9c1bb`, or `ancestor of 8d9c1bb…`). | [tools/legacy-rind-bench-map.json](../tools/legacy-rind-bench-map.json) |
 
 ## Presentations
 

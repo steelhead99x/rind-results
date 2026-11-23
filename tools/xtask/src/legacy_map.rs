@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
-//! Maps recorded private `steelhead99x/rind-bench` commits to public
+//! Maps recorded commits of the earlier private firmware repository to public
 //! `steelhead99x/rind-hardware` commits. `cargo verify` has its own copy:
 //! the two crates share no code.
 

@@ -2,6 +2,17 @@
 
 Each refresh reworks the whole deck into one story; this log records what changed in each refresh. Times are PST.
 
+## 2026-11-17 20:30
+
+- New slide 20: ML-DSA signing on the Jetson Orin Nano, from steelhead99x/rind#126 comment 6936142476 (base
+  19f94a07, head bbae5dc0, 3 interleaved runs, `taskset -c 3`): ML-DSA-44 149.40 → 142.79 µs (−4.4%), -65
+  227.97 → 210.36 µs (−7.7%), -87 247.27 → 229.81 µs (−7.1%). #126 was closed for kixel-ai/rind#863, which makes
+  the same change and is open. The A/B is in a PR comment, not on rind-results main.
+- Slide 21 ("where the numbers live") rewritten: every Pi 5 and M1 Pro source the deck uses is now on rind-results
+  main (checked at 88cbf85), and the Orin has a published set (`results/jetson-orin-nano/`, rind fastest on 65 of 68).
+- Slide 19: the "open PRs" item notes that the table alignment is upstream as kixel-ai/rind#790, ready for review.
+- Title subtitle mentions the Orin update. `meta.asOf` stays 2026-11-12 20:15, since the phase data did not change.
+
 ## 2026-11-12 20:15
 
 - Phase 2 now has eight branches. `perf/pi5-cpu-detect` (3d7dd094) moves from "held back" to "neutral, kept":
@@ -14,17 +25,6 @@ Each refresh reworks the whole deck into one story; this log records what change
   alignment item and adds the table fix to the PR #33 cherry-pick list.
 - Branch heads refreshed after the rind-results history rewrite (results branches 14c89e4, 94b8b1a, 3a481c4;
   main edcd461). Orin: bench scripts are on main, results still pending.
-
-## 2026-11-14
-
-- New slides for steelhead99x/rind#82 (Pi 5 narrow-schedule table from the PR body; A72, N1, and Jetson Cortex-A78AE not measured; A78AE keeps `_alt`) and #79 (64-byte P-256 table, 88,064 bytes; the 2.5–3% A76 effect is the earlier measurement; head `54d339e7` was not re-timed).
-- The 12 November status slide still records that evening's check. A following slide says the Orin set is now on main at `results/jetson-orin-nano` (rind `98568332`) and is not a remeasure of #79 or #82. Deck: `presentations/rind-jetson/`.
-
-## 2026-11-14 cleanup
-
-- The deck is 8 slides. The DATA block is gone. Each table is static HTML, and the footer names the file.
-- Removed the phase essays, the verification notes that are not in this repo, the early M1 fusion times, and the llvm-mca prediction.
-- The follow-up slide uses the ratios printed in `hosts/pi5/ab-narrow-mul/README.md`.
 
 ## Earlier
 

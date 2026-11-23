@@ -456,6 +456,7 @@ pub fn orin_run(home: &Path, n: u32, core: Option<u32>) -> Result<u32, String> {
         &relax,
         &env_ref,
         Some(&core.to_string()),
+        None,
         Some(&log),
     );
     let code = if rc.is_ok() { 0 } else { 1 };
@@ -900,7 +901,7 @@ pub fn mac_run(home: &Path, commit: &str) -> Result<(), String> {
         ("HOSTRUN_FREE_TARGET", "1".into()),
     ];
     let env_ref: Vec<(&str, &str)> = env.iter().map(|(k, v)| (*k, v.as_str())).collect();
-    let rc = upstream_run::run_bench_report(&rind, &args, &relax, &env_ref, None, None);
+    let rc = upstream_run::run_bench_report(&rind, &args, &relax, &env_ref, None, None, None);
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
     let _ = watchdog.join();
     let _ = fs::remove_dir_all(home.join("target"));
@@ -996,6 +997,7 @@ pub fn pi_run(home: &Path, commit: &str) -> Result<(), String> {
         &args,
         &host_relax(false),
         &env_ref,
+        None,
         None,
         None,
     );

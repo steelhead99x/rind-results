@@ -3,12 +3,133 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Counters used on the measured boards</title>
+<title>SysTick and timing across the hardware we bench on</title>
 <!--
-  Self-contained deck. No network, no external libraries.
-  Numbers are written on the slides. Each footer names the file or comment.
-  Arrow keys, PageUp/PageDown, Home/End, or #N.
+  Self-contained deck: no network access, no external libraries.
+  1. DATA block (id="deck-data", right below): every sourced number, table, and source link.
+  2. STYLE: the CSS of presentations/rind-rp2040 plus additions at the end.
+  3. SLIDES: one <section class="slide"> per slide. Slide numbers and footers are generated.
+  4. RENDER + NAVIGATION script at the end (arrow keys, PageUp/PageDown, Home/End, #N in the URL).
 -->
+<script id="deck-data">
+/* =====================================================================
+   DATA: every sourced number and table in the deck. Edit here.
+   Derived values (resolution, wrap time) are computed in the render
+   script from bits and MHz below, and are marked "computed" on slides.
+   Source keys (src) point into DATA.sources.
+   ===================================================================== */
+const DATA = {
+  meta: { date: "November 12, 2026", repo: "https://github.com/steelhead99x/rind-results" },
+
+  /* Hardware rind is benched on, from steelhead99x/rind-results */
+  hosts: [
+    { name: "RP2040", core: "Cortex-M0+ (ARMv6-M)", clock: "125 MHz", os: "none", timer: "SysTick, extended to 32 bits (first run 2026-11-12; COUNTFLAG wrap bug fixed)", src: "repo-rp2040" },
+    { name: "EFR32MG24", core: "Cortex-M33F (Armv8-M)", clock: "78 MHz", os: "none", timer: "none yet: nothing rind-related flashed", src: "repo-mg24" },
+    { name: "nRF52840", core: "Cortex-M4F (Armv7-M)", clock: "64 MHz", os: "none", timer: "DWT cycle counter", src: "repo-nrf" },
+    { name: "ESP32-S3", core: "Xtensa LX7", clock: "240 MHz", os: "ESP-IDF (FreeRTOS)", timer: "CCOUNT cycle counter", src: "repo-esp" },
+    { name: "Raspberry Pi 5", core: "Cortex-A76 (aarch64)", clock: "capped at 1.5 GHz", os: "Linux", timer: "criterion wall time (std Instant)", src: "repo-pi5" },
+    { name: "Apple M1 Pro", core: "8 P + 2 E cores (arm64)", clock: "not recorded", os: "macOS", timer: "criterion wall time (std Instant)", src: "repo-m1" },
+    { name: "Pixel 9 Pro", core: "Tensor G4: X4, A720, A520", clock: "not recorded", os: "Android", timer: "criterion wall time (std Instant)", src: "repo-pixel" },
+    { name: "Xeon VM", core: "x86_64, 8 shared vCPUs", clock: "not recorded", os: "Linux", timer: "criterion wall time (std Instant)", src: "repo-xeon" }
+  ],
+
+  /* SysTick registers: RP2040 datasheet Tables 88-91; ARMv7-M ARM B3.3 */
+  systick: {
+    bits: 24, reloadMax: "0x00FFFFFF",
+    regs: [
+      ["SYST_CSR", "control and status", "ENABLE (bit 0), TICKINT (bit 1: interrupt at zero), CLKSOURCE (bit 2: 1 = processor clock), COUNTFLAG (bit 16: set when the count passed 1 to 0; cleared when CSR is read)"],
+      ["SYST_RVR", "reload value", "RELOAD, bits 23:0. Loaded into CVR after the count reaches 0. A period of N clocks needs RELOAD = N - 1"],
+      ["SYST_CVR", "current value", "CURRENT, bits 23:0. Reads return the count. Any write clears it to 0 and clears COUNTFLAG"],
+      ["SYST_CALIB", "calibration", "NOREF (bit 31: no reference clock, CLKSOURCE forced to 1), SKEW (bit 30), TENMS"]
+    ]
+  },
+
+  /* Wrap examples: bits and MHz are sourced; the result is computed */
+  wraps: [
+    { what: "RP2040 SysTick", bits: 24, mhz: 125, src: "repo-rp2040", note: "NOTES.md: 134.2 ms" },
+    { what: "RP2040 SysTick, extended", bits: 32, mhz: 125, src: "repo-rp2040", note: "NOTES.md: 34.4 s" },
+    { what: "MG24 SysTick", bits: 24, mhz: 78, src: "rm-mg24", note: "computed" },
+    { what: "MG24 SysTick, reset clock", bits: 24, mhz: 20, src: "an0004", note: "computed" },
+    { what: "MG24 DWT CYCCNT", bits: 32, mhz: 78, src: "trm-m33", note: "computed" },
+    { what: "nRF52840 DWT CYCCNT", bits: 32, mhz: 64, src: "arm-v7m", note: "computed" },
+    { what: "ESP32-S3 CCOUNT", bits: 32, mhz: 240, src: "esp-idf", note: "computed" }
+  ],
+
+  /* Microcontroller counters. res/wrap computed from bits+mhz when given */
+  mcu: [
+    { chip: "RP2040", ctr: "SysTick", bits: 24, mhz: 125, read: "SYST_CVR (counts down)", note: "CLKSOURCE = 1 for clk_sys; else a 1 µs tick", src: "ds-rp2040" },
+    { chip: "RP2040", ctr: "TIMER (TIMERAWH/L)", bits: 64, mhz: 1, read: "RAWH, RAWL, RAWH; repeat if RAWH changed", note: "no latch, safe from both cores", src: "ds-rp2040" },
+    { chip: "RP2040", ctr: "DWT CYCCNT", bits: null, mhz: null, read: "not available", note: "ARMv6-M has no cycle counter", src: "arm-v6m" },
+    { chip: "EFR32MG24", ctr: "SysTick", bits: 24, mhz: 78, read: "SYST_CVR (counts down)", note: "SYSCFG_CFGSYSTIC can switch it to an external clock", src: "rm-mg24" },
+    { chip: "EFR32MG24", ctr: "DWT CYCCNT", bits: 32, mhz: 78, read: "DWT_CYCCNT (counts up)", note: "set DEMCR.TRCENA, then DWT_CTRL.CYCCNTENA", src: "trm-m33" },
+    { chip: "nRF52840", ctr: "DWT CYCCNT", bits: 32, mhz: 64, read: "DWT_CYCCNT (counts up)", note: "what the published runs use", src: "repo-nrf" },
+    { chip: "ESP32-S3", ctr: "CCOUNT", bits: 32, mhz: 240, read: "esp_cpu_get_cycle_count()", note: "checked against SYSTIMER: 240.0000 to 240.0007 MHz", src: "repo-esp" }
+  ],
+
+  /* Application processors */
+  app: [
+    { chip: "Raspberry Pi 5", ctr: "Generic timer CNTVCT_EL0", freq: "CNTFRQ_EL0: not recorded", width: "at least 56 bits; roll-over at least 40 years", read: "ISB, then MRS CNTVCT_EL0", src: "arm-a" },
+    { chip: "Raspberry Pi 5", ctr: "PMU PMCCNTR_EL0", freq: "CPU clock (capped at 1.5 GHz)", width: "64 bits", read: "only if the kernel enables EL0 access (PMUSERENR_EL0)", src: "arm-pmu" },
+    { chip: "Apple M1", ctr: "Generic timer CNTVCT_EL0", freq: "24 MHz (CNTFRQ_EL0 on an M1 Mac mini)", width: "at least 56 bits", read: "ISB, then MRS CNTVCT_EL0", src: "paper-m1" },
+    { chip: "Apple M1", ctr: "PMU PMCCNTR_EL0", freq: "n/a", width: "n/a", read: "illegal instruction from user mode on every Apple device tested", src: "paper-m1" },
+    { chip: "Pixel 9 Pro", ctr: "Generic timer CNTVCT_EL0", freq: "CNTFRQ_EL0: not recorded", width: "at least 56 bits", read: "through clock_gettime (std Instant)", src: "arm-a" },
+    { chip: "Xeon VM", ctr: "OS clock, CLOCK_MONOTONIC", freq: "not recorded", width: "n/a", read: "through clock_gettime (std Instant)", src: "rust-instant" }
+  ],
+
+  /* Recommendations (labelled as such on the slides) */
+  recs: [
+    { chip: "RP2040", short: "SysTick, CLKSOURCE = 1, report cycles", long: "software-extended SysTick (32 bits, 34.4 s) or TIMERAW in µs", also: "Cross-check SysTick against the 1 µs TIMER at boot, for at least two wraps. On a Pico the check ran 300 ms: 37,500,815 cycles against 300,021 µs (125.0 MHz). State whether hot code runs from XIP flash or SRAM." },
+    { chip: "EFR32MG24", short: "DWT CYCCNT, after checking DWT_CTRL.NOCYCCNT = 0", long: "CYCCNT (32 bits) with a wrap count, or extended SysTick", also: "Confirm SYSCLK is 78 MHz before converting: it resets to the 20 MHz FSRCO. Keep SYSTICEXTCLKEN = 0 if SysTick must count core cycles." },
+    { chip: "nRF52840, ESP32-S3", short: "Keep the current cycle counters", long: "Keep 2 ms samples, far below the 32-bit wrap", also: "Keep the boot-time check of the counter against an independent clock, as the ESP32-S3 harness does." },
+    { chip: "Raspberry Pi 5", short: "Batches of many calls timed with the generic timer", long: "Same; report ns plus the CPU clock", also: "Record the clock cap and governor. Report cycles only from the PMU, and only if it is enabled; ns do not convert to cycles while the clock can change." },
+    { chip: "Apple M1, M1 Pro", short: "Batches of at least about 10 ms (24 MHz counter = 41.67 ns steps)", long: "Same", also: "No user-mode PMU. Note which core type ran the code and how busy the machine was." },
+    { chip: "Pixel 9 Pro, Xeon VM", short: "Batches timed with std Instant", long: "Same", also: "Pin to one core type where possible; mark shared or unpinned runs as noisy, as the host notes already do." }
+  ],
+
+  /* Methodology (recommendations), from the firmware team's measurement plan (2026-11-12)
+     and the harness checks in the published ESP32-S3 and nRF52840 results */
+  method: [
+    ["Sample length", "Repeat the operation until one sample is at least about 10 ms, or 100 times the timer's resolution."],
+    ["Statistic", "Median of 5 or more samples, with the min/max spread."],
+    ["Order", "Interleave the variants being compared in one firmware image or one process."],
+    ["Correctness", "Run known-answer tests on the device before timing."],
+    ["Counter check", "Check the cycle counter against an independent clock at boot (ESP32-S3: 240.0000 to 240.0007 MHz over 36 boots; RP2040 after the wrap fix: 37,500,815 cycles against 300,021 µs, 125.0 MHz)."],
+    ["Scope", "Compare libraries on one chip at one clock. Do not compare across chip classes: cycles on an M0+ and wall time on an A76 measure different things."]
+  ],
+
+  /* Values the deck does not have a source for */
+  open: [
+    ["Raspberry Pi 5 counter frequency", "Read CNTFRQ_EL0 on the board. The BCM2712 device tree lists a 54 MHz oscillator, but no source here ties the counter to it."],
+    ["Apple M1 Pro counter frequency", "The 24 MHz figure was measured on an M1 Mac mini, not on the M1 Pro in the results."],
+    ["Pixel 9 Pro counter frequency", "Not recorded."],
+    ["EFR32MG24 CYCCNT present", "CYCCNT is optional in Armv8-M. Read DWT_CTRL.NOCYCCNT on the chip."],
+    ["Interrupt latency in cycles", "No per-chip figure is cited here; measure with the counter itself if it matters."]
+  ],
+
+  sources: {
+    "ds-rp2040": ["RP2040 datasheet (build 2025-02-20): 2.4.5.1.1 and Tables 88-91 (SysTick, p. 78), 2.6.3.1 (XIP cache, p. 122), 2.15.3.1 (clk_sys 125 MHz, p. 183), 4.6.2 (TIMER, p. 536)", "https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf"],
+    "arm-v6m": ["Arm ARMv6-M Architecture Reference Manual, DDI 0419E: D3.6.3 (SysTick optional), D3.7 (no cycle counter)", "https://documentation-service.arm.com/static/5f8ff05ef86e16515cdbf826"],
+    "arm-v7m": ["Arm ARMv7-M Architecture Reference Manual, DDI 0403D: B3.3 (SysTick), C1.8.3 (CYCCNT, optional, 32-bit)", "https://documentation-service.arm.com/static/5f8fedcbf86e16515cdbf30f"],
+    "trm-m33": ["Arm Cortex-M33 TRM (100230): DWT functional description (CYCCNT; set DEMCR.TRCENA first)", "https://support.arm.com/documentation/100230/0100/Data-Watchpoint-and-Trace-Unit/DWT-functional-description"],
+    "arm-a": ["Arm Architecture Reference Manual for A-profile, DDI 0487: D12.1.2 (system counter), D12.2.2 (virtual counter, ISB)", "https://support.arm.com/documentation/ddi0487/md/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D12-The-Generic-Timer-in-AArch64-state/-D12-1-About-the-Generic-Timer/-D12-1-2-The-system-counter"],
+    "arm-pmu": ["Arm Architecture Reference Manual for A-profile, DDI 0487: D13.11.3 (EL0 access to PMCCNTR)", "https://support.arm.com/documentation/ddi0487/md/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D13-The-Performance-Monitors-Extension/-D13-11-Counter-access/-D13-11-3-EL0-access-controls"],
+    "rm-mg24": ["Silicon Labs EFR32xG24 Reference Manual rev 1.1: 3.1 (Cortex-M33 r0p4), 3.2 (24-bit SysTick, DWT), 6.6.6.6 (SYSCFG_CFGSYSTIC)", "https://www.silabs.com/documents/public/reference-manuals/efr32xg24-rm.pdf"],
+    "an0004": ["Silicon Labs AN0004.2 (Series 2 CMU): 2.2 (SYSCLK from FSRCO at 20 MHz after reset)", "https://www.silabs.com/documents/public/application-notes/an0004.2-efr32-series2-cmu.pdf"],
+    "esp-idf": ["ESP-IDF v5.5.1 esp_cpu.h: esp_cpu_cycle_count_t is uint32_t", "https://github.com/espressif/esp-idf/blob/v5.5.1/components/esp_hw_support/include/esp_cpu.h"],
+    "paper-m1": ["Hetterich and Schwarz, Branch Different: Spectre Attacks on Apple Silicon, DIMVA 2022 (CNTFRQ_EL0 24 MHz on M1; user-mode PMCCNTR faults)", "https://misc0110.net/files/applespectre_dimva22.pdf"],
+    "rust-instant": ["Rust std::time::Instant: clock_gettime(CLOCK_MONOTONIC) on Unix, CLOCK_UPTIME_RAW on Darwin; criterion's WallTime uses Instant", "https://doc.rust-lang.org/std/time/struct.Instant.html"],
+    "repo-rp2040": ["rind-results main: hosts/rp2040/NOTES.md (commit 2cb88c3), baremetal/rp2040/builds/README.md; first-run SysTick fix: steelhead99x/rind-hardware rp2040/systick-wrap-fix (a9d057a)", "https://github.com/steelhead99x/rind-hardware/commit/a9d057a550a58150a3cf228e02b1532076db29e0"],
+    "repo-mg24": ["rind-results main: baremetal/mg24/README.md, baremetal/rp2040/TARGET-SURVEY.md", "https://github.com/steelhead99x/rind-results/blob/main/baremetal/mg24/README.md"],
+    "repo-nrf": ["rind-results main: results/nrf52840/RESULTS.md, tools/xtask/src/report.rs", "https://github.com/steelhead99x/rind-results/blob/main/results/nrf52840/RESULTS.md"],
+    "repo-esp": ["rind-results main: results/RESULTS.md (ESP32-S3, harness checks), tools/xtask/src/report.rs", "https://github.com/steelhead99x/rind-results/blob/main/results/RESULTS.md"],
+    "repo-pi5": ["rind-results: hosts/pi5/NOTES.md (main); hosts/pi5/ab-narrow-mul/README.md (branch results/pi5-lane-2026-11-12, the 1.5 GHz cap)", "https://github.com/steelhead99x/rind-results/blob/results/pi5-lane-2026-11-12/hosts/pi5/ab-narrow-mul/README.md"],
+    "repo-m1": ["rind-results main: hosts/m1pro/NOTES.md", "https://github.com/steelhead99x/rind-results/blob/main/hosts/m1pro/NOTES.md"],
+    "repo-pixel": ["rind-results main: hosts/pixel9pro/NOTES.md", "https://github.com/steelhead99x/rind-results/blob/main/hosts/pixel9pro/NOTES.md"],
+    "repo-xeon": ["rind-results main: hosts/xeon-vm/NOTES.md", "https://github.com/steelhead99x/rind-results/blob/main/hosts/xeon-vm/NOTES.md"],
+    "plan": ["firmware team measurement plan, 2026-11-12 (as in presentations/rind-rp2040)", ""]
+  }
+};
+</script>
 <style>
 :root{
   --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
@@ -159,78 +280,156 @@ ol.b{margin:0;padding-left:22px;font-size:15px;line-height:1.45}
 ol.b li{margin:0 0 6px}
 table.src td{font-size:14px;padding:7px 8px}
 .card.code pre,code{font-variant-ligatures:none;font-feature-settings:'liga' 0,'calt' 0}
-
-table.t.d14 th,table.t.d14 td{padding:3px 7px}
-.slide h2.s28{font-size:28px;line-height:1.12}
-.lede.s15{font-size:15px;margin-bottom:10px}
 </style>
 </head>
 <body>
 <div id="deck">
-
+<!-- 1. TITLE -->
 <section class="slide title" data-section="Title">
   <div class="bar"></div>
   <div class="inner">
-    <div class="kicker">rind · counters used on the measured boards</div>
-    <h1>What timed the published runs</h1>
-    <div class="sub">Microcontrollers report cycles. The Pi 5 and the Jetson report criterion wall time. No new SysTick bug was filed on 14 November.</div>
+    <div class="kicker">rind · benchmark timing</div>
+    <h1>SysTick and timing across the hardware we bench on</h1>
+    <div class="sub">How SysTick works, which counters each chip offers, what goes wrong when timing short operations, and what we recommend for each board.</div>
   </div>
-  <div class="meta">steelhead99x/rind-results<br>14 November 2026</div>
-  <div class="foot"><span class="src">Board notes and result files named on the next slides.</span><span class="num"></span></div>
+  <div class="meta">steelhead99x/rind-results<br><span data-k="meta.date"></span></div>
+  <div class="foot"><span class="src">Each slide's footer names its sources. Recommendations are labelled as recommendations.</span><span class="num"></span></div>
 </section>
 
-<section class="slide" data-section="Counters">
-  <div class="kicker">Counter each published set actually used</div>
-  <h2 class="s28">Five boards, five clocks. Do not compare the times across them.</h2>
-  <table class="t d14">
-    <tr><th>board</th><th>counter</th><th>clock in the notes</th></tr>
-    <tr><td>XIAO ESP32-S3</td><td>Cycle counter, checked against SYSTIMER. Reported as on-device ns in the 14 November comments.</td><td>36 boots: 240.0000 to 240.0007 MHz. 14 November runs: 240 MHz CPU, 80 MHz flash, 16 KB I-cache.</td></tr>
-    <tr><td>nRF52840 (T1000-E)</td><td>DWT_CYCCNT</td><td>64 MHz, in the poly1305-32 compare.</td></tr>
-    <tr><td>RP2040</td><td>SysTick, 24-bit, software-extended to 32 bits. No DWT.</td><td>125 MHz. Wrap 134.2 ms, extended wrap 34.4 s. No timing set is published.</td></tr>
-    <tr><td>Pi 5</td><td>criterion (wall time)</td><td>Fixed 1.5 GHz. Rated 2.4 GHz. The cap was left in place.</td></tr>
-    <tr><td>Jetson Orin Nano</td><td>criterion (wall time)</td><td>schedutil, 729.6–1728 MHz, not pinned. cpu5.</td></tr>
-  </table>
-  <div class="foot"><span class="src">results/RESULTS.md · results/nrf52840/diag/poly1305-32/README.md · hosts/rp2040/NOTES.md · hosts/pi5/ab-narrow-mul/README.md · results/jetson-orin-nano/facts.txt</span><span class="num"></span></div>
+<!-- 2. HARDWARE -->
+<section class="slide" data-section="Hardware">
+  <div class="kicker">The hardware</div>
+  <h2>rind is benched on eight targets, and they do not share one clock to time with</h2>
+  <table class="t" id="tb-hosts" style="margin-top:16px"></table>
+  <p class="small">The four microcontrollers run with no OS or a small RTOS and are timed in CPU cycles. The four application processors run a full OS and are timed in wall-clock time through criterion. "Not recorded": the host notes do not give a clock.</p>
+  <div class="foot"><span class="src">rind-results: hosts/*/NOTES.md, results/RESULTS.md, results/nrf52840/RESULTS.md, baremetal/mg24/README.md, hosts/rp2040/NOTES.md (2cb88c3); pi5 cap: branch results/pi5-lane-2026-11-12</span><span class="num"></span></div>
 </section>
 
-<section class="slide" data-section="Harness">
-  <div class="kicker">12 November · three harness findings, already published</div>
-  <h2 class="s28">Flash clock, a leftover watchdog, and code alignment.</h2>
-  <table class="t d14">
-    <tr><th>finding</th><th>measured</th></tr>
-    <tr><td>ESP32-S3 flash was 40 MHz</td><td>Same sha2.elf at 80 MHz: code streamed from flash ran in 0.520× the cycles. SHA-512, 1.54 M → 0.80 M cycles a block. The published set was rerun at 80 MHz.</td></tr>
-    <tr><td>nRF52840 watchdog</td><td>Reset 89 s into the first image, after 128 results. CRV = 2,949,120, a 90 s timeout. No published number changes.</td></tr>
-    <tr><td>ESP32-S3 layout</td><td>SHA-256 64 B is 2.36×, 2.80×, or 3.07× libcrux across three alignments of the same code. No verdict flips. The 3-run interval covers run-to-run noise only.</td></tr>
-  </table>
-  <div class="foot"><span class="src">results/diag/flash-80mhz/README.md · results/diag/nrf52840-watchdog-2026-11-12/README.md · results/diag/esp32s3-relink-fixed-98568332/README.md</span><span class="num"></span></div>
+<!-- 7. MCU COUNTERS -->
+<section class="slide" data-section="MCUs">
+  <div class="kicker">Per chip: microcontrollers</div>
+  <h2>The M0+ has only SysTick and a 1 µs timer, while the M33, M4 and Xtensa chips also have a 32-bit cycle counter</h2>
+  <table class="t" id="tb-mcu" style="margin-top:14px;font-size:13px"></table>
+  <p class="small">Resolution and wrap are computed from the width and clock in the row. RP2040 SysTick wrap matches hosts/rp2040/NOTES.md (134.2 ms). CYCCNT is optional in ARMv7-M and Armv8-M: check DWT_CTRL.NOCYCCNT reads 0.</p>
+  <div class="foot"><span class="src">RP2040 datasheet 2.4.5.1.1, 4.6.2 · ARMv6-M ARM D3.7 · ARMv7-M ARM C1.8.3 · Cortex-M33 TRM DWT · EFR32xG24 RM 3.2, 6.6.6.6 · ESP-IDF esp_cpu.h · results/RESULTS.md · results/nrf52840/RESULTS.md</span><span class="num"></span></div>
 </section>
 
-<section class="slide" data-section="14 Nov">
-  <div class="kicker">14 November · same counters · no new SysTick bug</div>
-  <h2 class="s28">Which runs used which counter.</h2>
-  <table class="t d14">
-    <tr><th>run</th><th>counter</th></tr>
-    <tr><td>XIAO #69 ef58672f, #96 966efe08, #98 4e551a93</td><td>On-device ns. 3 runs each. 80 MHz flash, 16 KB I-cache, rind-hardware 08de2829. #69 head a01b2b9e is not timed.</td></tr>
-    <tr><td>XIAO #97 cbd6043a</td><td>On-device ns. 2 runs. Compared with #96 at 28837e94.</td></tr>
-    <tr><td>Pi 5 #82</td><td>criterion, 1 s warm-up, 3 s measurement, taskset -c 3, 1.5 GHz. Dispatch 0ec13b3a. Not re-measured on ece9afa7. #79 head 54d339e7 was not re-timed.</td></tr>
-    <tr><td>Jetson</td><td>criterion, schedutil. Published rind 98568332 only. #79 and #82 are not measured on this board.</td></tr>
-    <tr><td>nRF #87</td><td>DWT cycles in the 12 November compare. Not re-measured on 6f2866d9.</td></tr>
-    <tr><td>RP2040 #84</td><td>No new counter and no new timing. Host tests only.</td></tr>
-    <tr><td>#76</td><td>ns/op on one unnamed portable host. Not a SysTick run.</td></tr>
-  </table>
-  <div class="foot"><span class="src">#96 comment 6882029555 · #98 comment 6882515749 · #97 comment 6881716592 · #69 comment 6875774312 · #82 body · #76 comment 6874901551</span><span class="num"></span></div>
+<!-- 8. APP PROCESSORS -->
+<section class="slide" data-section="Application">
+  <div class="kicker">Per chip: application processors</div>
+  <h2>The Pi 5, M1 and Pixel use the Arm generic timer instead of SysTick, and it counts wall time at a fixed rate</h2>
+  <table class="t" id="tb-app" style="margin-top:14px;font-size:13px"></table>
+  <ul class="b sm" style="margin-top:12px">
+    <li>The published Pi 5, M1 Pro, Pixel 9 Pro and Xeon VM runs used criterion, which times with Rust's <code>Instant</code>: <code>clock_gettime(CLOCK_MONOTONIC)</code> on Linux and Android, <code>CLOCK_UPTIME_RAW</code> on macOS.</li>
+    <li>SysTick is defined in the M-profile architecture manuals; A-profile cores like these use the generic timer.</li>
+    <li>Armv8.6 and later fix the generic timer at 1 GHz; earlier cores use a fixed rate, typically 1 to 50 MHz, given in CNTFRQ_EL0.</li>
+  </ul>
+  <div class="foot"><span class="src">Arm ARM DDI 0487 D12.1.2, D12.2.2, D13.11.3 · Hetterich and Schwarz, DIMVA 2022 · Rust std::time::Instant docs · criterion WallTime docs · hosts/*/NOTES.md</span><span class="num"></span></div>
+</section>
+
+<!-- 11b. TODAY'S HARNESS FIXES (added 2026-11-12 evening) -->
+<section class="slide" data-section="Harness fixes">
+  <div class="kicker">What the boards taught us on 12 November</div>
+  <h2>Three timing problems found today were in the harness, not the crypto: the flash clock, a leftover watchdog, and code layout</h2>
+  <div class="cols3" style="margin-top:16px">
+    <div class="card pit"><h3>Flash clock (ESP32-S3)</h3><ul class="b sm">
+      <li>espflash wrote 40 MHz into the image header, not the 80 MHz in <code>sdkconfig</code>.</li>
+      <li>At 80 MHz, rows that stream code from flash ran in 0.520&times; the cycles; cache-missing rows had been up to 1.92&times; slow.</li>
+      <li>Fixed: flash at 80 MHz, print the clock from the logs, reject a set with mixed clocks, rerun.</li>
+    </ul></div>
+    <div class="card pit"><h3>Leftover watchdog (nRF52840)</h3><ul class="b sm">
+      <li>Meshtastic's watchdog (<code>CRV</code> 2,949,120 = 90 s) survives a software reset and the bootloader.</li>
+      <li>The first image after Meshtastic reset 89 s into its run.</li>
+      <li>Fixed: the firmware records the watchdog at boot and feeds it between timed regions. No published number changes.</li>
+    </ul></div>
+    <div class="card pit"><h3>Code layout (ESP32-S3)</h3><ul class="b sm">
+      <li>The same code at three cache alignments: SHA-256 64B is 2.36&times;, 2.80&times; or 3.07&times; libcrux.</li>
+      <li>A 32 KB instruction cache takes XChaCha20-Poly1305 32B from 7.50&times; to 1.10&times; RustCrypto.</li>
+      <li>The 3-run interval covers run-to-run noise only, not layout. No verdict flips.</li>
+    </ul></div>
+  </div>
+  <p class="small" style="margin-top:14px">Lesson for every chip: record the clocks and the watchdog state in each run log, and treat short-input ratios on a cached-flash chip as layout-dependent.</p>
+  <div class="foot"><span class="src">rind-results main 95300f2: results/diag/flash-80mhz/README.md · results/diag/nrf52840-watchdog-2026-11-12/README.md · results/diag/esp32s3-relink-fixed-98568332/README.md · results/diag/esp32s3-icache32-80mhz-98568332/ratios.md · results/RESULTS.md</span><span class="num"></span></div>
 </section>
 
 </div>
 <div id="hud"></div>
 <script>
 (function(){
-  const $=s=>document.querySelector(s);
+  const D = DATA, $ = (s,r=document)=>r.querySelector(s)||document.createElement("div") /* a cut slide's element: writes go nowhere */, NS="http://www.w3.org/2000/svg";
+  const get = p => p.split('.').reduce((o,k)=>o&&o[k], D);
+  document.querySelectorAll('[data-k]').forEach(e=>{ e.textContent = get(e.dataset.k); });
+  function el(tag, attrs, parent, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; if(parent) parent.appendChild(e); return e; }
+  const fmtT = s => s>=1 ? (s>=100? Math.round(s)+' s' : s.toFixed(1)+' s') : (s>=1e-3 ? (s*1e3).toFixed(1)+' ms' : (s*1e6).toFixed(1)+' µs');
+  const fmtR = mhz => { const ns=1000/mhz; return ns>=1000 ? (ns/1000)+' µs' : (ns<10? ns.toFixed(2): ns.toFixed(1).replace(/\.0$/,''))+' ns'; };
+  const wrap = (bits,mhz) => Math.pow(2,bits)/(mhz*1e6);
+
+  $('#tb-hosts').innerHTML = `<tr><th>Target</th><th>Core</th><th>Clock</th><th>OS</th><th>What times the published runs</th></tr>` +
+    D.hosts.map(h=>`<tr><td><b>${h.name}</b></td><td>${h.core}</td><td>${h.clock}</td><td>${h.os}</td><td>${h.timer}</td></tr>`).join('');
+
+  // SysTick diagram
+  (function(){ const s=$('#st-diag');
+    el('defs',{},s).innerHTML='<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>';
+    const x0=78,x1=460,yTop=44,yBot=200; el('line',{x1:x0,y1:yBot,x2:x1,y2:yBot,stroke:'#5d6878'},s); el('line',{x1:x0,y1:yTop-10,x2:x0,y2:yBot,stroke:'#5d6878'},s);
+    let d=''; const per=(x1-x0)/3; for(let i=0;i<3;i++){ const a=x0+i*per; d+=`M${a},${yTop} L${a+per-6},${yBot} L${a+per},${yTop} `; }
+    el('path',{d,fill:'none',stroke:'#0f766e','stroke-width':2.5},s);
+    el('text',{x:x0-8,y:yTop+4,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,'RELOAD');
+    el('text',{x:x0-8,y:yBot+4,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,'0');
+    for(let i=1;i<=3;i++){ el('circle',{cx:x0+i*per-6,cy:yBot,r:5,fill:'#b4532a'},s); }
+    el('text',{x:x0+per-6,y:yBot+22,'font-size':12,'text-anchor':'middle',fill:'#b4532a','font-weight':700},s,'COUNTFLAG = 1');
+    el('text',{x:x0+per*0.5,y:yTop-16,'font-size':12,'text-anchor':'middle',fill:'#465467'},s,'CVR counts down, 1 per clock');
+    el('text',{x:x0+per*2.35,y:yTop-16,'font-size':12,'text-anchor':'middle',fill:'#465467'},s,'then reloads from RVR');
+    const bx=[[0,'SYST_RVR',['reload value','24 bits']],[160,'SYST_CVR',['current count','24 bits']],[320,'SYST_CSR',['ENABLE, TICKINT,','CLKSOURCE,','COUNTFLAG']]];
+    bx.forEach(([x,h,t])=>{ el('rect',{x:x,y:240,width:150,height:86,rx:8,fill:'#f5f7fa',stroke:'#dfe4ea'},s);
+      el('text',{x:x+10,y:268,'font-size':13,'font-weight':700,fill:'#0e2238','font-family':'monospace'},s,h);
+      t.forEach((w,j)=>el('text',{x:x+10,y:288+j*16,'font-size':11,fill:'#465467'},s,w)); });
+    el('line',{x1:150,y1:282,x2:158,y2:282,stroke:'#0f766e','stroke-width':2,'marker-end':'url(#ah)'},s);
+  })();
+  $('#tb-regs').innerHTML = `<tr><th style="width:22%">Register</th><th>Fields</th></tr>` + D.systick.regs.map(r=>`<tr><td><code>${r[0]}</code><br><span class="sub2">${r[1]}</span></td><td>${r[2]}</td></tr>`).join('');
+
+  // Wrap chart (log scale)
+  (function(){ const W=D.wraps, w=640, rowH=40, h=W.length*rowH+40, s=el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img','aria-label':'Bar chart of time until each counter wraps, on a log scale from 10 ms to 100 s'}), x0=230, x1=w-130;
+    const lo=Math.log10(0.01), hi=Math.log10(100), sc=v=>x0+(x1-x0)*(Math.log10(v)-lo)/(hi-lo);
+    [0.01,0.1,1,10,100].forEach(t=>{ el('line',{x1:sc(t),x2:sc(t),y1:4,y2:h-24,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-8,'font-size':11,'text-anchor':'middle',fill:'#5d6878'},s,fmtT(t)); });
+    W.forEach((r,i)=>{ const y=8+i*rowH, v=wrap(r.bits,r.mhz);
+      el('text',{x:x0-8,y:y+15,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,r.what);
+      el('text',{x:x0-8,y:y+29,'font-size':10.5,'text-anchor':'end',fill:'#5d6878'},s,`${r.bits}-bit at ${r.mhz} MHz`);
+      el('rect',{x:x0,y:y+6,width:Math.max(2,sc(v)-x0),height:20,rx:2,fill:r.bits===24?'#b4532a':'#0f766e'},s);
+      el('text',{class:'v',x:sc(v)+6,y:y+21,'font-size':11.5,fill:'#16202e','font-weight':600},s,fmtT(v)+(r.note==='computed'?' (computed)':'')); });
+    $('#ch-wrap').appendChild(s);
+  })();
+
+  // MCU table
+  $('#tb-mcu').innerHTML = `<tr><th>Chip</th><th>Counter</th><th class="n">Width</th><th class="n">Clock</th><th class="n">Resolution*</th><th class="n">Wraps after*</th><th>Read it with</th><th>Note</th></tr>` +
+    D.mcu.map(r=>`<tr${r.bits==null?' class="na"':''}><td><b>${r.chip}</b></td><td>${r.ctr}</td><td class="n">${r.bits?r.bits+' bits':'none'}</td><td class="n">${r.mhz?r.mhz+' MHz':'n/a'}</td><td class="n">${r.mhz?fmtR(r.mhz):'n/a'}</td><td class="n">${r.bits?(r.bits>=64?'not in practice':fmtT(wrap(r.bits,r.mhz))):'n/a'}</td><td>${r.read}</td><td>${r.note}</td></tr>`).join('') +
+    `<tr><td colspan="8" class="sub2">* computed from width and clock</td></tr>`;
+
+  // App table
+  $('#tb-app').innerHTML = `<tr><th>Chip</th><th>Counter</th><th>Rate</th><th>Width</th><th>Read it with</th></tr>` +
+    D.app.map(r=>`<tr><td><b>${r.chip}</b></td><td>${r.ctr}</td><td>${r.freq}</td><td>${r.width}</td><td>${r.read}</td></tr>`).join('');
+
+  // Recs
+  $('#tb-recs').innerHTML = `<tr><th style="width:14%">Chip</th><th style="width:24%">Short operations</th><th style="width:24%">Long operations</th><th>Also</th></tr>` +
+    D.recs.map(r=>`<tr><td><b>${r.chip}</b></td><td>${r.short}</td><td>${r.long}</td><td>${r.also}</td></tr>`).join('');
+
+  // Method
+  $('#method').innerHTML = D.method.map((m,i)=>`<div class="mcard"><div class="ix">${i+1}</div><div class="mk">${m[0]}</div><div class="mv">${m[1]}</div></div>`).join('');
+
+  // Open
+  $('#tb-open').innerHTML = `<tr><th style="width:30%">Value</th><th>Status</th></tr>` + D.open.map(o=>`<tr><td><b>${o[0]}</b></td><td>${o[1]}</td></tr>`).join('');
+
+  // Sources
+  const srow=([t,u])=>`<tr><td>${u?`<a href="${u}">${t}</a>`:t}</td></tr>`;
+  const S=Object.entries(D.sources);
+  $('#tb-src1').innerHTML = `<tr><th>Document and sections used</th></tr>` + S.filter(([k])=>!/^(repo-|plan)/.test(k)).map(([k,v])=>srow(v)).join('');
+  $('#tb-src2').innerHTML = `<tr><th>File and what it supports</th></tr>` + S.filter(([k])=>/^(repo-|plan)/.test(k)).map(([k,v])=>srow(v)).join('');
+
+  // Navigation
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
   slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
   let cur=0;
   function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
-  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N}`; }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
   addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
   $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
   addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });

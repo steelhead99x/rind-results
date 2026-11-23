@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 //! `cargo xtask host-run`: runs rind's own `admin/bench-report run` on this
 //! Linux host, outside Nix: rind's pinned stable toolchain through rustup
-//! (RUSTUP_TOOLCHAIN), with the dev-shell check satisfied by hand, pinned with
-//! taskset to one physical core (both its SMT threads), and the host's power
-//! settings recorded beside the JSON in `<out>.facts.txt`.
+//! (RUSTUP_TOOLCHAIN), with the dev-shell check satisfied by hand, and the
+//! host's power settings recorded beside the JSON in `<out>.facts.txt`.
+//!
+//! By default the Python process is not wrapped in `taskset`. The intended
+//! pin (`2,3`) is passed as `RIND_PINNED_CPUS` for rind's bench-report.
+//! `--cpus` is an explicit opt-in for the legacy process-wide pin (Linux only).
 //!
 //! bench-report itself is rind's Python; this only prepares its environment.
 
@@ -16,8 +19,9 @@ pub struct Args {
     rind: PathBuf,
     host: String,
     out: PathBuf,
-    #[arg(default_value = "2,3")]
-    cpus: String,
+    /// Legacy process-wide `taskset -c` pin (Linux only). Opt-in.
+    #[arg(long)]
+    cpus: Option<String>,
     /// relax rind's busy-host refusal to this share of busy CPUs (rind: 0.1);
     /// the edit is reverted afterwards and recorded in the facts file
     #[arg(long, env = "BUSY_SHARE")]
@@ -81,7 +85,17 @@ pub fn run(a: Args) -> Result<(), String> {
             sys(&format!("{c0}/energy_performance_preference"))
         ),
         format!("scaling driver: {}", sys(&format!("{c0}/scaling_driver"))),
-        format!("pinned to CPUs: {}", a.cpus),
+        format!(
+            "pinned to CPUs: {}",
+            crate::upstream_run::bench_report_spawn(
+                a.cpus.as_deref(),
+                a.cpus
+                    .as_deref()
+                    .is_none()
+                    .then_some(crate::upstream_run::DEFAULT_PINNED_CPUS),
+            )
+            .cpus_log
+        ),
         format!("load: {}", sys("/proc/loadavg")),
         format!(
             "rustc: {}",
@@ -128,12 +142,17 @@ pub fn run(a: Args) -> Result<(), String> {
     .into_iter()
     .map(str::to_string)
     .collect::<Vec<_>>();
+    let (process_pin, intended_pin) = match &a.cpus {
+        Some(c) => (Some(c.as_str()), None),
+        None => (None, Some(crate::upstream_run::DEFAULT_PINNED_CPUS)),
+    };
     crate::upstream_run::run_bench_report(
         &rind,
         &args,
         &relax,
         &[("IN_RIND_DEV_SHELL", "1"), ("RUSTUP_TOOLCHAIN", &tc)],
-        Some(&a.cpus),
+        process_pin,
+        intended_pin,
         None,
     )
 }

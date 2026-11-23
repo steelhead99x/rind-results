@@ -11,8 +11,13 @@
 //! `cargo verify --dir <tree>` checks that directory instead of the published
 //! paths: a host tree (`raw/run-*.json` plus its median JSON and RESULTS.md),
 //! a board tree (jsonl under the directory, `raw/`, or a sibling `raw-<name>/`),
-//! an `x86-host-c`-style `summary.md`, a `rind-results/ab-v1` directory, or a
-//! parent of those. With no arguments the published paths are checked, as before.
+//! an `x86-host-c`-style `summary.md`, a `rind-results/ab-v1` directory, a
+//! cycle-median tree, or a parent of those. A cycle-median tree that still
+//! has `raw/capture.log` (or `capture.log`) is recomputed from that serial
+//! capture: per-run cycles, the µs field, published digests, omitted rows,
+//! and known-answer lines. SHA-256, SHA-512, and the Uno R3 Poly1305 pattern
+//! are hashed again when `digest_verified` is set. The log is not rewritten.
+//! With no arguments the published paths are checked, as before.
 
 use regex::Regex;
 use serde_json::Value;
@@ -20,6 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod capture;
 mod tree;
 
 const NOT_RIVALS: &[&str] = &["rind", "esp32s3-hw"];
@@ -216,6 +222,14 @@ fn read(path: &Path) -> String {
         &std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display())),
     )
     .into_owned()
+}
+
+/// A start record's boot clock check in Hz (`check_cycles` over `check_us`
+/// microseconds), when the firmware recorded one.
+fn start_clock_hz(start: &Value) -> Option<f64> {
+    let cycles = start.get("check_cycles")?.as_f64()?;
+    let us = start.get("check_us")?.as_f64()?;
+    (us > 0.0).then(|| cycles * 1e6 / us)
 }
 
 struct Raw {
@@ -446,6 +460,33 @@ fn check_board_at(
                 ),
             );
         }
+    }
+    // The RP2040 firmware records its boot clock check in the start record:
+    // SysTick cycles over `check_us` of the 1 MHz TIMER.
+    let start_clocks: Vec<f64> = raw.starts.iter().filter_map(start_clock_hz).collect();
+    for rate in &start_clocks {
+        if hz_expect > 0.0 && (rate / hz_expect - 1.0).abs() > 0.001 {
+            rep.bad(
+                board,
+                format!(
+                    "cycle counter ran at {:.3} MHz against the start record's timer",
+                    rate / 1e6
+                ),
+            );
+        }
+    }
+    if !start_clocks.is_empty() {
+        let lo = start_clocks.iter().copied().fold(f64::INFINITY, f64::min);
+        let hi = start_clocks
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
+        println!(
+            "{board}: {} start-record clock checks, {:.4} to {:.4} MHz",
+            start_clocks.len(),
+            lo / 1e6,
+            hi / 1e6
+        );
     }
     if !raw.clocks.is_empty() {
         let first: Vec<String> = raw
@@ -1008,7 +1049,7 @@ fn check_summary(name: &str, json_path: &Path, summary: &Path, rep: &mut Report)
     println!("{name}: summary.md {n} rows checked, noisy={noisy}");
 }
 
-/// Maps recorded private rind-bench SHAs to public rind-hardware commits.
+/// Maps recorded SHAs from the earlier private firmware history to public rind-hardware commits.
 /// Duplicated from xtask: the two crates share no code.
 const PROVENANCE_MAP: &str = "tools/legacy-rind-bench-map.json";
 const SQUASH: &str = "8d9c1bb5e76e5ae8eb2d481535dc63ccd6a8f5f3";
@@ -1639,6 +1680,16 @@ mod provenance_tests {
                 }
             }
         })
+    }
+
+    #[test]
+    fn start_record_clock_check_is_cycles_over_timer_microseconds() {
+        let start = serde_json::json!({"type": "start", "cpu_hz": 125_000_000u64,
+                                       "check_cycles": 37_500_817u64, "check_us": 300_020u64});
+        let hz = start_clock_hz(&start).unwrap();
+        assert!((hz / 125e6 - 1.0).abs() < 1e-4, "{hz}");
+        assert!(start_clock_hz(&serde_json::json!({"cpu_hz": 240_000_000u64})).is_none());
+        assert!(start_clock_hz(&serde_json::json!({"check_cycles": 1, "check_us": 0})).is_none());
     }
 
     #[test]

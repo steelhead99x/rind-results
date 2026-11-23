@@ -1,17 +1,48 @@
-<!-- SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0 -->
-# Counters used on the measured boards
+# SysTick and timing across the hardware we bench on: slide deck
 
-`index.html` is 4 slides at 1280×720. Open it in a browser. Arrow keys or `#N`.
+`index.html` is a self-contained HTML deck (no network access, no external libraries), 5 slides at 1280×720.
+Cut on 23 November (rind-results #34) to the counter tables and the harness fixes: the SysTick textbook,
+the wrap chart, the read sketches, the recommendations and the sources slides are gone.
 
-1. Title.
-2. The counter and clock each published set used. Times are not comparable across boards.
-3. The three published harness findings: flash 40→80 MHz, the nRF watchdog, and ESP32-S3 alignment.
-4. Which 14 November run used which counter. #96 and #98 were run (3 runs). #97 was 2 runs against #96 at `28837e94`. #69 head `a01b2b9e` is not timed.
+1. Title
+2. The eight targets rind is benched on and what times each one's published runs
+3. Counters on the microcontrollers (RP2040, EFR32MG24, nRF52840, ESP32-S3)
+4. Counters on the application processors (Raspberry Pi 5, Apple M1, Pixel 9 Pro, Xeon VM)
+5. Harness fixes found on 12 November: the ESP32-S3 flash clock (40 → 80 MHz), the nRF52840 leftover watchdog, and code layout (relinks, 32 KB icache)
+
+## Opening it
+
+- Open `index.html` in any modern browser. Navigate with ← / → (also PageUp/PageDown, Space, Home/End), or click
+  the right or left half of the slide. `#N` in the URL opens slide N.
+- PDF: print from Chrome or Edge with "Save as PDF", margins "None", and background graphics on. Each slide prints as one 1280×720 page.
+
+## Updating it
+
+Every sourced value is in the `DATA` block (`<script id="deck-data">`) at the top of `index.html`: the target list,
+the SysTick register fields, counter widths and clocks, the recommendations, the open items, and the source list.
+Resolution and wrap time are not stored: the render script computes them from each row's `bits` and `mhz`, and the
+slides mark them "computed". When a value in "Not yet known" (slide 13) is read on a board, add it to the matching row
+in `DATA.app` or `DATA.mcu`, cite where it is recorded in `DATA.sources`, and remove it from `DATA.open`.
+
+The CSS and navigation script are reused from `presentations/rind-rp2040`.
+
+## What is a recommendation
+
+Slides 5 (the extension method), 9 (read sequences), 10 and 11 are recommendations, labelled as such. Everything else
+states what a source says. The methodology on slide 11 follows the measurement plan of 2026-11-12
+and the harness checks in the published ESP32-S3 and nRF52840 results, plus the RP2040 boot cross-check after the wrap-count fix.
 
 ## Sources
 
-`results/RESULTS.md`, `results/nrf52840/diag/poly1305-32/README.md`, `hosts/rp2040/NOTES.md`,
-`hosts/pi5/ab-narrow-mul/README.md`, `results/jetson-orin-nano/facts.txt`,
-`results/diag/flash-80mhz/README.md`, `results/diag/nrf52840-watchdog-2026-11-12/README.md`,
-`results/diag/esp32s3-relink-fixed-98568332/README.md`.
-14 November: comments 6882029555, 6882515749, 6881716592, 6875774312, 6874901551, and the #82 body.
+- RP2040 datasheet (build 2025-02-20): https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf
+- Arm ARMv6-M ARM DDI 0419E, ARMv7-M ARM DDI 0403D, Cortex-M33 TRM (100230), A-profile ARM DDI 0487 (D12, D13)
+- Silicon Labs EFR32xG24 Reference Manual rev 1.1 and AN0004.2. The reference manual blocked automated download, so
+  its sections (3.1, 3.2, 6.6.6.6) were read from an extracted-text copy.
+- ESP-IDF v5.5.1 `esp_cpu.h`
+- Hetterich and Schwarz, "Branch Different: Spectre Attacks on Apple Silicon", DIMVA 2022 (M1 counter frequency and PMU access)
+- Rust `std::time::Instant` and criterion `WallTime` documentation
+- steelhead99x/rind-results: `hosts/rp2040/NOTES.md` (2cb88c3), `baremetal/rp2040/builds/README.md`,
+  `baremetal/rp2040/TARGET-SURVEY.md`, `baremetal/mg24/README.md`, `results/RESULTS.md`, `results/nrf52840/RESULTS.md`,
+  `tools/xtask/src/report.rs`, `hosts/{pi5,m1pro,pixel9pro,xeon-vm}/NOTES.md` (main), and
+  `hosts/pi5/ab-narrow-mul/README.md` (branch `results/pi5-lane-2026-11-12`)
+- steelhead99x/rind-hardware `rp2040/systick-wrap-fix` (a9d057a): COUNTFLAG double-count on the first Pico run, the fix, and the 300 ms boot cross-check (37,500,815 cycles against 300,021 µs, 125.0 MHz)

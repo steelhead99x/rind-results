@@ -1,0 +1,290 @@
+From 00b2e1e7afe8633b3facc592cbdc5417aa215a67 Mon Sep 17 00:00:00 2001
+From: steelhead99x <steelhead99x@users.noreply.github.com>
+Date: Tue, 17 Nov 2026 20:02:59 -0800
+Subject: [PATCH] bench-only: drop verified-garbage rows (no Xtensa support)
+
+---
+ rind-bench/benches/hkdf.rs | 65 +++-----------------------------------
+ rind-bench/benches/hmac.rs | 36 +++------------------
+ rind-bench/benches/sha2.rs | 44 --------------------------
+ 3 files changed, 9 insertions(+), 136 deletions(-)
+
+diff --git a/rind-bench/benches/hkdf.rs b/rind-bench/benches/hkdf.rs
+index d499cc4f7..338c57ee2 100644
+--- a/rind-bench/benches/hkdf.rs
++++ b/rind-bench/benches/hkdf.rs
+@@ -34,7 +34,7 @@ impl ring::hkdf::KeyType for Len {
+ 
+ // A 32-byte key for one label, from a PRK extracted once: what a QUIC token
+ // or an e2ee track key derives from a long-lived secret.
+-fn bench<V: verified_garbage::hmac::HmacHash>(
++fn bench<V>(
+     c: &mut Criterion,
+     name: &str,
+     ring: ring::hkdf::Algorithm,
+@@ -157,7 +157,6 @@ fn bench<V: verified_garbage::hmac::HmacHash>(
+         Hash::Sha512 => rustcrypto::<hkdf::hmac::Hmac<sha2::Sha512>>(&mut group, &secret, info[0]),
+     }
+     libcrux(&mut group, hash, &secret, info[0]);
+-    vg::<V>(&mut group, ours, &secret, info[0]);
+     #[cfg(all(feature = "__bench_openssl", target_family = "unix"))]
+     openssl(&mut group, hash, &secret, info[0]);
+ }
+@@ -194,60 +193,6 @@ fn rustcrypto<H: hkdf::HmacImpl>(
+     });
+ }
+ 
+-// verified-garbage has no HKDF, so this is RFC 5869 over its HMAC, as rind's
+-// glue would run it.
+-fn vg_expand<V: verified_garbage::hmac::HmacHash>(prk: &[u8], info: &[u8], out: &mut [u8]) {
+-    let mut previous: Option<V::Output> = None;
+-    for (counter, chunk) in (1u8..).zip(out.chunks_mut(V::OUTPUT_SIZE)) {
+-        let mut ctx = verified_garbage::hmac::Hmac::<V>::new(prk);
+-        if let Some(previous) = &previous {
+-            ctx.update(previous.as_ref());
+-        }
+-        ctx.update(info);
+-        ctx.update(&[counter]);
+-        let block = ctx.finalize();
+-        chunk.copy_from_slice(&block.as_ref()[..chunk.len()]);
+-        previous = Some(block);
+-    }
+-}
+-
+-fn vg<V: verified_garbage::hmac::HmacHash>(
+-    group: &mut BenchmarkGroup<'_, WallTime>,
+-    ours: &'static rind::hkdf::Algorithm,
+-    secret: &[u8],
+-    info: &[u8],
+-) {
+-    let extract_expand = |out: &mut [u8]| {
+-        let prk = verified_garbage::hmac::Hmac::<V>::mac(b"salt", secret);
+-        vg_expand::<V>(prk.as_ref(), info, out);
+-    };
+-    let mut expected = [0u8; 32];
+-    rind::hkdf::Salt::new(ours, b"salt")
+-        .extract(secret)
+-        .unwrap()
+-        .fill(&[info], &mut expected)
+-        .unwrap();
+-    let mut out = [0u8; 32];
+-    extract_expand(&mut out);
+-    assert_eq!(out, expected);
+-
+-    group.bench_function("extract-expand/verified-garbage", |b| {
+-        b.iter(|| {
+-            let mut out = [0u8; 32];
+-            extract_expand(&mut out);
+-            black_box(out)
+-        })
+-    });
+-    let prk = verified_garbage::hmac::Hmac::<V>::mac(b"salt", secret);
+-    group.bench_function("expand/verified-garbage", |b| {
+-        b.iter(|| {
+-            let mut out = [0u8; 32];
+-            vg_expand::<V>(prk.as_ref(), info, &mut out);
+-            black_box(out)
+-        })
+-    });
+-}
+-
+ fn libcrux(group: &mut BenchmarkGroup<'_, WallTime>, hash: Hash, secret: &[u8], info: &[u8]) {
+     use libcrux_hkdf::{Algorithm, expand, extract, hkdf};
+     let (algorithm, prk_len) = match hash {
+@@ -323,7 +268,7 @@ fn openssl(group: &mut BenchmarkGroup<'_, WallTime>, hash: Hash, secret: &[u8],
+ }
+ 
+ fn hkdf(c: &mut Criterion) {
+-    bench::<verified_garbage::hashes::sha1::Sha1>(
++    bench::<()>(
+         c,
+         "hkdf-sha1",
+         ring::hkdf::HKDF_SHA1_FOR_LEGACY_USE_ONLY,
+@@ -331,7 +276,7 @@ fn hkdf(c: &mut Criterion) {
+         &rind::hkdf::legacy::HKDF_SHA1,
+         Hash::Sha1,
+     );
+-    bench::<verified_garbage::hashes::sha256::Sha256>(
++    bench::<()>(
+         c,
+         "hkdf-sha256",
+         ring::hkdf::HKDF_SHA256,
+@@ -339,7 +284,7 @@ fn hkdf(c: &mut Criterion) {
+         &rind::hkdf::HKDF_SHA256,
+         Hash::Sha256,
+     );
+-    bench::<verified_garbage::hashes::sha384::Sha384>(
++    bench::<()>(
+         c,
+         "hkdf-sha384",
+         ring::hkdf::HKDF_SHA384,
+@@ -347,7 +292,7 @@ fn hkdf(c: &mut Criterion) {
+         &rind::hkdf::HKDF_SHA384,
+         Hash::Sha384,
+     );
+-    bench::<verified_garbage::hashes::sha512::Sha512>(
++    bench::<()>(
+         c,
+         "hkdf-sha512",
+         ring::hkdf::HKDF_SHA512,
+diff --git a/rind-bench/benches/hmac.rs b/rind-bench/benches/hmac.rs
+index f86d3a917..de7d26311 100644
+--- a/rind-bench/benches/hmac.rs
++++ b/rind-bench/benches/hmac.rs
+@@ -43,7 +43,7 @@ fn openssl(md: openssl::hash::MessageDigest, key: &[u8], data: &[u8]) {
+ 
+ // Each row keys HMAC per message, as a one-off MAC does; the `reused-key`
+ // rows sign with a long-lived key, such as a STUN or SRTP session's.
+-fn bench<V: verified_garbage::hmac::HmacHash>(
++fn bench<V>(
+     c: &mut Criterion,
+     name: &str,
+     ring: ring::hmac::Algorithm,
+@@ -88,21 +88,6 @@ fn bench<V: verified_garbage::hmac::HmacHash>(
+                 b.iter(|| black_box(rind::hmac::sign(&rind::hmac::Key::new(ours, key), input)))
+             });
+         }
+-        assert_eq!(
+-            verified_garbage::hmac::Hmac::<V>::mac(key, &input).as_ref(),
+-            rind::hmac::sign(&rind::hmac::Key::new(ours, key), &input).as_ref()
+-        );
+-        group.bench_with_input(
+-            BenchmarkId::new("verified-garbage", size_name),
+-            &input,
+-            |b, input| {
+-                b.iter(|| {
+-                    let mut ctx = verified_garbage::hmac::Hmac::<V>::new(key);
+-                    ctx.update(input);
+-                    black_box(ctx.finalize())
+-                })
+-            },
+-        );
+ 
+         let ring_key = ring::hmac::Key::new(ring, key);
+         group.bench_with_input(
+@@ -124,19 +109,6 @@ fn bench<V: verified_garbage::hmac::HmacHash>(
+             &input,
+             |b, input| b.iter(|| black_box(rind::hmac::sign(&rind_key, input))),
+         );
+-        // Its keyed state, cloned per message, is the key schedule reused.
+-        let vg_key = verified_garbage::hmac::Hmac::<V>::new(key);
+-        group.bench_with_input(
+-            BenchmarkId::new("verified-garbage/reused-key", size_name),
+-            &input,
+-            |b, input| {
+-                b.iter(|| {
+-                    let mut ctx = vg_key.clone();
+-                    ctx.update(input);
+-                    black_box(ctx.finalize())
+-                })
+-            },
+-        );
+     }
+ }
+ 
+@@ -188,7 +160,7 @@ fn hmac(c: &mut Criterion) {
+         )
+     };
+ 
+-    bench::<verified_garbage::hashes::sha1::Sha1>(
++    bench::<()>(
+         c,
+         "hmac-sha1",
+         ring::hmac::HMAC_SHA1_FOR_LEGACY_USE_ONLY,
+@@ -197,7 +169,7 @@ fn hmac(c: &mut Criterion) {
+         &[0xff; 20],
+         &sha1,
+     );
+-    bench::<verified_garbage::hashes::sha256::Sha256>(
++    bench::<()>(
+         c,
+         "hmac-sha256",
+         ring::hmac::HMAC_SHA256,
+@@ -206,7 +178,7 @@ fn hmac(c: &mut Criterion) {
+         &[0xff; 32],
+         &sha256,
+     );
+-    bench::<verified_garbage::hashes::sha384::Sha384>(
++    bench::<()>(
+         c,
+         "hmac-sha384",
+         ring::hmac::HMAC_SHA384,
+diff --git a/rind-bench/benches/sha2.rs b/rind-bench/benches/sha2.rs
+index 6497adc3d..2b6a3fd59 100644
+--- a/rind-bench/benches/sha2.rs
++++ b/rind-bench/benches/sha2.rs
+@@ -79,32 +79,6 @@ fn test_rind_sha512_256(data: &[u8]) {
+     black_box(ctx.finish());
+ }
+ 
+-fn test_vg<H: verified_garbage::hashes::HashFunction>(data: &[u8]) {
+-    let mut ctx = H::new();
+-    ctx.update(data);
+-    black_box(ctx.finalize());
+-}
+-
+-// verified-garbage's row, after checking its digest matches rind's.
+-fn vg_row<H: verified_garbage::hashes::HashFunction>(
+-    group: &mut criterion::BenchmarkGroup<'_, criterion::measurement::WallTime>,
+-    ours: &'static rind::digest::Algorithm,
+-    size_name: &str,
+-    input: &[u8],
+-) {
+-    let mut ctx = H::new();
+-    ctx.update(input);
+-    assert_eq!(
+-        ctx.finalize().as_ref(),
+-        rind::digest::digest(ours, input).as_ref()
+-    );
+-    group.bench_with_input(
+-        BenchmarkId::new("verified-garbage", size_name),
+-        input,
+-        |b, input| b.iter(|| test_vg::<H>(input)),
+-    );
+-}
+-
+ fn sha256(c: &mut Criterion) {
+     let mut group = c.benchmark_group("sha256");
+     for (size, size_name) in criterion::HASH_SIZES {
+@@ -130,12 +104,6 @@ fn sha256(c: &mut Criterion) {
+                 b.iter(|| test_rind_sha256(input))
+             });
+         }
+-        vg_row::<verified_garbage::hashes::sha256::Sha256>(
+-            &mut group,
+-            &rind::digest::SHA256,
+-            size_name,
+-            &input,
+-        );
+         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+         group.bench_with_input(
+             BenchmarkId::new("graviola", size_name),
+@@ -187,12 +155,6 @@ fn sha512(c: &mut Criterion) {
+                 b.iter(|| test_rind_sha512(input))
+             });
+         }
+-        vg_row::<verified_garbage::hashes::sha512::Sha512>(
+-            &mut group,
+-            &rind::digest::SHA512,
+-            size_name,
+-            &input,
+-        );
+         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+         group.bench_with_input(
+             BenchmarkId::new("graviola", size_name),
+@@ -242,12 +204,6 @@ fn sha512_256(c: &mut Criterion) {
+         group.bench_with_input(BenchmarkId::new("rind", size_name), &input, |b, input| {
+             b.iter(|| test_rind_sha512_256(input))
+         });
+-        vg_row::<verified_garbage::hashes::sha512_256::Sha512_256>(
+-            &mut group,
+-            &rind::digest::SHA512_256,
+-            size_name,
+-            &input,
+-        );
+     }
+ }
+ 
+-- 
+2.52.0
+

@@ -3,19 +3,139 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>No SPAKE2+ timing on 14 November</title>
+<title>SPAKE2+ comes to rind: RFC 9383 and Matter PASE</title>
 <!--
-  Self-contained deck. No network, no external libraries.
-  Numbers are written on the slides. Each footer names the file or comment.
-  Arrow keys, PageUp/PageDown, Home/End, or #N.
+  Self-contained deck: no network access, no external libraries.
+  1. DATA block (id="deck-data"): the benchmark numbers, copied unchanged from the DATA block of
+     presentations/rind-aarch64-perf/index.html. Only some fields are used here.
+  2. STYLE: the rind-aarch64-perf deck's CSS plus a few additions at the end.
+  3. SLIDES: one <section class="slide"> per slide. Slide numbers and footers are generated.
+  4. RENDER + NAVIGATION script at the end (arrow keys, PageUp/PageDown, Home/End, #N in the URL).
 -->
+<script id="deck-data">
+const DATA = {
+  meta: {
+    title: "SPAKE2+ comes to rind (bench data from the rind-aarch64-perf deck)",
+    subtitle: "Raspberry Pi 5 (Cortex-A76) and Apple M1 Pro · public-key dispatch and Argon2id",
+    asOf: "2026-11-12 16:00 PST",
+    start: "2026-11-11",
+    piNote: "Pi 5 figures: the board has no fan, so its CPU is capped at 1.5 GHz to avoid thermal throttling. Both sides of every A/B ran at that clock, so ratios hold. Absolute times are 1.5 GHz figures, longer than an actively cooled 2.4 GHz Pi 5 would show."
+  },
+  /* Executive-summary cards: value, label, detail, source */
+  kpis: [
+    { v: "252.8 → 107.6 µs", l: "X25519 on Pi 5 (PR #33)", d: "narrow/wide 0.43; now 0.99× aws-lc-rs", src: "results/pr33-pi5/README.md" },
+    { v: "14 of 16", l: "Pi 5 ops at or ahead of aws-lc-rs", d: "with PR #33; P-256 verify 1.07× and P-384 verify 1.13× remain", src: "results/pr33-pi5/README.md" },
+    { v: "0.75× / 0.73×", l: "P-256 / P-384 ECDSA verify vs aws-lc-rs", d: "narrow NIST + P-384 w7 on Pi 5 (was 1.07× / 1.13× with #33)", src: "hosts/pi5/ab-narrow-mul/README.md" },
+    { v: "2.578 ms", l: "Argon2id 1 MiB, t=3 on Pi 5", d: "interleave + scalar riders: 0.611× RustCrypto (4.218 ms); 0.55× the original fill (4.728 ms)", src: "results/argon2-scalar-rider/RESULTS.md" }
+  ],
+  /* Phase 1: PR #33 on Pi 5. Median of 3 interleaved rounds. Ratios as printed in the source. */
+  pr33: [
+    // op, wide, narrow, aws, narrow/wide, narrow/aws, wide/aws
+    ["ed25519-sign", "51.48 µs", "34.55 µs", "35.42 µs", 0.67, 0.98, 1.45],
+    ["ed25519-verify", "263.02 µs", "169.74 µs", "182.37 µs", 0.65, 0.93, 1.44],
+    ["p256-ecdh", "326.62 µs", "200.03 µs", "213.54 µs", 0.61, 0.94, 1.53],
+    ["p256-ecdsa-sign", "60.72 µs", "45.10 µs", "75.91 µs", 0.74, 0.59, 0.80],
+    ["p256-ecdsa-verify", "303.22 µs", "273.88 µs", "256.66 µs", 0.90, 1.07, 1.18],
+    ["p384-ecdh", "1.116 ms", "662.02 µs", "699.32 µs", 0.59, 0.95, 1.60],
+    ["p384-ecdsa-sign", "248.36 µs", "175.02 µs", "350.03 µs", 0.70, 0.50, 0.71],
+    ["p384-ecdsa-verify", "1.021 ms", "896.78 µs", "792.49 µs", 0.88, 1.13, 1.29],
+    ["p521-ecdh", "2.386 ms", "1.448 ms", "1.472 ms", 0.61, 0.98, 1.62],
+    ["p521-ecdsa-sign", "522.08 µs", "366.32 µs", "850.01 µs", 0.70, 0.43, 0.61],
+    ["p521-ecdsa-verify", "2.116 ms", "1.382 ms", "1.741 ms", 0.65, 0.79, 1.22],
+    ["rsa2048-pkcs1-sign", "5.209 ms", "3.071 ms", "3.134 ms", 0.59, 0.98, 1.66],
+    ["rsa2048-pkcs1-verify", "151.73 µs", "85.92 µs", "90.58 µs", 0.57, 0.95, 1.68],
+    ["rsa2048-pss-sign", "5.211 ms", "3.072 ms", "3.136 ms", 0.59, 0.98, 1.66],
+    ["rsa2048-pss-verify", "153.35 µs", "87.57 µs", "92.15 µs", 0.57, 0.95, 1.66],
+    ["x25519-ecdh", "252.77 µs", "107.61 µs", "108.84 µs", 0.43, 0.99, 2.32]
+  ],
+  /* Phase 2: follow-up branches. status: win | tooling | split | fixed | pending */
+  followups: [
+    { b: "perf/pi5-narrow-nist", sha: "529a9d64", status: "win", what: "Ten P-256/P-384/P-521 field and point schedules proven by program equivalence now run on narrow cores", result: "ECDSA verify vs #33: P-256 273.8 → 192.5 µs, P-384 896.6 → 609.6 µs, P-521 1381.4 → 1324.8 µs (spreads ≤ 0.4%)" },
+    { b: "perf/pi5-rsa-bench-sizes", sha: "41f45409", status: "tooling", what: "rsa_sizes bench: RSA-2048/3072/4096 sign + verify, rind vs aws-lc-rs", result: "Bench only; produced the RSA-3072/4096 rows" },
+    { b: "perf/pi5-rsa-8n", sha: "850e9c34", status: "win", what: "s2n-bignum generic product + 8n reduction at 24/48/64 words", result: "RSA-3072 sign 0.753×, verify 0.716×; RSA-4096 verify 0.710× of #33; RSA-2048 unchanged" },
+    { b: "perf/pi5-mont-uninit", sha: "d4e79165", status: "win", what: "Karatsuba scratch left uninitialised (no memset per call)", result: "RSA-2048 sign 3069.9 → 3039.0 µs (0.990×); other rows 0.998–1.000×" },
+    { b: "perf/pi5-p384-verify-w7", sha: "41e69151", status: "win", what: "P-384 verify: generator terms from a width-7 NAF over G..63G", result: "P-384 verify 609.7 → 582.1 µs (0.955×, 0.73× aws-lc-rs); controls 1.000×" },
+    { b: "perf/pi5-p521-verify-w7", sha: "da1895d2", status: "win", what: "The same width-7 generator NAF for P-521", result: "P-521 verify 1325.0 → 1267.3 µs (0.956×, 0.73× aws-lc-rs); controls 0.999–1.000×" },
+    { b: "perf/pi5-cpu-detect", sha: "3d7dd094", status: "fixed", what: "Lazy, MIDR_EL1-first multiplier detection; unreadable cpuinfo keeps _alt", result: "Resolved: the 2.5% P-256 sign delta came from the generator table's cache-line offset. Fix 3d7dd094 (64-byte alignment) removes it: cpu-detect + fix vs #33 measured 1.002× sign, 1.001× ECDH; neutral elsewhere. Kept off the RSA/uninit stack." }
+  ],
+  nistVerify: [
+    // op, #33 µs, NIST µs, aws µs, #33/aws, NIST/aws
+    // op, #33 µs, NIST µs, aws µs, #33/aws, NIST/aws, +w7/aws (null = no w7 branch)
+    ["P-256 verify", 273.8, 192.5, 256.6, 1.07, 0.75, null],
+    ["P-384 verify", 896.6, 609.6, 791.6, 1.13, 0.77, 0.73],
+    ["P-521 verify", 1381.4, 1324.8, 1740.3, 0.79, 0.76, 0.73]
+  ],
+  rsa8n: [
+    // op, #33 µs, rsa-8n µs, aws µs, rsa8n/#33, #33/aws, rsa8n/aws
+    ["RSA-2048 sign", 3069.9, 3070.4, 3135.2, 1.000, 0.98, 0.98],
+    ["RSA-3072 sign", 17084.3, 12868.7, 13431.0, 0.753, 1.27, 0.96],
+    ["RSA-3072 verify", 307.1, 219.9, 253.3, 0.716, 1.21, 0.87],
+    ["RSA-4096 sign", 20624.8, 20487.9, 21698.5, 0.993, 0.95, 0.94],
+    ["RSA-4096 verify", 543.2, 385.5, 439.7, 0.710, 1.24, 0.88]
+  ],
+  /* Phase 3: Argon2id NEON on M1 Pro, 2026-11-11, from perf/argon2-neon commit messages (ms) */
+  argonNeon: {
+    sizes: ["1 MiB, t=3", "16 MiB, t=1", "64 MiB, t=1"],
+    series: [
+      { n: "Branch start", v: [1.106, 6.353, 32.00], c: "before" },
+      { n: "Before fuse (bd907631)", v: [1.018, 5.534, 28.43], c: "mid" },
+      { n: "Fused loads/stores, NEON", v: [0.800, 4.378, 23.99], c: "neon" },
+      { n: "SHA3 xar (4ad61ae3)", v: [0.724, 3.929, 22.46], c: "after" },
+      { n: "RustCrypto argon2", v: [1.054, 6.141, 29.82], c: "ref" }
+    ]
+  },
+  /* Phase 4: umlal BlaMka, c1/a0, median of 5 interleaved runs */
+  umlal: {
+    sizes: ["1 MiB", "16 MiB", "64 MiB"],
+    series: [
+      { n: "M1 Pro, SHA3 fill", v: [0.865, 0.866, 0.939], c: "after" },
+      { n: "M1 Pro, NEON fill", v: [0.867, 0.876, 0.871], c: "neon" },
+      { n: "Pi 5 (A76), NEON fill", v: [1.025, 1.021, 1.019], c: "bad" }
+    ],
+    m1: [["1 MiB, t=3", "720.6 µs", "623.2 µs", "0.865", "1.055 ms"], ["16 MiB, t=1", "3.888 ms", "3.367 ms", "0.866", "5.85 ms"], ["64 MiB, t=1", "21.02 ms", "19.74 ms", "0.939", "30.1 ms"]],
+    pi: [["1 MiB, t=3", "4.729 ms", "4.847 ms", "1.025", "4.201 ms"], ["16 MiB, t=1", "28.11 ms", "28.71 ms", "1.021", "26.35 ms"], ["64 MiB, t=1", "124.4 ms", "126.8 ms", "1.019", "118.2 ms"]]
+  },
+  /* Phase 5: PMU per 1 KiB block, 1 MiB / 3 passes, Pi 5, median of 8 alternations (raw/pi5-pmu-r4.tsv) */
+  pmu: [
+    // name, cycles, inst, stall_backend, stall %, IPC, L1D refill
+    ["rind a0 (before)", 2307, 2816, 1560, "68%", 1.22, 11.9],
+    ["RustCrypto 0.6", 2048, 4365, 451, "22%", 2.13, 13.6],
+    ["rind g1 (after)", 1522, 2664, 756, "50%", 1.75, 17.9]
+  ],
+  interleavePi: {
+    sizes: ["1 MiB, t=3", "16 MiB, t=1", "64 MiB, t=1"],
+    a0: [4.728, 28.116, 124.111], g1: [3.113, 19.720, 90.356], rc: [4.202, 26.357, 117.839],
+    g1a0: ["0.658", "0.701", "0.728"], g1rc: ["0.741", "0.748", "0.767"]
+  },
+  /* Phase 5c: scalar riders (h2), Pi 5 criterion set r6, 5 interleaved runs (results/argon2-scalar-rider/RESULTS.md) */
+  riderPi: {
+    sizes: ["1 MiB, t=3", "16 MiB, t=1", "64 MiB, t=1"],
+    rc: [4.218, 26.486, 119.071], g1: [3.119, 19.994, 92.168], h2: [2.578, 17.722, 84.629],
+    h2g1: ["0.827", "0.886", "0.918"], h2rc: ["0.611", "0.669", "0.711"], vsA0: ["0.55", "0.64", "0.68"]
+  },
+  riderPmu: [
+    // size, cycles/blk g1 -> h2, IPC g1 -> h2, stall_backend/blk g1 -> h2 (raw/pi5-pmu-h2.tsv)
+    ["1 MiB, t=3", "1522 → 1259", "1.75 → 2.62", "756 → 345"],
+    ["16 MiB", "1817 → 1645", "1.44 → 1.95", "1059 → 744"],
+    ["64 MiB", "1758 → 1584", "1.48 → 2.02", "1002 → 686"]
+  ],
+  interleaveM1: [
+    ["1 MiB", "sha3", "624.95 µs", "562.30 µs", "0.900"],
+    ["16 MiB", "sha3", "3.538 ms", "3.233 ms", "0.914"],
+    ["64 MiB", "sha3", "22.141 ms", "20.496 ms", "0.926"],
+    ["1 MiB", "neon", "799.14 µs", "726.69 µs", "0.909"],
+    ["16 MiB", "neon", "4.436 ms", "4.078 ms", "0.919"],
+    ["64 MiB", "neon", "26.711 ms", "23.700 ms", "0.887"]
+  ]
+};
+</script>
 <style>
 :root{
   --ink:#16202e; --ink2:#465467; --mute:#7b8797; --line:#dfe4ea; --bg:#ffffff; --panel:#f5f7fa;
   --navy:#0e2238; --accent:#0f766e; --accent2:#2b6cb0; --before:#a8b3c1; --bad:#b4532a; --ref:#6b5ca5;
   --good-bg:#e6f4f1; --bad-bg:#fbeee7; --pend-bg:#fdf6e3; --split-bg:#eef0f6;
   --sans: "Inter","Helvetica Neue",-apple-system,"Segoe UI","Noto Sans",Arial,sans-serif;
-  --mono: "JetBrains Mono","SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --mono: "JetBrains Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#1b2330;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
@@ -112,50 +232,138 @@ svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round
 .tag.skip{background:var(--split-bg);color:#4a5578}
 .timeline.t5{grid-template-columns:repeat(5,1fr)}
 .tag.fixed{background:#e8f0fa;color:var(--accent2);white-space:normal}
-
-table.t.d14 th,table.t.d14 td{padding:3px 7px}
-.slide h2.s28{font-size:28px;line-height:1.12}
-.lede.s15{font-size:15px;margin-bottom:10px}
+/* PR links (2026-11-19): one muted "PRs:" line at the top of each footer */
+.slide .foot .src .prs{display:block;margin-bottom:3px;color:var(--ink2);font-weight:600}
+.slide .foot .src .prs a{color:var(--ink2);border-bottom:1px solid #c3ccd7;font-weight:600}
+.slide .foot .src .prs a:hover{color:var(--accent2)}
+.slide.title .foot .src .prs,.slide.title .foot .src .prs a{color:#c8d3e0;border-color:#3d5573}
 </style>
 </head>
 <body>
 <div id="deck">
-
+<!-- ============ 1. TITLE ============ -->
 <section class="slide title" data-section="Title">
   <div class="bar"></div>
   <div class="inner">
-    <div class="kicker">rind · SPAKE2+</div>
-    <h1>No SPAKE2+ timing on 14 November.</h1>
-    <div class="sub">None of the 14 November pulls change the SPAKE2+ code. Pi 5 and M1 Pro timings are in the aarch64 deck. They are not SPAKE2+ measurements.</div>
+    <div class="kicker">rind · password-authenticated key exchange</div>
+    <h1>SPAKE2+ comes to rind: RFC 9383 and Matter PASE</h1>
+    <div class="sub">The protocol and rind's implementation. kixel-ai/rind#689 merged 13 Nov; four fixes split out of it merged 13 and 14 Nov. Also the aarch64 work from the same days.</div>
   </div>
-  <div class="meta">steelhead99x/rind · steelhead99x/rind-results<br>14 November 2026</div>
-  <div class="foot"><span class="src">steelhead99x/rind#64 body. SPAKE2+ is not in that diff.</span><span class="num"></span></div>
+  <div class="meta">kixel-ai/rind (formerly moq-dev/rind) · steelhead99x/rind-results<br>November 12, 2026 · merge status updated 19 November 2026 · times are PST</div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a> · <a href="https://github.com/kixel-ai/rind/pull/722">rind #722</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/kixel-ai/rind/pull/724">rind #724</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a></span>Facts with no source are left out. Merge facts come from the merged PR bodies on kixel-ai/rind.</span><span class="num"></span></div>
 </section>
 
-<section class="slide" data-section="#64">
-  <div class="kicker">steelhead99x/rind#64 · head 04d6a9d8 · Ed25519, not a handshake timing</div>
-  <h2 class="s28">914 CCTV Ed25519 verdicts. No new SPAKE2+ number.</h2>
-  <table class="t d14">
-    <tr><th>check</th><th>result</th></tr>
-    <tr><td>ed25519-verdicts.txt</td><td>aws-lc’s accept or reject for 914 CCTV Ed25519 vectors, so wasm has an oracle.</td></tr>
-    <tr><td>Wipe canaries</td><td>Return a result instead of panicking.</td></tr>
-    <tr><td>FIPS break-test</td><td>Timed out at 10.174 s. The pull request says this patch does not affect that binary.</td></tr>
-    <tr><td>Focused diagnostic</td><td>Passed in 0.120 s. It does not clear the timeout.</td></tr>
-    <tr><td>Upstream</td><td>The replacement of kixel-ai/rind#709 is not opened.</td></tr>
+<!-- ============ 7. SUITES ============ -->
+<section class="slide" data-section="rind design">
+  <div class="kicker">rind design · two suites</div>
+  <h2>rind ships two suites, RFC 9383 and Matter PASE, and the type system keeps them from being mixed</h2>
+  <table class="t" style="margin-top:18px;font-size:14.5px">
+    <tr><th style="width:20%"></th><th style="width:40%;text-transform:none"><code>Suite&lt;Rfc9383&gt;</code></th><th style="text-transform:none"><code>Suite&lt;MatterPase&gt;</code></th></tr>
+    <tr><td>Spec</td><td>RFC 9383</td><td>draft-bar-cfrg-spake2plus-01, which Matter PASE uses</td></tr>
+    <tr><td>Key schedule</td><td>Transcript hash fed to HKDF</td><td>Hash(TT) split into Ka || Ke; confirmation keys come from HKDF over Ka; 16-byte keys</td></tr>
+    <tr><td>Primitives</td><td colspan="2">P-256, SHA-256, HKDF-SHA256, HMAC-SHA256. All already in rind; no new primitive.</td></tr>
   </table>
-  <div class="foot"><span class="src">steelhead99x/rind#64 body (04d6a9d8)</span><span class="num"></span></div>
+  <div class="cols" style="margin-top:20px">
+    <div class="callout warn"><b>The draft disagrees with itself.</b> Its prose and its diagram split Hash(TT) differently. rind follows the draft's appendix B test vectors and the connectedhomeip vectors.</div>
+    <div class="callout">The suite is part of the type. Mixing the two suites in one handshake fails to compile.</div>
+  </div>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a></span>kixel-ai/rind#689 · RFC 9383 · draft-bar-cfrg-spake2plus-01 (appendix B)</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 10. MERGED ============ -->
+<section class="slide" data-section="Status">
+  <div class="kicker">Merged · 13 Nov 2026, 10:39 AM PST</div>
+  <h2>#689 is merged: <code style="font-size:.8em">just ci</code> passed with 1100 tests, and ctgrind found 0 errors</h2>
+  <div class="board" style="margin-top:16px">
+    <div class="cell"><div class="k">State</div><div class="v">Merged</div></div>
+    <div class="cell"><div class="k">Merged by</div><div class="v">Maintainer</div></div>
+    <div class="cell"><div class="k">Final diff</div><div class="v">+2,971 / −53</div></div>
+    <div class="cell"><div class="k">Files</div><div class="v">25</div></div>
+  </div>
+  <table class="t" style="font-size:16px">
+    <tr><th style="width:36%">Check, from the merged body</th><th style="width:20%">Head</th><th>Result</th></tr>
+    <tr class="hl"><td><code>just ci origin/main</code></td><td><code>c5da7311</code></td><td>pass; nextest 1100 passed, 37 skipped</td></tr>
+    <tr><td><code>admin/ctgrind unit</code> (whole unit suite)</td><td><code>3e5d3651</code></td><td>0 errors</td></tr>
+    <tr><td><code>admin/ctgrind unit spake2plus</code></td><td><code>391da462</code></td><td>13 passed, 0 errors</td></tr>
+    <tr><td><code>cargo test --release --lib</code> spake2plus / mid::p256</td><td><code>391da462</code></td><td>13 passed / 24 passed</td></tr>
+    <tr><td><code>just portable</code>, <code>just armv7</code> (qemu), <code>just qemu s390x</code></td><td></td><td>pass, big-endian included</td></tr>
+    <tr><td><code>just wasm</code></td><td></td><td>lib, zeroing and <code>spake2plus_entry</code> pass; the full recipe fails on an ML-DSA wasm gate issue that also fails on main</td></tr>
+  </table>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/689">rind #689</a></span>kixel-ai/rind#689 merged body (Validation); merge time and merger from GitHub. The 12 Nov version of this slide showed the pre-merge check board.</span><span class="num"></span></div>
+</section>
+
+<!-- ============ 11. SPLIT-OUT FIXES ============ -->
+<section class="slide" data-section="Follow-ups">
+  <div class="kicker">One contributor PR, five upstream merges</div>
+  <h2>Four fixes split out of #689, each merged on its own with authorship kept</h2>
+  <table class="t" style="margin-top:12px;font-size:15.5px">
+    <tr><th style="width:15%">PR</th><th style="width:19%">Merged (PST)</th><th>What it fixed</th></tr>
+    <tr><td>#724 docs</td><td>13 Nov, 11:26 AM</td><td>The aarch64 SHA-512 doc claimed the scalar build matched the proof. <code>admin/prove</code> builds only Linux targets, so the claim is now limited to Linux. +3 / −2</td></tr>
+    <tr><td>#722 VRF</td><td>13 Nov, 11:53 AM</td><td><code>prove</code> panicked after 256 failed candidates (about 2<sup>-256</sup>, no known input); it now returns <code>Error::Fault</code>. Docs require a dedicated VRF seed, since reusing the signing seed reveals the scalar. +122 / −18</td></tr>
+    <tr><td>#725 CI</td><td>14 Nov, 12:51 PM</td><td>cargo-mutants kept <code>..</code> in <code>#[path]</code> module names, so a campaign could select nothing and exit 0. +351 / −7</td></tr>
+    <tr class="hl"><td>#723 FIPS</td><td>14 Nov, 4:53 PM</td><td>The HMAC_DRBG self-test ran under a process-wide <code>Once</code>; after <code>fork</code> a child could wait forever. Now an <code>AtomicBool</code>. The maintainer measured about 9.6 µs per thread against about 19.6 µs to spawn one. +114 / −4</td></tr>
+  </table>
+  <p class="small">Each is a maintainer cherry-pick of a steelhead99x commit (#723, #724, #725 from fork #67). Ed25519 work went on in kixel-ai/rind#709, which closed, and landed as #797 on 18 Nov.</p>
+  <div class="foot"><span class="src"><span class="prs">PRs: <a href="https://github.com/kixel-ai/rind/pull/722">rind #722</a> · <a href="https://github.com/kixel-ai/rind/pull/723">rind #723</a> · <a href="https://github.com/kixel-ai/rind/pull/724">rind #724</a> · <a href="https://github.com/kixel-ai/rind/pull/725">rind #725</a> · <a href="https://github.com/steelhead99x/rind/pull/67">fork #67</a> · <a href="https://github.com/kixel-ai/rind/pull/797">rind #797</a></span>kixel-ai/rind#722, #723, #724, #725 merged bodies ("Split out of #689 ... keeps their authorship") · the #723 timing is the maintainer's, with no raw log in rind-results</span><span class="num"></span></div>
 </section>
 
 </div>
 <div id="hud"></div>
 <script>
 (function(){
-  const $=s=>document.querySelector(s);
+  const D = DATA, $ = (s,r=document)=>r.querySelector(s)||document.createElement("div") /* a cut slide's element: writes go nowhere */, NS="http://www.w3.org/2000/svg";
+  const C = {before:"#a8b3c1", mid:"#cbd3dc", neon:"#5aa9a0", after:"#0f766e", ref:"#6b5ca5", bad:"#b4532a", accent2:"#2b6cb0"};
+  const get = p => p.split('.').reduce((o,k)=>o&&o[k], D);
+  document.querySelectorAll('[data-k]').forEach(e=>{ e.textContent = get(e.dataset.k); });
+  const fmt = (v,d=2)=>Number(v).toFixed(d);
+  function el(tag, attrs, parent, text){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(text!=null) e.textContent=text; if(parent) parent.appendChild(e); return e; }
+  function svg(w,h){ return el('svg',{viewBox:`0 0 ${w} ${h}`,width:w,height:h,role:'img'}); }
+
+  // KPI cards
+  $('#kpis').innerHTML = D.kpis.map(k=>`<div class="kpi"><div class="v">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+
+  // Follow-up table
+  const tagTxt={win:'measured win',tooling:'bench / tooling',split:'held back',fixed:'delta fixed, kept separate',pending:'pending'};
+  $('#tb-followups').innerHTML = `<tr><th style="width:22%">Branch</th><th style="width:28%">Change</th><th>Pi 5 result</th><th style="width:12%">Status</th></tr>` +
+    D.followups.map(f=>`<tr><td><code>${f.b}</code><br><span class="mono" style="color:#7b8797">${f.sha}</span></td><td>${f.what}</td><td>${f.result}</td><td><span class="tag ${f.status}">${tagTxt[f.status]}</span></td></tr>`).join('');
+
+  // Paired bars: ratio vs aws-lc-rs
+  function pairbars(target, rows, iA, iB, {w=560,max=1.4,iC=null}={}){
+    const rowH=iC!=null?58:44, h=rows.length*rowH+30, s=svg(w,h), x0=120, x1=w-46, sc=v=>x0+(x1-x0)*v/max;
+    for(let t=0;t<=max+1e-9;t+=0.2){ el('line',{x1:sc(t),x2:sc(t),y1:4,y2:h-22,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-6,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,fmt(t,1)+'×'); }
+    rows.forEach((r,i)=>{ const y=6+i*rowH;
+      el('text',{x:x0-8,y:y+rowH/2+3,'font-size':12,'text-anchor':'end',fill:'#16202e'},s,r[0]);
+      [[r[iA],C.before,0],[r[iB],C.after,1]].concat(iC!=null&&r[iC]!=null?[[r[iC],C.accent2,2]]:[]).forEach(([v,c,k])=>{ const yy=y+4+k*17;
+        el('rect',{x:x0,y:yy,width:sc(v)-x0,height:14,rx:2,fill:c},s);
+        el('text',{class:'v',x:sc(v)+5,y:yy+11,'font-size':11,fill:'#465467','font-weight':600},s,fmt(v)+'×'); }); });
+    el('line',{x1:sc(1),x2:sc(1),y1:2,y2:h-22,stroke:'#0e2238','stroke-width':1.5,'stroke-dasharray':'4 3'},s);
+    $(target).appendChild(s);
+  }
+  pairbars('#ch-nist', D.nistVerify, 4, 5, {w:560, iC:6});
+  pairbars('#ch-rsa', D.rsa8n, 5, 6, {w:560});
+
+  // Argon2 Pi 5: grouped bars normalised to RustCrypto
+  (function(){
+    const rp=D.riderPi, ser=[['rc',C.ref],['g1',C.neon],['h2',C.after]];
+    const w=640, rowH=92, h=rp.sizes.length*rowH+30, s=svg(w,h), x0=110, x1=w-60, max=1.2, sc=v=>x0+(x1-x0)*v/max;
+    for(let t=0;t<=max+1e-9;t+=0.2){ el('line',{x1:sc(t),x2:sc(t),y1:4,y2:h-22,stroke:'#e6eaef'},s); el('text',{x:sc(t),y:h-6,'font-size':11,'text-anchor':'middle',fill:'#7b8797'},s,fmt(t,1)+'×'); }
+    rp.sizes.forEach((sz,i)=>{ const y=8+i*rowH;
+      el('text',{x:x0-8,y:y+38,'font-size':12.5,'text-anchor':'end',fill:'#16202e'},s,sz);
+      ser.forEach(([k,c],j)=>{ const v=rp[k][i]/rp.rc[i], yy=y+6+j*24;
+        el('rect',{x:x0,y:yy,width:sc(v)-x0,height:19,rx:2,fill:c},s);
+        el('text',{class:'v',x:sc(v)+6,y:yy+14,'font-size':11.5,fill:'#465467','font-weight':600},s,`${fmt(v,3)}×  (${rp[k][i]} ms)`); }); });
+    el('line',{x1:sc(1),x2:sc(1),y1:2,y2:h-22,stroke:'#0e2238','stroke-width':1.5,'stroke-dasharray':'4 3'},s);
+    $('#ch-argon').appendChild(s);
+    $('#tb-argon').innerHTML = `<tr><th>size</th><th class="n">h2 / RustCrypto</th><th class="n">less time</th></tr>` +
+      rp.sizes.map((sz,i)=>`<tr><td>${sz}</td><td class="n">${rp.h2rc[i]}×</td><td class="n"><b>${Math.round((1-rp.h2rc[i])*100)}%</b></td></tr>`).join('');
+  })();
+
+  // Navigation
   const slides=[...document.querySelectorAll('.slide')], N=slides.length;
   slides.forEach((s,i)=>{ const n=s.querySelector('.foot .num'); if(n) n.textContent=`${s.dataset.section} · ${i+1} / ${N}`; });
   let cur=0;
-  function fit(){ const k=Math.min(innerWidth/1280, (innerHeight-26)/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
-  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N}`; }
+  function fit(){ const k=Math.min(innerWidth/1280, innerHeight/720)*0.98; slides.forEach(s=>s.style.transform=`scale(${k})`); }
+  function show(i){ cur=Math.max(0,Math.min(N-1,i)); slides.forEach((s,j)=>s.classList.toggle('active',j===cur)); history.replaceState(null,'','#'+(cur+1)); $('#hud').textContent=`${cur+1} / ${N} · ← → to navigate`; }
   addEventListener('keydown',e=>{ if(['ArrowRight','PageDown',' ','ArrowDown'].includes(e.key)){e.preventDefault();show(cur+1);} else if(['ArrowLeft','PageUp','ArrowUp'].includes(e.key)){e.preventDefault();show(cur-1);} else if(e.key==='Home')show(0); else if(e.key==='End')show(N-1); });
   $('#deck').addEventListener('click',e=>{ if(e.target.closest('a')) return; show(e.clientX>innerWidth/2?cur+1:cur-1); });
   addEventListener('resize',fit); addEventListener('hashchange',()=>{ const h=parseInt(location.hash.slice(1)); if(h) show(h-1); });
