@@ -27,7 +27,7 @@ On 2026-11-23 each of #307 to #311 still had the commit above as its head.
 - Each candidate was flashed **once**, so each has **one run**. It does not meet the three-run rule. [ab.md](ab.md) shows `n` = 1 and a spread of 0 for each candidate. That 0 comes from having one run. It does not show that the candidate repeats. This directory is a diagnostic A/B. It is not a comparable-set publish of any candidate.
 - Within a flash the firmware repeats every row once per round, 22 to 29 complete rounds per flash. Those rounds are not counted as runs.
 - The six control runs agree closely. Every control row has a run spread of 0.00% except `p256_verify`, at 0.32% (RUNS.md). Each candidate flash sits between two control flashes.
-- To meet the rule, each of `zero`, `aes`, `p256`, `cp` and `all` needs **two more flashes** on this board, interleaved with `ctl` as before (for example `ctl zero ctl aes ctl p256 ctl cp ctl all ctl`, twice). That is 10 more candidate flashes and up to 12 control flashes.
+- To meet the rule, each of `zero`, `aes`, `p256`, `cp` and `all` needs **two more flashes** on this board, interleaved with `ctl` as before (for example `ctl zero ctl aes ctl p256 ctl cp ctl all ctl`, twice). That is 10 more candidate flashes and up to 12 control flashes. These were run the same evening as two more full passes, [pass 2](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-pass2-2026-11-23/NOTES.md) and [pass 3](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-pass3-2026-11-23/NOTES.md). Pass 3's `ab-all-passes.md` pools all three passes, and there every candidate has three runs.
 
 ## Board and harness
 
