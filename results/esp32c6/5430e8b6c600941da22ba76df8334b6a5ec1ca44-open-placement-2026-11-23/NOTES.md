@@ -21,7 +21,7 @@ The build note for these images, which was made without a board, says this about
 ## Run counts and the three-run rule
 
 - `t275` (the control) has **three runs**: flashes 1, 3 and 5. `esp32c6.json`, RUNS.md and RESULTS.md are those runs.
-- `t280` has **two runs**: flashes 2 and 4. That is one short of the three-run rule. [ab.md](ab.md) shows `n` = 2. Meeting the rule needs **one more `t280` flash** on this board, between two `t275` flashes (`t275 t280 t275`).
+- `t280` has **two runs**: flashes 2 and 4. That is one short of the three-run rule. [ab.md](ab.md) shows `n` = 2. Meeting the rule needs **one more `t280` flash** on this board, between two `t275` flashes (`t275 t280 t275`). That pass was run the same evening: [pass 2](../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-pass2-2026-11-23/NOTES.md). Its `ab-both-passes.md` pools both passes, giving `t275` five runs and `t280` three.
 - Every `t275` row's spread over its three runs is 0.00% except `aead_seal/51B` (0.18%) and `aead_open/243B` (0.10%). Both `t280` runs print the same median on every row.
 
 ## Result
