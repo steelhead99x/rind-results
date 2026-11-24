@@ -30,7 +30,7 @@ Every one of the 15 flashes printed the MAC of the board that ends **`3D:C8`** (
 
 - The control `ctl` has **eight runs** (flashes 1, 3, 5, 7, 9, 11, 13 and 15). `esp32s3.json`, RUNS.md and RESULTS.md are those runs. Every control row has a run spread of 0.00% except `aead_seal/1500B` (0.01%).
 - Each candidate (`zero`, `rot`, `notag`, `poly`, `all`, `xor`, `polyw`) was flashed **once**, so each has **one run**. It does not meet the three-run rule. [ab.md](ab.md) shows `n` = 1 and a spread of 0 for each, which says nothing about repeatability. This directory is a diagnostic A/B. It is not a comparable-set publish of any candidate.
-- To meet the rule, each of the seven candidates needs **two more flashes**, interleaved with `ctl`: 14 more candidate flashes.
+- To meet the rule, each of the seven candidates needs **two more flashes**, interleaved with `ctl`: 14 more candidate flashes. Two more sessions on this board followed on 2026-11-23: the [repeat](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-repeat-2026-11-23/NOTES.md) and a [third session](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-pass3-2026-11-23/NOTES.md). The third session's `ab-three-sessions.md` pools all three, and gives every candidate three runs.
 - Within a flash the firmware repeats every row once per round, 6 or 7 complete rounds in a 240 s capture. Those rounds are not counted as runs.
 
 ## Board and harness

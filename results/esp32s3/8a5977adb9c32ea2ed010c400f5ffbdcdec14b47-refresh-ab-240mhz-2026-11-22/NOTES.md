@@ -18,7 +18,7 @@ Every one of the 11 flashes printed the MAC of the board that ends **`3D:C8`**. 
 
 - The control `ctl` has **six runs** (flashes 1, 3, 5, 7, 9 and 11). `esp32s3.json`, RUNS.md and RESULTS.md are those runs. Every control row has a run spread of 0.0% except `aead_open/255B` (0.1% in RUNS.md, 0.07% in ab.md).
 - Each candidate was flashed **once**, so each has **one run**. It does not meet the three-run rule. This directory is a diagnostic A/B.
-- To meet the rule, each of `zero`, `rot`, `notag`, `poly` and `all` needs **two more flashes** at 240 MHz, interleaved with `ctl240`: 10 more candidate flashes.
+- To meet the rule, each of `zero`, `rot`, `notag`, `poly` and `all` needs **two more flashes** at 240 MHz, interleaved with `ctl240`: 10 more candidate flashes. A [second](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/NOTES.md) and a [third session](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass3-2026-11-23/NOTES.md) followed on 2026-11-23. The third session's `ab-three-sessions.md` gives every candidate three runs, and it shows the Ed25519 sign step below repeating.
 - Each 150 s capture holds 4 or 5 complete rounds. Those rounds are not counted as runs.
 
 ## Board, harness and method

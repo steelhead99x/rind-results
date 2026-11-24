@@ -5,7 +5,7 @@ Recorded 2026-11-23, 22:37 to 23:40 UTC (14:37 to 15:40 America/Los_Angeles). Th
 
 ## What this is
 
-This repeats [`8a5977ad...-refresh-ab-80mhz-2026-11-22`](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-2026-11-22/NOTES.md) about 18 hours later, on the **same board**. It is the ESP32-S3 whose MAC ends `3D:C8`, and all 15 flashes printed that MAC. It is not a second board.
+This repeats [`8a5977ad...-refresh-ab-80mhz-2026-11-22`](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-2026-11-22/NOTES.md) about 18 hours later, on the **same board**. It is the ESP32-S3 whose MAC ends `3D:C8`, and all 15 flashes printed that MAC.
 
 The repeat used the same 15 images, unchanged by sha256 (`images.sha256` is identical), the same script, and the same order: `ctl zero ctl rot ctl notag ctl poly ctl all ctl xor ctl polyw ctl`. The commits, fork PRs, harness and toolchain are as in that tree's NOTES.md:
 
@@ -22,7 +22,7 @@ The repeat used the same 15 images, unchanged by sha256 (`images.sha256` is iden
 
 - This session: `ctl` has **eight runs** (flashes 1, 3, …, 15), and each candidate has **one run**. `esp32s3.json`, RUNS.md, RESULTS.md and [ab.md](ab.md) are this session only.
 - [ab-both-days.md](ab-both-days.md) pools both sessions. It reads this tree's logs and the 2026-11-22 tree's logs in place. Pooled, `ctl` has **16 runs** and each of the seven candidates has **two runs**. `cargo verify` checks it like any ab-v1 file.
-- So no candidate meets the three-run rule, even pooled. Each of `zero`, `rot`, `notag`, `poly`, `all`, `xor` and `polyw` needs **one more flash** on this board, interleaved with `ctl`.
+- Two sessions alone are not enough for the three-run rule. A third session on the same board was run the same evening. [`…-refresh-ab-80mhz-pass3-2026-11-23/ab-three-sessions.md`](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-pass3-2026-11-23/ab-three-sessions.md) pools all three, and gives every candidate three runs.
 
 ## Same-board repeatability
 
