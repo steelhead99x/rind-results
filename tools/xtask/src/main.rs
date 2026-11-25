@@ -469,6 +469,18 @@ const RESULT_DIRS: &[&str] = &[
     "results/argon2-scalar-rider",
     "results/m1pro-8feee30e",
     "results/pr33-pi5",
+    // WS-BENCH A/B trees. `results/esp32s3` holds the comparable pin, so the
+    // walk treats its other revision directories as history; name them here.
+    "results/esp32c6",
+    "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-2026-11-22",
+    "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-repeat-2026-11-23",
+    "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-80mhz-pass3-2026-11-23",
+    "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23",
+    "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass3-2026-11-23",
+    "results/esp32s3/8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22",
+    "results/esp32s3/5430e8b6c600941da22ba76df8334b6a5ec1ca44-aead-stack-ab-2026-11-21",
+    "results/esp32s3/5430e8b6c600941da22ba76df8334b6a5ec1ca44-aead-stack-ab-2026-11-22",
+    "results/esp32s3/529ff5c0cf6bb4fdb51659699c921cca8e5a824a-sha512-placement-ab-2026-11-21",
 ];
 
 // Version the previous CI action installed (EmbarkStudios/cargo-deny-action v2.1.1).

@@ -1,0 +1,116 @@
+{
+ "host": "esp32c6",
+ "chip": "esp32c6",
+ "title": "ESP32-C6 ChaCha20-Poly1305 open-path placement check, #275 against #280, pass 2",
+ "commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "control": "t275",
+ "board": "ESP32-C6 rev v0.2, 4 MB flash, USB-Serial/JTAG; the board whose MAC ends 2C:48",
+ "cpu": {
+  "model": "Espressif ESP32-C6 (RISC-V riscv32imac), 160 MHz",
+  "arch": "riscv32",
+  "logical_cpus": 1
+ },
+ "clock_hz": 160000000,
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.98.1 (nixpkgs), riscv32imac-unknown-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the C6 (private harness, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-24T01:49:25Z",
+ "finished": "2026-11-24T02:02:12Z",
+ "note": "Control of an interleaved A/B on one ESP32-C6. Each run is one flash of the control image; the run's value is the median over that boot's complete rounds. Every flash of every image is in ab.json.",
+ "variants": {
+  "t275": {
+   "rind_commit": "89da51f759dd837216712705676302aa98c42625",
+   "image": "c6-t275.bin",
+   "what": "fork #275 head at the time of the build (26-bit Poly1305 and word-XOR ChaCha20 on 32-bit targets), the earlier C6 tag run's control",
+   "image_sha256": "7daad1ccd6dfb507aeef5fad7a68a7a4302c8ab9d1acb1124657cb7152fb8349",
+   "elf_sha256": "be57f6c416f14c641b8cbc40ae35a2fca40667c3119faf8dd17414b2a80836c0",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/275"
+  },
+  "t280": {
+   "rind_commit": "5af26036fd81bfc8b6af585fab8560acd2aee770",
+   "image": "c6-t280.bin",
+   "what": "fork #280 at 5af26036 (after 9e5f0d21, which keeps the 16-bit tag add on Xtensa only): the same instructions as t275 on riscv32, at different addresses",
+   "image_sha256": "eaf44c562989c9b065984fb0bcdaf424da765102ff95866cef5431405c568bec",
+   "elf_sha256": "ed061e2bc356a974a2589e3427071c4057032ddbb6287229d33246aec8dd2075",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/280"
+  }
+ },
+ "ab_order": [
+  "t275",
+  "t280"
+ ],
+ "flashes": [
+  {
+   "n": 1,
+   "variant": "t275",
+   "log": "raw/b-1-t275.log"
+  },
+  {
+   "n": 2,
+   "variant": "t280",
+   "log": "raw/b-2-t280.log"
+  },
+  {
+   "n": 3,
+   "variant": "t275",
+   "log": "raw/b-3-t275.log"
+  }
+ ],
+ "results_intro": [
+  "Second pass of the ESP32-C6 open-path placement check on the same board (MAC ending 2C:48), 2026-11-23, same images as [pass 1](../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23/NOTES.md). The tables below are this pass's control image (`t275`); [ab.md](ab.md) has this pass's images, [ab-both-passes.md](ab-both-passes.md) both passes pooled, [RUNS.md](RUNS.md) every control run, [NOTES.md](NOTES.md) the method."
+ ],
+ "results_ab": [
+  "[ab.md](ab.md) is this session; [ab-both-passes.md](ab-both-passes.md) pools all 2 sessions, in which every candidate has 2 runs. See [NOTES.md](NOTES.md)."
+ ],
+ "fork_commit": "89da51f759dd837216712705676302aa98c42625",
+ "pooled": {
+  "stem": "ab-both-passes",
+  "title": "ESP32-C6 open-path placement check, both passes on the board ending 2C:48",
+  "flashes": [
+   {
+    "n": "s1-1",
+    "variant": "t275",
+    "log": "../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23/raw/b-1-t275.log"
+   },
+   {
+    "n": "s1-2",
+    "variant": "t280",
+    "log": "../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23/raw/b-2-t280.log"
+   },
+   {
+    "n": "s1-3",
+    "variant": "t275",
+    "log": "../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23/raw/b-3-t275.log"
+   },
+   {
+    "n": "s1-4",
+    "variant": "t280",
+    "log": "../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23/raw/b-4-t280.log"
+   },
+   {
+    "n": "s1-5",
+    "variant": "t275",
+    "log": "../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23/raw/b-5-t275.log"
+   },
+   {
+    "n": "s2-1",
+    "variant": "t275",
+    "log": "raw/b-1-t275.log"
+   },
+   {
+    "n": "s2-2",
+    "variant": "t280",
+    "log": "raw/b-2-t280.log"
+   },
+   {
+    "n": "s2-3",
+    "variant": "t275",
+    "log": "raw/b-3-t275.log"
+   }
+  ],
+  "note": "All sessions pooled: same board, same images (by sha256), same order. `s1-N` is flash N of [5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23](../5430e8b6c600941da22ba76df8334b6a5ec1ca44-open-placement-2026-11-23/NOTES.md), and `s2-N` flash N of this tree. A flash is still one run."
+ }
+}

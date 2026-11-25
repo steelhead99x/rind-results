@@ -1,0 +1,509 @@
+{
+ "schema": 1,
+ "host": "esp32s3",
+ "commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "upstream_commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "fork_commit": "05498de75934e3e44778b18d0485188383f76c95",
+ "started": "2026-11-22T04:54:47Z",
+ "finished": "2026-11-22T05:07:29Z",
+ "cpu": {
+  "model": "Espressif ESP32-S3 (Xtensa LX7), 80 MHz",
+  "arch": "xtensa",
+  "logical_cpus": 1
+ },
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0), xtensa-esp32s3-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "status": "ok",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 37:68",
+ "clock_hz": 80000000,
+ "harness": "WS-BENCH firmware for the S3 (private copy of the student repo's firmware-s3, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "runs": 5,
+ "spread_is": "runs",
+ "metric_units": "ns",
+ "note": "Control of an interleaved A/B on one ESP32-S3. Each run is one flash of the control image; the run's value is the median over that boot's complete rounds. Every flash of every image is in ab.json.",
+ "results": [
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/16B",
+   "ns": 99375,
+   "ns_low": 99375,
+   "ns_high": 99375,
+   "runs_ns": [
+    99375,
+    99375,
+    99375,
+    99375,
+    99375
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/16B",
+   "ns": 113500,
+   "ns_low": 113500,
+   "ns_high": 113500,
+   "runs_ns": [
+    113500,
+    113500,
+    113500,
+    113500,
+    113500
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/51B",
+   "ns": 127125,
+   "ns_low": 127125,
+   "ns_high": 127125,
+   "runs_ns": [
+    127125,
+    127125,
+    127125,
+    127125,
+    127125
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/51B",
+   "ns": 141750,
+   "ns_low": 141750,
+   "ns_high": 141750,
+   "runs_ns": [
+    141750,
+    141750,
+    141750,
+    141750,
+    141750
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/243B",
+   "ns": 355750,
+   "ns_low": 355750,
+   "ns_high": 355750,
+   "runs_ns": [
+    355750,
+    355750,
+    355750,
+    355750,
+    355750
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/243B",
+   "ns": 372375,
+   "ns_low": 372375,
+   "ns_high": 372375,
+   "runs_ns": [
+    372375,
+    372375,
+    372375,
+    372375,
+    372375
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/255B",
+   "ns": 357375,
+   "ns_low": 357375,
+   "ns_high": 357375,
+   "runs_ns": [
+    357375,
+    357375,
+    357375,
+    357375,
+    357375
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/255B",
+   "ns": 374250,
+   "ns_low": 374250,
+   "ns_high": 374250,
+   "runs_ns": [
+    374250,
+    374250,
+    374250,
+    374250,
+    374250
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/1500B",
+   "ns": 1857625,
+   "ns_low": 1857625,
+   "ns_high": 1857625,
+   "runs_ns": [
+    1857625,
+    1857625,
+    1857625,
+    1857625,
+    1857625
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/1500B",
+   "ns": 1886125,
+   "ns_low": 1886000,
+   "ns_high": 1886125,
+   "runs_ns": [
+    1886000,
+    1886125,
+    1886125,
+    1886125,
+    1886000
+   ],
+   "run_spread_pct": 0.006627344423089668,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "ed25519_sign/rustcrypto/32B",
+   "ns": 148686000.0,
+   "ns_low": 148686000.0,
+   "ns_high": 148686500.0,
+   "runs_ns": [
+    148686000.0,
+    148686000.0,
+    148686000.0,
+    148686500.0,
+    148686000.0
+   ],
+   "run_spread_pct": 0.0003362791385873586,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "ed25519_verify/rustcrypto/32B",
+   "ns": 76923500.0,
+   "ns_low": 76923000.0,
+   "ns_high": 76924000.0,
+   "runs_ns": [
+    76923500.0,
+    76924000.0,
+    76924000.0,
+    76923000.0,
+    76923000.0
+   ],
+   "run_spread_pct": 0.0012999928500393248,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "id": "aead_seal/rind/16B",
+   "ns": 200625.0,
+   "ns_low": 200625.0,
+   "ns_high": 200625.0,
+   "runs_ns": [
+    200625.0,
+    200625.0,
+    200625.0,
+    200625.0,
+    200625.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "id": "aead_open/rind/16B",
+   "ns": 210750.0,
+   "ns_low": 210750.0,
+   "ns_high": 210750.0,
+   "runs_ns": [
+    210750.0,
+    210750.0,
+    210750.0,
+    210750.0,
+    210750.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "id": "aead_seal/rind/51B",
+   "ns": 232000.0,
+   "ns_low": 232000.0,
+   "ns_high": 232000.0,
+   "runs_ns": [
+    232000.0,
+    232000.0,
+    232000.0,
+    232000.0,
+    232000.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "id": "aead_open/rind/51B",
+   "ns": 242125.0,
+   "ns_low": 242125.0,
+   "ns_high": 242125.0,
+   "runs_ns": [
+    242125.0,
+    242125.0,
+    242125.0,
+    242125.0,
+    242125.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "id": "aead_seal/rind/243B",
+   "ns": 384000.0,
+   "ns_low": 384000.0,
+   "ns_high": 384000.0,
+   "runs_ns": [
+    384000.0,
+    384000.0,
+    384000.0,
+    384000.0,
+    384000.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "id": "aead_open/rind/243B",
+   "ns": 395750.0,
+   "ns_low": 395750.0,
+   "ns_high": 395750.0,
+   "runs_ns": [
+    395750.0,
+    395750.0,
+    395750.0,
+    395750.0,
+    395750.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "id": "aead_seal/rind/255B",
+   "ns": 387375.0,
+   "ns_low": 387375.0,
+   "ns_high": 387375.0,
+   "runs_ns": [
+    387375.0,
+    387375.0,
+    387375.0,
+    387375.0,
+    387375.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "id": "aead_open/rind/255B",
+   "ns": 399375.0,
+   "ns_low": 399375.0,
+   "ns_high": 399375.0,
+   "runs_ns": [
+    399375.0,
+    399375.0,
+    399375.0,
+    399375.0,
+    399375.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "id": "aead_seal/rind/1500B",
+   "ns": 1379250.0,
+   "ns_low": 1379250.0,
+   "ns_high": 1379250.0,
+   "runs_ns": [
+    1379250.0,
+    1379250.0,
+    1379250.0,
+    1379250.0,
+    1379250.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "id": "aead_open/rind/1500B",
+   "ns": 1400875.0,
+   "ns_low": 1400875.0,
+   "ns_high": 1400875.0,
+   "runs_ns": [
+    1400875.0,
+    1400875.0,
+    1400875.0,
+    1400875.0,
+    1400875.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "id": "ed25519_sign/rind/32B",
+   "ns": 45271000.0,
+   "ns_low": 45270500.0,
+   "ns_high": 45271000.0,
+   "runs_ns": [
+    45271000.0,
+    45270500.0,
+    45270500.0,
+    45271000.0,
+    45271000.0
+   ],
+   "run_spread_pct": 0.0011044598087075611,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "id": "ed25519_verify/rind/32B",
+   "ns": 67306000.0,
+   "ns_low": 67305000.0,
+   "ns_high": 67306000.0,
+   "runs_ns": [
+    67306000.0,
+    67306000.0,
+    67306000.0,
+    67306000.0,
+    67305000.0
+   ],
+   "run_spread_pct": 0.0014857516417555643,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  }
+ ]
+}

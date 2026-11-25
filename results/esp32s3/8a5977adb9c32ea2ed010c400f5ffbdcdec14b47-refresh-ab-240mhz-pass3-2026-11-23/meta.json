@@ -1,0 +1,108 @@
+{
+ "schema": 1,
+ "host": "esp32s3",
+ "commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "upstream_commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 3D:C8",
+ "chip": "esp32s3",
+ "clock_hz": 240000000,
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0), xtensa-esp32s3-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the S3 (private copy of the student repo's firmware-s3, not published here): ChaCha20-Poly1305 seal/open, Ed25519 and SHA-512 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-24T01:16:07Z",
+ "finished": "2026-11-24T01:45:16Z",
+ "control": "ctl",
+ "runs": 6,
+ "flashes": 11,
+ "images": {
+  "ctl": {
+   "rind_commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+   "image": "s3-ctl240.bin",
+   "what": "kixel-ai/rind main 8a5977ad as it is (HACL* Poly1305 in u64 limbs, HACL* ChaCha20; rolled SHA-512 is upstream's default here, #944)",
+   "image_sha256": "db9d73b33d7f6f9880715575f4e8d0d314eb8403cba09ea12a57570c24a55db5",
+   "elf_sha256": "e7d75af083b8406c1492924a12d278f2a147a0ccf89c5ea24a305daf425bf0e1",
+   "flashes": [
+    1,
+    3,
+    5,
+    7,
+    9,
+    11
+   ],
+   "kats_pass": 210,
+   "kats_fail": 0
+  },
+  "zero": {
+   "rind_commit": "1efdd366ada969b4b1269dccf2e693004146b2ef",
+   "image": "s3-zero240.bin",
+   "what": "+ key wipe as one memset on Xtensa",
+   "image_sha256": "558a427572a5e026a475496ac95c3ba51838f330eecbd5ac38634cd902c28873",
+   "elf_sha256": "2eef96f9976e0aa30de5939a8298cb4c3fe8d78e0ad095d804a6cac228ee50b8",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/294",
+   "flashes": [
+    2
+   ],
+   "kats_pass": 37,
+   "kats_fail": 0
+  },
+  "rot": {
+   "rind_commit": "8218d57cf8100e37bffba79b6d5406d3f9b61ba0",
+   "image": "s3-rot240.bin",
+   "what": "+ ChaCha20 rotates as ssai/src (rounds4), with the word XOR (#295 head)",
+   "image_sha256": "6e73fb5735b04e8905cfe011f0ba5fb94ed969557bd2082466d07d2614e841fa",
+   "elf_sha256": "84a7fb3ac72fc20bafaff9875204692771a763d9884f9dac94b6aacef6017e26",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/295",
+   "flashes": [
+    4
+   ],
+   "kats_pass": 37,
+   "kats_fail": 0
+  },
+  "notag": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-notag240.bin",
+   "what": "#296 at d3f3374f with a bench-only local patch that keeps the u64 tag add (branchless block loop only); not on any branch",
+   "image_sha256": "0973a23a6aa0ff649006549b578034470c6e73a80fa7946059168dde9216a294",
+   "elf_sha256": "aaf88748bb50c49ca2d1afd4f05b3a4206fdf61a1c1ee2dd92ef4f3ae0fdf6e6",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296",
+   "flashes": [
+    6
+   ],
+   "kats_pass": 37,
+   "kats_fail": 0
+  },
+  "poly": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-poly240.bin",
+   "what": "+ branchless Poly1305 block loop and 16-bit-halves tag add (#296 at d3f3374f)",
+   "image_sha256": "db99bb9c704d2155c6a82919348f9217ba3f22f11ab8ea7dd424fd5fc0efe4fb",
+   "elf_sha256": "c22b39fd31dc67194cf524bebb562174daf56f903ec78d907068833c276cb0d2",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296",
+   "flashes": [
+    8
+   ],
+   "kats_pass": 37,
+   "kats_fail": 0
+  },
+  "all": {
+   "rind_commit": "24920d52cd59f5ed88ea46ae468361af61aa3474",
+   "image": "s3-all240.bin",
+   "what": "zero + rot + poly merged (#297 at 24920d52)",
+   "image_sha256": "b738e8bfb9e551f12b2598501fc78ae1703cb0bd8a47b8aea02ccc0d8100cd73",
+   "elf_sha256": "7a9e33fb6a591720f227694b102fc9451b0b0ab9b6194a2c3790fb95b69cd176",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/297",
+   "flashes": [
+    10
+   ],
+   "kats_pass": 38,
+   "kats_fail": 0
+  }
+ },
+ "kats": {
+  "checks": 396,
+  "failures": 0,
+  "boots": 11
+ }
+}

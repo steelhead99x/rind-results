@@ -1,0 +1,77 @@
+{
+ "host": "esp32c6",
+ "chip": "esp32c6",
+ "title": "ESP32-C6 ChaCha20-Poly1305 tag A/B, #275 against #280 at 1d8901b8",
+ "commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "control": "ctl",
+ "board": "ESP32-C6 rev v0.2, 4 MB flash, USB-Serial/JTAG; the board whose MAC ends 2C:48",
+ "cpu": {
+  "model": "Espressif ESP32-C6 (RISC-V riscv32imac), 160 MHz",
+  "arch": "riscv32",
+  "logical_cpus": 1
+ },
+ "clock_hz": 160000000,
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.98.1 (nixpkgs), riscv32imac-unknown-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the C6 (private harness, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-22T09:26:54Z",
+ "finished": "2026-11-22T09:34:18Z",
+ "note": "Control of an interleaved A/B on one ESP32-C6. Each run is one flash of the control image; the run's value is the median over that boot's complete rounds. Every flash of every image is in ab.json.",
+ "variants": {
+  "ctl": {
+   "rind_commit": "89da51f759dd837216712705676302aa98c42625",
+   "image": "c6-ctl-89da51f75.elf",
+   "what": "fork #275 head at the time (26-bit Poly1305 and word-XOR ChaCha20 on 32-bit targets)",
+   "image_sha256": "18ecfa570f1a980b7e880c336862203f251715d4cca835a5c96ac09d407e3474",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/275"
+  },
+  "all": {
+   "rind_commit": "1d8901b8f23d5c769dc32629c4b4f044b1e80f7e",
+   "image": "c6-all-1d8901b8f.elf",
+   "what": "fork #280 at 1d8901b8 (branchless Poly1305 block loop and 16-bit tag add, merged with the Xtensa ChaCha20 rotates branch); in the riscv32 image only Poly1305::finish differs from the control",
+   "image_sha256": "675a2f9f0c483df5eda905795d9835e9db9273796d78cfeb03dc902e57f9e618",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/280"
+  }
+ },
+ "ab_order": [
+  "ctl",
+  "all"
+ ],
+ "flashes": [
+  {
+   "n": 1,
+   "variant": "ctl",
+   "log": "raw/b-1-ctl.log"
+  },
+  {
+   "n": 2,
+   "variant": "all",
+   "log": "raw/b-2-all.log"
+  },
+  {
+   "n": 3,
+   "variant": "ctl",
+   "log": "raw/b-3-ctl.log"
+  },
+  {
+   "n": 4,
+   "variant": "all",
+   "log": "raw/b-4-all.log"
+  },
+  {
+   "n": 5,
+   "variant": "ctl",
+   "log": "raw/b-5-ctl.log"
+  }
+ ],
+ "results_intro": [
+  "Five interleaved flashes of fork #275's head `89da51f7` and #280 at `1d8901b8` on one ESP32-C6, 2026-11-22. The tables below are the control image. [ab.md](ab.md) has every image against the control, [RUNS.md](RUNS.md) every control run, and [NOTES.md](NOTES.md) the method, the run counts and what each image is."
+ ],
+ "results_ab": [
+  "[ab.md](ab.md) has every image against the control, flash by flash. Images flashed fewer than three times do not meet the three-run rule; [NOTES.md](NOTES.md) says which."
+ ],
+ "fork_commit": "89da51f759dd837216712705676302aa98c42625"
+}

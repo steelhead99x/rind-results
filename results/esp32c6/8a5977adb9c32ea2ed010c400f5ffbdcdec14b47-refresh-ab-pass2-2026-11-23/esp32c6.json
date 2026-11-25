@@ -1,0 +1,700 @@
+{
+ "schema": 1,
+ "host": "esp32c6",
+ "commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "upstream_commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "started": "2026-11-23T23:44:37Z",
+ "finished": "2026-11-24T00:31:48Z",
+ "cpu": {
+  "model": "Espressif ESP32-C6 (RISC-V riscv32imac), 160 MHz",
+  "arch": "riscv32",
+  "logical_cpus": 1
+ },
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.98.1 (nixpkgs), riscv32imac-unknown-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "status": "ok",
+ "board": "ESP32-C6 rev v0.2, 4 MB flash, USB-Serial/JTAG; the board whose MAC ends 2C:48",
+ "clock_hz": 160000000,
+ "harness": "WS-BENCH firmware for the C6 (private harness, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek, plus rind-only AES-128-GCM seal/open and P-256 sign/verify. Rows are medians of 32 calls (8 for Ed25519 and P-256).",
+ "runs": 6,
+ "spread_is": "runs",
+ "metric_units": "ns",
+ "note": "Control of an interleaved A/B on one ESP32-C6. Each run is one flash of c6-ctl.bin; the run's value is the median over that boot's complete rounds. Variants are in ab.json.",
+ "results": [
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/16B",
+   "ns": 43250.0,
+   "ns_low": 43250,
+   "ns_high": 43250,
+   "runs_ns": [
+    43250,
+    43250,
+    43250,
+    43250,
+    43250,
+    43250
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/16B",
+   "ns": 48500.0,
+   "ns_low": 48500,
+   "ns_high": 48500,
+   "runs_ns": [
+    48500,
+    48500,
+    48500,
+    48500,
+    48500,
+    48500
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/51B",
+   "ns": 53250.0,
+   "ns_low": 53250,
+   "ns_high": 53250,
+   "runs_ns": [
+    53250,
+    53250,
+    53250,
+    53250,
+    53250,
+    53250
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/51B",
+   "ns": 58750.0,
+   "ns_low": 58750,
+   "ns_high": 58750,
+   "runs_ns": [
+    58750,
+    58750,
+    58750,
+    58750,
+    58750,
+    58750
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/243B",
+   "ns": 135500.0,
+   "ns_low": 135500,
+   "ns_high": 135500,
+   "runs_ns": [
+    135500,
+    135500,
+    135500,
+    135500,
+    135500,
+    135500
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/243B",
+   "ns": 141750.0,
+   "ns_low": 141750,
+   "ns_high": 141750,
+   "runs_ns": [
+    141750,
+    141750,
+    141750,
+    141750,
+    141750,
+    141750
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/255B",
+   "ns": 136125.0,
+   "ns_low": 136125,
+   "ns_high": 136125,
+   "runs_ns": [
+    136125,
+    136125,
+    136125,
+    136125,
+    136125,
+    136125
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/255B",
+   "ns": 142250.0,
+   "ns_low": 142250,
+   "ns_high": 142250,
+   "runs_ns": [
+    142250,
+    142250,
+    142250,
+    142250,
+    142250,
+    142250
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rustcrypto",
+   "id": "aead_seal/rustcrypto/1500B",
+   "ns": 674250.0,
+   "ns_low": 674250,
+   "ns_high": 674250,
+   "runs_ns": [
+    674250,
+    674250,
+    674250,
+    674250,
+    674250,
+    674250
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rustcrypto",
+   "id": "aead_open/rustcrypto/1500B",
+   "ns": 685125.0,
+   "ns_low": 685125,
+   "ns_high": 685125,
+   "runs_ns": [
+    685125,
+    685125,
+    685125,
+    685125,
+    685125,
+    685125
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "ed25519_sign/rustcrypto/32B",
+   "ns": 68560000.0,
+   "ns_low": 68560000,
+   "ns_high": 68560000,
+   "runs_ns": [
+    68560000,
+    68560000,
+    68560000,
+    68560000,
+    68560000,
+    68560000
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rustcrypto",
+   "id": "ed25519_verify/rustcrypto/32B",
+   "ns": 32211000.0,
+   "ns_low": 32211000,
+   "ns_high": 32211000,
+   "runs_ns": [
+    32211000,
+    32211000,
+    32211000,
+    32211000,
+    32211000,
+    32211000
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/16B",
+   "library": "rind",
+   "id": "aead_seal/rind/16B",
+   "ns": 81250.0,
+   "ns_low": 81250,
+   "ns_high": 81250,
+   "runs_ns": [
+    81250,
+    81250,
+    81250,
+    81250,
+    81250,
+    81250
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/16B",
+   "library": "rind",
+   "id": "aead_open/rind/16B",
+   "ns": 82500.0,
+   "ns_low": 82500,
+   "ns_high": 82500,
+   "runs_ns": [
+    82500,
+    82500,
+    82500,
+    82500,
+    82500,
+    82500
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/51B",
+   "library": "rind",
+   "id": "aead_seal/rind/51B",
+   "ns": 96875.0,
+   "ns_low": 96875,
+   "ns_high": 96875,
+   "runs_ns": [
+    96875,
+    96875,
+    96875,
+    96875,
+    96875,
+    96875
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/51B",
+   "library": "rind",
+   "id": "aead_open/rind/51B",
+   "ns": 98750.0,
+   "ns_low": 98750,
+   "ns_high": 98750,
+   "runs_ns": [
+    98750,
+    98750,
+    98750,
+    98750,
+    98750,
+    98750
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 51
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/243B",
+   "library": "rind",
+   "id": "aead_seal/rind/243B",
+   "ns": 191375.0,
+   "ns_low": 191375,
+   "ns_high": 191375,
+   "runs_ns": [
+    191375,
+    191375,
+    191375,
+    191375,
+    191375,
+    191375
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/243B",
+   "library": "rind",
+   "id": "aead_open/rind/243B",
+   "ns": 194000.0,
+   "ns_low": 194000,
+   "ns_high": 194000,
+   "runs_ns": [
+    194000,
+    194000,
+    194000,
+    194000,
+    194000,
+    194000
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/255B",
+   "library": "rind",
+   "id": "aead_seal/rind/255B",
+   "ns": 191750.0,
+   "ns_low": 191750,
+   "ns_high": 191750,
+   "runs_ns": [
+    191750,
+    191750,
+    191750,
+    191750,
+    191750,
+    191750
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/255B",
+   "library": "rind",
+   "id": "aead_open/rind/255B",
+   "ns": 194500.0,
+   "ns_low": 194500,
+   "ns_high": 194500,
+   "runs_ns": [
+    194500,
+    194500,
+    194500,
+    194500,
+    194500,
+    194500
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 255
+   }
+  },
+  {
+   "operation": "aead_seal/{lib}/1500B",
+   "library": "rind",
+   "id": "aead_seal/rind/1500B",
+   "ns": 810500.0,
+   "ns_low": 810500,
+   "ns_high": 810500,
+   "runs_ns": [
+    810500,
+    810500,
+    810500,
+    810500,
+    810500,
+    810500
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "aead_open/{lib}/1500B",
+   "library": "rind",
+   "id": "aead_open/rind/1500B",
+   "ns": 818000.0,
+   "ns_low": 818000,
+   "ns_high": 818000,
+   "runs_ns": [
+    818000,
+    818000,
+    818000,
+    818000,
+    818000,
+    818000
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "ed25519_sign/{lib}/32B",
+   "library": "rind",
+   "id": "ed25519_sign/rind/32B",
+   "ns": 30879000.0,
+   "ns_low": 30879000,
+   "ns_high": 30879000,
+   "runs_ns": [
+    30879000,
+    30879000,
+    30879000,
+    30879000,
+    30879000,
+    30879000
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "ed25519_verify/{lib}/32B",
+   "library": "rind",
+   "id": "ed25519_verify/rind/32B",
+   "ns": 27098000.0,
+   "ns_low": 27098000,
+   "ns_high": 27098000,
+   "runs_ns": [
+    27098000,
+    27098000,
+    27098000,
+    27098000,
+    27098000,
+    27098000
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "aes128gcm_seal/{lib}/16B",
+   "library": "rind",
+   "id": "aes128gcm_seal/rind/16B",
+   "ns": 101625.0,
+   "ns_low": 101625,
+   "ns_high": 101625,
+   "runs_ns": [
+    101625,
+    101625,
+    101625,
+    101625,
+    101625,
+    101625
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aes128gcm_open/{lib}/16B",
+   "library": "rind",
+   "id": "aes128gcm_open/rind/16B",
+   "ns": 105875.0,
+   "ns_low": 105875,
+   "ns_high": 105875,
+   "runs_ns": [
+    105875,
+    105875,
+    105875,
+    105875,
+    105875,
+    105875
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 16
+   }
+  },
+  {
+   "operation": "aes128gcm_seal/{lib}/243B",
+   "library": "rind",
+   "id": "aes128gcm_seal/rind/243B",
+   "ns": 498625.0,
+   "ns_low": 498625,
+   "ns_high": 498625,
+   "runs_ns": [
+    498625,
+    498625,
+    498625,
+    498625,
+    498625,
+    498625
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aes128gcm_open/{lib}/243B",
+   "library": "rind",
+   "id": "aes128gcm_open/rind/243B",
+   "ns": 504375.0,
+   "ns_low": 504375,
+   "ns_high": 504375,
+   "runs_ns": [
+    504375,
+    504375,
+    504375,
+    504375,
+    504375,
+    504375
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 243
+   }
+  },
+  {
+   "operation": "aes128gcm_seal/{lib}/1500B",
+   "library": "rind",
+   "id": "aes128gcm_seal/rind/1500B",
+   "ns": 2626375.0,
+   "ns_low": 2626375,
+   "ns_high": 2626375,
+   "runs_ns": [
+    2626375,
+    2626375,
+    2626375,
+    2626375,
+    2626375,
+    2626375
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "aes128gcm_open/{lib}/1500B",
+   "library": "rind",
+   "id": "aes128gcm_open/rind/1500B",
+   "ns": 2636875.0,
+   "ns_low": 2636875,
+   "ns_high": 2636875,
+   "runs_ns": [
+    2636875,
+    2636875,
+    2636875,
+    2636875,
+    2636875,
+    2636875
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 32,
+   "throughput": {
+    "Bytes": 1500
+   }
+  },
+  {
+   "operation": "p256_sign/{lib}/32B",
+   "library": "rind",
+   "id": "p256_sign/rind/32B",
+   "ns": 20564000.0,
+   "ns_low": 20564000.0,
+   "ns_high": 20564000.0,
+   "runs_ns": [
+    20564000.0,
+    20564000.0,
+    20564000.0,
+    20564000.0,
+    20564000.0,
+    20564000.0
+   ],
+   "run_spread_pct": 0.0,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  },
+  {
+   "operation": "p256_verify/{lib}/32B",
+   "library": "rind",
+   "id": "p256_verify/rind/32B",
+   "ns": 30096250.0,
+   "ns_low": 30055500.0,
+   "ns_high": 30233500.0,
+   "runs_ns": [
+    30108000.0,
+    30083500.0,
+    30055500.0,
+    30099500.0,
+    30233500.0,
+    30093000.0
+   ],
+   "run_spread_pct": 0.5914358101092329,
+   "iters": 8,
+   "throughput": {
+    "Bytes": 32
+   }
+  }
+ ]
+}

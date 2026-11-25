@@ -1,0 +1,79 @@
+{
+ "schema": 1,
+ "host": "esp32s3",
+ "commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "upstream_commit": "5430e8b6c600941da22ba76df8334b6a5ec1ca44",
+ "fork_commit": "89da51f759dd837216712705676302aa98c42625",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 37:68",
+ "chip": "esp32s3",
+ "clock_hz": 80000000,
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0), xtensa-esp32s3-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the S3 (private copy of the student repo's firmware-s3, not published here): ChaCha20-Poly1305 seal/open and Ed25519 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-22T08:31:31Z",
+ "finished": "2026-11-22T08:44:15Z",
+ "control": "ctl",
+ "runs": 5,
+ "flashes": 8,
+ "images": {
+  "ctl": {
+   "rind_commit": "89da51f759dd837216712705676302aa98c42625",
+   "image": "s3-ctl-89da51f75.elf",
+   "what": "#275 then: 26-bit Poly1305 and word-XOR ChaCha20 on 32-bit targets",
+   "image_sha256": "175bd74f5234da081174e9ece4c4917cb91c1f79a8641755fb7f74744fcd1acf",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/275",
+   "flashes": [
+    1,
+    3,
+    5,
+    7,
+    9
+   ],
+   "kats_pass": 250,
+   "kats_fail": 0
+  },
+  "zero": {
+   "rind_commit": "e14a65d480d3dc249375e0c366bf363995af99a2",
+   "image": "s3-zero-e14a65d48.elf",
+   "what": "#278 then (#275 merged in): the key wipe as one memset",
+   "image_sha256": "3aef89d189377aab21c09802a24813f47246026d6288fc2e0d8cc5ce6cd370fe",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/278",
+   "flashes": [
+    2
+   ],
+   "kats_pass": 52,
+   "kats_fail": 0
+  },
+  "chacha": {
+   "rind_commit": "dbd134fbd05ed6a84cec0fb437fd0e4c0fc9e7ab",
+   "image": "s3-chacha-dbd134fbd.elf",
+   "what": "#279 then (#278 merged in): ChaCha20 rotates as ssai/src on Xtensa",
+   "image_sha256": "8b1764c6bfd2517971c17e6da146f1ef4a3e3468db7d4e462a496dc65ac35540",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/279",
+   "flashes": [
+    4
+   ],
+   "kats_pass": 52,
+   "kats_fail": 0
+  },
+  "all": {
+   "rind_commit": "3d8657f94d3ac83aea729e5dd44b3cee82681d1f",
+   "image": "s3-all-3d8657f94.elf",
+   "what": "#280 then (#279 merged in): branchless Poly1305 block loop and 16-bit tag add",
+   "image_sha256": "ea1b8ac96d1d77831d8c897d4b0f3c3e8fb59bfbe8b47019bded1024b44d0148",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/280",
+   "flashes": [
+    6
+   ],
+   "kats_pass": 52,
+   "kats_fail": 0
+  }
+ },
+ "kats": {
+  "checks": 406,
+  "failures": 0,
+  "boots": 8
+ }
+}

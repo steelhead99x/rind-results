@@ -1,0 +1,315 @@
+{
+ "host": "esp32s3",
+ "chip": "esp32s3",
+ "title": "ESP32-S3 upstream refresh A/B at kixel-ai/rind `8a5977ad`, CPU at 240 MHz, third session",
+ "commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "control": "ctl",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 3D:C8",
+ "cpu": {
+  "model": "Espressif ESP32-S3 (Xtensa LX7), 240 MHz",
+  "arch": "xtensa",
+  "logical_cpus": 1
+ },
+ "clock_hz": 240000000,
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0), xtensa-esp32s3-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the S3 (private copy of the student repo's firmware-s3, not published here): ChaCha20-Poly1305 seal/open, Ed25519 and SHA-512 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-24T01:16:07Z",
+ "finished": "2026-11-24T01:45:16Z",
+ "note": "Control of an interleaved A/B on one ESP32-S3. Each run is one flash of the control image; the run's value is the median over that boot's complete rounds. Every flash of every image is in ab.json.",
+ "variants": {
+  "ctl": {
+   "rind_commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+   "image": "s3-ctl240.bin",
+   "what": "kixel-ai/rind main 8a5977ad as it is (HACL* Poly1305 in u64 limbs, HACL* ChaCha20; rolled SHA-512 is upstream's default here, #944)",
+   "image_sha256": "db9d73b33d7f6f9880715575f4e8d0d314eb8403cba09ea12a57570c24a55db5",
+   "elf_sha256": "e7d75af083b8406c1492924a12d278f2a147a0ccf89c5ea24a305daf425bf0e1"
+  },
+  "zero": {
+   "rind_commit": "1efdd366ada969b4b1269dccf2e693004146b2ef",
+   "image": "s3-zero240.bin",
+   "what": "+ key wipe as one memset on Xtensa",
+   "image_sha256": "558a427572a5e026a475496ac95c3ba51838f330eecbd5ac38634cd902c28873",
+   "elf_sha256": "2eef96f9976e0aa30de5939a8298cb4c3fe8d78e0ad095d804a6cac228ee50b8",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/294"
+  },
+  "rot": {
+   "rind_commit": "8218d57cf8100e37bffba79b6d5406d3f9b61ba0",
+   "image": "s3-rot240.bin",
+   "what": "+ ChaCha20 rotates as ssai/src (rounds4), with the word XOR (#295 head)",
+   "image_sha256": "6e73fb5735b04e8905cfe011f0ba5fb94ed969557bd2082466d07d2614e841fa",
+   "elf_sha256": "84a7fb3ac72fc20bafaff9875204692771a763d9884f9dac94b6aacef6017e26",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/295"
+  },
+  "notag": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-notag240.bin",
+   "what": "#296 at d3f3374f with a bench-only local patch that keeps the u64 tag add (branchless block loop only); not on any branch",
+   "image_sha256": "0973a23a6aa0ff649006549b578034470c6e73a80fa7946059168dde9216a294",
+   "elf_sha256": "aaf88748bb50c49ca2d1afd4f05b3a4206fdf61a1c1ee2dd92ef4f3ae0fdf6e6",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  },
+  "poly": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-poly240.bin",
+   "what": "+ branchless Poly1305 block loop and 16-bit-halves tag add (#296 at d3f3374f)",
+   "image_sha256": "db99bb9c704d2155c6a82919348f9217ba3f22f11ab8ea7dd424fd5fc0efe4fb",
+   "elf_sha256": "c22b39fd31dc67194cf524bebb562174daf56f903ec78d907068833c276cb0d2",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  },
+  "all": {
+   "rind_commit": "24920d52cd59f5ed88ea46ae468361af61aa3474",
+   "image": "s3-all240.bin",
+   "what": "zero + rot + poly merged (#297 at 24920d52)",
+   "image_sha256": "b738e8bfb9e551f12b2598501fc78ae1703cb0bd8a47b8aea02ccc0d8100cd73",
+   "elf_sha256": "7a9e33fb6a591720f227694b102fc9451b0b0ab9b6194a2c3790fb95b69cd176",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/297"
+  }
+ },
+ "ab_order": [
+  "ctl",
+  "zero",
+  "rot",
+  "notag",
+  "poly",
+  "all"
+ ],
+ "flashes": [
+  {
+   "n": 1,
+   "variant": "ctl",
+   "log": "raw/b-1-ctl.log"
+  },
+  {
+   "n": 2,
+   "variant": "zero",
+   "log": "raw/b-2-zero.log"
+  },
+  {
+   "n": 3,
+   "variant": "ctl",
+   "log": "raw/b-3-ctl.log"
+  },
+  {
+   "n": 4,
+   "variant": "rot",
+   "log": "raw/b-4-rot.log"
+  },
+  {
+   "n": 5,
+   "variant": "ctl",
+   "log": "raw/b-5-ctl.log"
+  },
+  {
+   "n": 6,
+   "variant": "notag",
+   "log": "raw/b-6-notag.log"
+  },
+  {
+   "n": 7,
+   "variant": "ctl",
+   "log": "raw/b-7-ctl.log"
+  },
+  {
+   "n": 8,
+   "variant": "poly",
+   "log": "raw/b-8-poly.log"
+  },
+  {
+   "n": 9,
+   "variant": "ctl",
+   "log": "raw/b-9-ctl.log"
+  },
+  {
+   "n": 10,
+   "variant": "all",
+   "log": "raw/b-10-all.log"
+  },
+  {
+   "n": 11,
+   "variant": "ctl",
+   "log": "raw/b-11-ctl.log"
+  }
+ ],
+ "results_intro": [
+  "Third session of the 240 MHz ESP32-S3 upstream refresh A/B on the same board (MAC ending 3D:C8), 2026-11-23. The tables below are this session's control image; [ab.md](ab.md) has this session's images, [ab-three-sessions.md](ab-three-sessions.md) all three sessions pooled, [RUNS.md](RUNS.md) every control run, [NOTES.md](NOTES.md) the method."
+ ],
+ "results_ab": [
+  "[ab.md](ab.md) is this session; [ab-three-sessions.md](ab-three-sessions.md) pools all 3 sessions, in which every candidate has 3 runs. See [NOTES.md](NOTES.md)."
+ ],
+ "pooled": {
+  "stem": "ab-three-sessions",
+  "title": "ESP32-S3 refresh A/B at 240 MHz, three sessions on the board ending 3D:C8",
+  "flashes": [
+   {
+    "n": "s1-1",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-1-ctl.log"
+   },
+   {
+    "n": "s1-2",
+    "variant": "zero",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-2-zero.log"
+   },
+   {
+    "n": "s1-3",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-3-ctl.log"
+   },
+   {
+    "n": "s1-4",
+    "variant": "rot",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-4-rot.log"
+   },
+   {
+    "n": "s1-5",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-5-ctl.log"
+   },
+   {
+    "n": "s1-6",
+    "variant": "notag",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-6-notag.log"
+   },
+   {
+    "n": "s1-7",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-7-ctl.log"
+   },
+   {
+    "n": "s1-8",
+    "variant": "poly",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-8-poly.log"
+   },
+   {
+    "n": "s1-9",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-9-ctl.log"
+   },
+   {
+    "n": "s1-10",
+    "variant": "all",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-10-all.log"
+   },
+   {
+    "n": "s1-11",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/raw/b-11-ctl.log"
+   },
+   {
+    "n": "s2-1",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-1-ctl.log"
+   },
+   {
+    "n": "s2-2",
+    "variant": "zero",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-2-zero.log"
+   },
+   {
+    "n": "s2-3",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-3-ctl.log"
+   },
+   {
+    "n": "s2-4",
+    "variant": "rot",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-4-rot.log"
+   },
+   {
+    "n": "s2-5",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-5-ctl.log"
+   },
+   {
+    "n": "s2-6",
+    "variant": "notag",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-6-notag.log"
+   },
+   {
+    "n": "s2-7",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-7-ctl.log"
+   },
+   {
+    "n": "s2-8",
+    "variant": "poly",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-8-poly.log"
+   },
+   {
+    "n": "s2-9",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-9-ctl.log"
+   },
+   {
+    "n": "s2-10",
+    "variant": "all",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-10-all.log"
+   },
+   {
+    "n": "s2-11",
+    "variant": "ctl",
+    "log": "../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/raw/b-11-ctl.log"
+   },
+   {
+    "n": "s3-1",
+    "variant": "ctl",
+    "log": "raw/b-1-ctl.log"
+   },
+   {
+    "n": "s3-2",
+    "variant": "zero",
+    "log": "raw/b-2-zero.log"
+   },
+   {
+    "n": "s3-3",
+    "variant": "ctl",
+    "log": "raw/b-3-ctl.log"
+   },
+   {
+    "n": "s3-4",
+    "variant": "rot",
+    "log": "raw/b-4-rot.log"
+   },
+   {
+    "n": "s3-5",
+    "variant": "ctl",
+    "log": "raw/b-5-ctl.log"
+   },
+   {
+    "n": "s3-6",
+    "variant": "notag",
+    "log": "raw/b-6-notag.log"
+   },
+   {
+    "n": "s3-7",
+    "variant": "ctl",
+    "log": "raw/b-7-ctl.log"
+   },
+   {
+    "n": "s3-8",
+    "variant": "poly",
+    "log": "raw/b-8-poly.log"
+   },
+   {
+    "n": "s3-9",
+    "variant": "ctl",
+    "log": "raw/b-9-ctl.log"
+   },
+   {
+    "n": "s3-10",
+    "variant": "all",
+    "log": "raw/b-10-all.log"
+   },
+   {
+    "n": "s3-11",
+    "variant": "ctl",
+    "log": "raw/b-11-ctl.log"
+   }
+  ],
+  "note": "All sessions pooled: same board, same images (by sha256), same order. `s1-N` is flash N of [8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-2026-11-22/NOTES.md), `s2-N` is flash N of [8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23](../8a5977adb9c32ea2ed010c400f5ffbdcdec14b47-refresh-ab-240mhz-pass2-2026-11-23/NOTES.md), and `s3-N` flash N of this tree. A flash is still one run."
+ }
+}

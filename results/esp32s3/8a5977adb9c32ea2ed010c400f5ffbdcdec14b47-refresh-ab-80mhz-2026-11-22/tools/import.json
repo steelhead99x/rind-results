@@ -1,0 +1,181 @@
+{
+ "host": "esp32s3",
+ "chip": "esp32s3",
+ "title": "ESP32-S3 upstream refresh A/B at kixel-ai/rind `8a5977ad`, CPU at 80 MHz",
+ "commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+ "control": "ctl",
+ "board": "Seeed XIAO ESP32-S3 class board, ESP32-S3 rev v0.2, 8 MB flash, USB-Serial/JTAG; the board whose MAC ends 3D:C8",
+ "cpu": {
+  "model": "Espressif ESP32-S3 (Xtensa LX7), 80 MHz",
+  "arch": "xtensa",
+  "logical_cpus": 1
+ },
+ "clock_hz": 80000000,
+ "os": "bare metal (esp-hal, no OS)",
+ "toolchain": {
+  "rustc": "rustc 1.97.0-nightly (8ea53bcd7 2026-07-08) (esp 1.97.0.0), xtensa-esp32s3-none-elf, opt-level 3, lto fat, codegen-units 1",
+  "espflash": "4.7.0"
+ },
+ "harness": "WS-BENCH firmware for the S3 (private copy of the student repo's firmware-s3, not published here): ChaCha20-Poly1305 seal/open, Ed25519 and SHA-512 for rind and RustCrypto/dalek. A row is the firmware's median of `iters` timed samples (32, or 8 for Ed25519).",
+ "started": "2026-11-23T04:41:18Z",
+ "finished": "2026-11-23T05:43:40Z",
+ "note": "Control of an interleaved A/B on one ESP32-S3. Each run is one flash of the control image; the run's value is the median over that boot's complete rounds. Every flash of every image is in ab.json.",
+ "variants": {
+  "ctl": {
+   "rind_commit": "8a5977adb9c32ea2ed010c400f5ffbdcdec14b47",
+   "image": "s3-ctl.bin",
+   "what": "kixel-ai/rind main 8a5977ad as it is (HACL* Poly1305 in u64 limbs, HACL* ChaCha20; rolled SHA-512 is upstream's default here, #944)",
+   "image_sha256": "dcdc3205ae9bf1ba9b7393bf31bc6d4cd65f77dcfa120cb632227b3a75ef5edd",
+   "elf_sha256": "d39ab485eaea0c90f8afb3c33bfa1e49eebc868c03726ef8f67d792656dc65e5"
+  },
+  "zero": {
+   "rind_commit": "1efdd366ada969b4b1269dccf2e693004146b2ef",
+   "image": "s3-zero.bin",
+   "what": "+ key wipe as one memset on Xtensa",
+   "image_sha256": "2733d510bbdcb975869378f83a821d5345cc554039b3b8a63db5c3bec6bd0e70",
+   "elf_sha256": "baccca6dfb87025cd812830c0874ff9eb3df81f05cb89be90964900f791b4ff9",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/294"
+  },
+  "rot": {
+   "rind_commit": "8218d57cf8100e37bffba79b6d5406d3f9b61ba0",
+   "image": "s3-rot.bin",
+   "what": "+ ChaCha20 rotates as ssai/src (rounds4), with the word XOR (#295 head)",
+   "image_sha256": "ec950833b1bb68e443316ceda55883c788374064080e176f48706663e1c5b869",
+   "elf_sha256": "58e67be4058a66798d90268a6fe7e1b2d4b412ce84681e77dc01f1b4795f55d0",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/295"
+  },
+  "notag": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-notag.bin",
+   "what": "#296 at d3f3374f with a bench-only local patch that keeps the u64 tag add (branchless block loop only); not on any branch",
+   "image_sha256": "d1e8c803a67240bacabf0ff1c876cc2cb5327a51d3b92896a1899d5f9e29f20a",
+   "elf_sha256": "fd4085c622e6743ab28e0e1715fc9fce08d6d58bdb713fa19c1b73ae6ac2599f",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  },
+  "poly": {
+   "rind_commit": "d3f3374f04cf004c5e9982007d99175313a1b4d7",
+   "image": "s3-poly.bin",
+   "what": "+ branchless Poly1305 block loop and 16-bit-halves tag add (#296 at d3f3374f)",
+   "image_sha256": "b731e4555eeedd1458f0c48f40217b14faf23de3ecb7d2562b8a84f15cf74608",
+   "elf_sha256": "ff5f852fb7144c620b4e9124d53092c9d30400c7cd16d63758ddf18ccadc62b4",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  },
+  "all": {
+   "rind_commit": "24920d52cd59f5ed88ea46ae468361af61aa3474",
+   "image": "s3-all.bin",
+   "what": "zero + rot + poly merged (#297 at 24920d52)",
+   "image_sha256": "45630d474374d5212a03256a5b6fbc524565d21cb343b09cc24a3d295f7deaf3",
+   "elf_sha256": "8db58c03caf242e4b98c820014cddf2315b0bfdff363d33187484c599d470231",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/297"
+  },
+  "xor": {
+   "rind_commit": "ec4a74283044095ef187e9d076ceba20c97102d4",
+   "image": "s3-xor.bin",
+   "what": "+ ChaCha20 keystream XORed a word at a time from registers on Xtensa (first commit of #295)",
+   "image_sha256": "916cd24786d4e70fb4469d51f11cd7c382d6266ac09f7d6107eba8a0dc57b449",
+   "elf_sha256": "b203bcde0076cbffa0dd064660361e248e08a79bbebab1a7f43d2c59c1592c45",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/295"
+  },
+  "polyw": {
+   "rind_commit": "b0f260c0a80aa171f4b19b7faf7b6f2973a30532",
+   "image": "s3-polyw.bin",
+   "what": "+ 26-bit Poly1305 in u32 limbs on Xtensa, sums still in u64 (first commit of #296)",
+   "image_sha256": "24e7e543e89b949499589b0400e93282128dfb60017c7fd1b57a27c7b314986c",
+   "elf_sha256": "a187e28f6468f943577c2ced61e36c54932c5a67c75aac447d18c35f4ff4b164",
+   "fork_pr": "https://github.com/steelhead99x/rind/pull/296"
+  }
+ },
+ "ab_order": [
+  "ctl",
+  "zero",
+  "rot",
+  "notag",
+  "poly",
+  "all",
+  "xor",
+  "polyw"
+ ],
+ "flashes": [
+  {
+   "n": 1,
+   "variant": "ctl",
+   "log": "raw/b-1-ctl.log"
+  },
+  {
+   "n": 2,
+   "variant": "zero",
+   "log": "raw/b-2-zero.log"
+  },
+  {
+   "n": 3,
+   "variant": "ctl",
+   "log": "raw/b-3-ctl.log"
+  },
+  {
+   "n": 4,
+   "variant": "rot",
+   "log": "raw/b-4-rot.log"
+  },
+  {
+   "n": 5,
+   "variant": "ctl",
+   "log": "raw/b-5-ctl.log"
+  },
+  {
+   "n": 6,
+   "variant": "notag",
+   "log": "raw/b-6-notag.log"
+  },
+  {
+   "n": 7,
+   "variant": "ctl",
+   "log": "raw/b-7-ctl.log"
+  },
+  {
+   "n": 8,
+   "variant": "poly",
+   "log": "raw/b-8-poly.log"
+  },
+  {
+   "n": 9,
+   "variant": "ctl",
+   "log": "raw/b-9-ctl.log"
+  },
+  {
+   "n": 10,
+   "variant": "all",
+   "log": "raw/b-10-all.log"
+  },
+  {
+   "n": 11,
+   "variant": "ctl",
+   "log": "raw/b-11-ctl.log"
+  },
+  {
+   "n": 12,
+   "variant": "xor",
+   "log": "raw/b-12-xor.log"
+  },
+  {
+   "n": 13,
+   "variant": "ctl",
+   "log": "raw/b-13-ctl.log"
+  },
+  {
+   "n": 14,
+   "variant": "polyw",
+   "log": "raw/b-14-polyw.log"
+  },
+  {
+   "n": 15,
+   "variant": "ctl",
+   "log": "raw/b-15-ctl.log"
+  }
+ ],
+ "results_intro": [
+  " The tables below are the control image. [ab.md](ab.md) has every image against the control, [RUNS.md](RUNS.md) every control run, and [NOTES.md](NOTES.md) the method, the run counts and what each image is."
+ ],
+ "results_ab": [
+  "[ab.md](ab.md) has every image against the control, flash by flash. Images flashed fewer than three times do not meet the three-run rule; [NOTES.md](NOTES.md) says which."
+ ]
+}
