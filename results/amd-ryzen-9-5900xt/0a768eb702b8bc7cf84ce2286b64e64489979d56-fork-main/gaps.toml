@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap over 10% on the amd-ryzen-9-5900xt host (gaming-001)
+# at steelhead99x/rind fork main 0a768eb7, in rind's benchmarks/gaps.toml format.
+# Each entry carries over the decision upstream kixel-ai/rind benchmarks/gaps.toml
+# already records for the same operation on other hosts; written by Grok Bot,
+# not yet reviewed by Kyle.
+
+[[gap]]
+operations = ["mlkem768-keygen/{lib}"]
+on = ["amd-ryzen-9-5900xt"]
+reason = "1.25x pyca/verified-garbage on the medians of three runs. Upstream decided this in kixel-ai/rind#812 (benchmarks/gaps.toml, on nixos, the same Ryzen 9 5900XT): on x86_64 without AVX-512 ML-KEM-768 key generation stays on rind's arithmetic because decapsulation, the hot path, runs on the arithmetic that generated the key and VG's decapsulation was 1.17-1.25x slower."
+
+[[gap]]
+operations = ["p384-ecdsa-sign/{lib}"]
+on = ["amd-ryzen-9-5900xt"]
+reason = "1.11x pyca/verified-garbage on the medians of three runs, on a host sharing its CPU with a vLLM job (busy_share relaxed to 0.15; see relaxations.json). Upstream records the same 1.06-1.11x margin on ovh-iad, ovh-sea and fedora: rind's hedged per-signature nonce (fresh randomness, as aws-lc-rs) against VG's deterministic RFC 6979 nonce is deliberate, so it stays."
+
+[[gap]]
+operations = ["sha1/{lib}/64B"]
+on = ["amd-ryzen-9-5900xt"]
+reason = "1.18x RustCrypto at 64 B only on the medians of three runs. Upstream keeps SHA-1 as a legacy-only algorithm without a speed quest (benchmarks/gaps.toml, sha1/* on portable); a 64 B hash is fixed-cost dominated and this host was shared with a vLLM job."

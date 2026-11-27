@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+# The decision on every gap over 10% on the amd-ryzen-9-3900x host (gaming-002)
+# at steelhead99x/rind fork main 0a768eb7, in rind's benchmarks/gaps.toml format.
+# Carries over upstream kixel-ai/rind benchmarks/gaps.toml's decision for the same
+# operation on other hosts; written by Grok Bot, not yet reviewed by Kyle.
+
+[[gap]]
+operations = ["mlkem768-keygen/{lib}"]
+on = ["amd-ryzen-9-3900x"]
+reason = "1.56x pyca/verified-garbage on the medians of three runs, larger than the 1.25x on Zen 3 (amd-ryzen-9-5900xt). Upstream decided this in kixel-ai/rind#812: on x86_64 without AVX-512 ML-KEM-768 key generation stays on rind's arithmetic because decapsulation, the hot path, runs on the arithmetic that generated the key and VG's decapsulation was 1.17-1.25x slower. Zen 2 was not among the hosts that decision measured, so the larger margin here should be rechecked against decapsulation on this CPU."
