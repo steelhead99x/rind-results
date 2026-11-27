@@ -21,6 +21,8 @@ Open the `RESULTS.md` link for each machine's full table.
 
 | Machine | CPU | rind commit | Results |
 |---|---|---|---|
+| AMD Ryzen 9 5900XT desktop (boost off) | x86_64, Zen 3 | `0a768eb7` (fork) | [RESULTS.md](results/amd-ryzen-9-5900xt/0a768eb702b8bc7cf84ce2286b64e64489979d56-fork-main/RESULTS.md) |
+| AMD Ryzen 9 3900X desktop | x86_64, Zen 2 | `0a768eb7` (fork) | [RESULTS.md](results/amd-ryzen-9-3900x/0a768eb702b8bc7cf84ce2286b64e64489979d56-fork-main/RESULTS.md) |
 | Intel Core Ultra 9 275HX laptop | x86_64 | `d6ca9a75` | [RESULTS.md](results/intel-core-ultra-9-275hx/d6ca9a756d3d1e71489e61e44c04f33c3c893589/RESULTS.md) |
 | Jetson Orin Nano | Arm Cortex-A78AE | `98568332` | [RESULTS.md](results/jetson-orin-nano/RESULTS.md) |
 | Raspberry Pi 5 (no fan, 1.5 GHz) | Arm Cortex-A76 | `a6577cb4` | [RESULTS.md](results/pi5-nofan-1p5ghz/a6577cb4a4b48af06385f8d748f3892c07cc229e/RESULTS.md) |
